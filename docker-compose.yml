@@ -1,0 +1,16 @@
+services:
+  app:
+    restart: always
+    #build: .
+    image: ghcr.io/g0rsthir/pdfmanager:latest
+    volumes:
+      - app-storage:/app/storage
+    env_file:
+      - .env
+    environment:
+      - APP_ACCESS_JWT_SECRET=${JWT_SECRET?Variable not set}
+      - APP_REFRESH_JWT_SECRET=${JWT_SECRET?Variable not set}
+    ports:
+      - 8080:8080
+volumes:
+  app-storage:

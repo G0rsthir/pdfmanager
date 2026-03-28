@@ -1,0 +1,24 @@
+/* Isolate PDF.js from Chakra UI's @layer reset.
+   Chakra sets: border-width:0, font:inherit, line-height:1.5
+   on *, which breaks text positioning, page borders, and annotation links. 
+   */
+
+.pdfViewer :not(.textLayer, .textLayer *, .annotationLayer, .annotationLayer *),
+.pdfViewer
+  :not(.textLayer, .textLayer *, .annotationLayer, .annotationLayer *)::before,
+.pdfViewer
+  :not(.textLayer, .textLayer *, .annotationLayer, .annotationLayer *)::after {
+  border-width: revert;
+  border-style: revert;
+  border-color: revert;
+  font: revert;
+  line-height: revert;
+  margin: revert;
+  padding: revert;
+  box-sizing: revert;
+  word-wrap: revert;
+}
+
+.pdfViewer .page {
+  margin: 1px auto 20px;
+}
