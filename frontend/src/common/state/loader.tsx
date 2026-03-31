@@ -1,6 +1,6 @@
+import { parseAPIError } from "@/common/error";
 import { ApplicationError } from "@/components/ui/error";
 import { AppLoadingOverlay } from "@/components/ui/feedback";
-import { parseAPIError } from "@/utils/error";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useAuth } from "../auth/hooks";

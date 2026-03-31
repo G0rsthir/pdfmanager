@@ -40,6 +40,8 @@ import type {
   DeleteTagResponses,
   GetAppStateData,
   GetAppStateResponses,
+  GetAppStatusData,
+  GetAppStatusResponses,
   GetCurrentSessionData,
   GetCurrentSessionResponses,
   GetFileData,
@@ -53,6 +55,8 @@ import type {
   GetFolderResponses,
   GetLibraryTreeData,
   GetLibraryTreeResponses,
+  ListCollectionsData,
+  ListCollectionsResponses,
   ListFilesData,
   ListFilesErrors,
   ListFilesResponses,
@@ -98,6 +102,7 @@ import {
   zDeleteTagData,
   zGetAppStateData,
   zGetAppStateResponse,
+  zGetAppStatusData,
   zGetCurrentSessionData,
   zGetCurrentSessionResponse,
   zGetFileData,
@@ -107,6 +112,8 @@ import {
   zGetFolderResponse,
   zGetLibraryTreeData,
   zGetLibraryTreeResponse,
+  zListCollectionsData,
+  zListCollectionsResponse,
   zListFilesData,
   zListFilesResponse,
   zListFoldersData,
@@ -231,6 +238,26 @@ export const refreshAuthToken = <ThrowOnError extends boolean = false>(
       await zRefreshAuthTokenResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/auth/refresh",
+    ...options,
+  });
+
+/**
+ * List Collections
+ */
+export const listCollections = <ThrowOnError extends boolean = false>(
+  options?: Options<ListCollectionsData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    ListCollectionsResponses,
+    unknown,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await zListCollectionsData.parseAsync(data),
+    responseValidator: async (data) =>
+      await zListCollectionsResponse.parseAsync(data),
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/collections",
     ...options,
   });
 
@@ -658,3 +685,20 @@ export const createSetupUser = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * Status
+ *
+ * liveness / readiness probe
+ */
+export const getAppStatus = <ThrowOnError extends boolean = false>(
+  options?: Options<GetAppStatusData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<GetAppStatusResponses, unknown, ThrowOnError>(
+    {
+      requestValidator: async (data) =>
+        await zGetAppStatusData.parseAsync(data),
+      url: "/api/v1/setup/status",
+      ...options,
+    },
+  );

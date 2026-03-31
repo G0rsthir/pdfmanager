@@ -1,4 +1,4 @@
-import type { APIError } from "@/utils/error";
+import type { APIError } from "@/common/error";
 import {
   Center,
   Spinner,

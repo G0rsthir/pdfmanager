@@ -127,6 +127,24 @@ export type BodyUploadFile = {
 };
 
 /**
+ * CollectionResponse
+ */
+export type CollectionResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Parent Id
+   */
+  parent_id?: string | null;
+};
+
+/**
  * CreateCollectionRequest
  */
 export type CreateCollectionRequest = {
@@ -759,6 +777,25 @@ export type RefreshAuthTokenResponses = {
 export type RefreshAuthTokenResponse =
   RefreshAuthTokenResponses[keyof RefreshAuthTokenResponses];
 
+export type ListCollectionsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/collections";
+};
+
+export type ListCollectionsResponses = {
+  /**
+   * Response Listcollections
+   *
+   * Successful Response
+   */
+  200: Array<CollectionResponse>;
+};
+
+export type ListCollectionsResponse =
+  ListCollectionsResponses[keyof ListCollectionsResponses];
+
 export type CreateCollectionData = {
   body: CreateCollectionRequest;
   path?: never;
@@ -1211,6 +1248,14 @@ export type ListFilesData = {
      */
     tags?: Array<string> | null;
     /**
+     * Names
+     */
+    names?: Array<string> | null;
+    /**
+     * Descriptions
+     */
+    descriptions?: Array<string> | null;
+    /**
      * Text
      */
     text?: Array<string> | null;
@@ -1332,3 +1377,17 @@ export type CreateSetupUserResponses = {
 
 export type CreateSetupUserResponse =
   CreateSetupUserResponses[keyof CreateSetupUserResponses];
+
+export type GetAppStatusData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/setup/status";
+};
+
+export type GetAppStatusResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};

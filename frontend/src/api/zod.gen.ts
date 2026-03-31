@@ -60,6 +60,15 @@ export const zBodyUploadFile = z.object({
 });
 
 /**
+ * CollectionResponse
+ */
+export const zCollectionResponse = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  parent_id: z.uuid().nullish(),
+});
+
+/**
  * CreateCollectionRequest
  */
 export const zCreateCollectionRequest = z.object({
@@ -90,7 +99,7 @@ export const zLibraryTreeNode = z.object({
  * PatchFileStateRequest
  */
 export const zPatchFileStateRequest = z.object({
-  current_page: z.int().nullish(),
+  current_page: z.int().gte(1).nullish(),
   scale: z.string().nullish(),
 });
 
@@ -174,8 +183,8 @@ export const zUpdateCollectionRequest = z.object({
  * UpdateFileRequest
  */
 export const zUpdateFileRequest = z.object({
-  name: z.string().min(1),
-  description: z.string().nullish(),
+  name: z.string().min(1).max(255),
+  description: z.string().max(255).nullish(),
   tags: z.array(z.string()).optional(),
   folder_id: z.uuid().nullish(),
   is_favorite: z.boolean().optional().default(false),
@@ -360,6 +369,19 @@ export const zRefreshAuthTokenData = z.object({
  */
 export const zRefreshAuthTokenResponse = zAccessToken;
 
+export const zListCollectionsData = z.object({
+  body: z.never().optional(),
+  path: z.never().optional(),
+  query: z.never().optional(),
+});
+
+/**
+ * Response Listcollections
+ *
+ * Successful Response
+ */
+export const zListCollectionsResponse = z.array(zCollectionResponse);
+
 export const zCreateCollectionData = z.object({
   body: zCreateCollectionRequest,
   path: z.never().optional(),
@@ -529,6 +551,8 @@ export const zListFilesData = z.object({
     .object({
       is_favorite: z.boolean().nullish(),
       tags: z.array(z.string()).nullish(),
+      names: z.array(z.string()).nullish(),
+      descriptions: z.array(z.string()).nullish(),
       text: z.array(z.string()).nullish(),
     })
     .optional(),
@@ -576,3 +600,9 @@ export const zCreateSetupUserData = z.object({
  * Successful Response
  */
 export const zCreateSetupUserResponse = zUserResponse;
+
+export const zGetAppStatusData = z.object({
+  body: z.never().optional(),
+  path: z.never().optional(),
+  query: z.never().optional(),
+});

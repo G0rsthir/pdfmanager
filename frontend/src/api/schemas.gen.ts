@@ -178,6 +178,35 @@ export const Body_UploadFileSchema = {
   title: "Body_UploadFile",
 } as const;
 
+export const CollectionResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    parent_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Parent Id",
+    },
+  },
+  type: "object",
+  required: ["id", "name"],
+  title: "CollectionResponse",
+} as const;
+
 export const CreateCollectionRequestSchema = {
   properties: {
     name: {
@@ -402,6 +431,7 @@ export const PatchFileStateRequestSchema = {
       anyOf: [
         {
           type: "integer",
+          minimum: 1,
         },
         {
           type: "null",
@@ -565,6 +595,7 @@ export const UpdateFileRequestSchema = {
   properties: {
     name: {
       type: "string",
+      maxLength: 255,
       minLength: 1,
       title: "Name",
     },
@@ -572,6 +603,7 @@ export const UpdateFileRequestSchema = {
       anyOf: [
         {
           type: "string",
+          maxLength: 255,
         },
         {
           type: "null",

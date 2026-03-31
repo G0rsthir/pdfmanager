@@ -17,11 +17,13 @@ import {
   deleteFolder,
   deleteTag,
   getAppState,
+  getAppStatus,
   getCurrentSession,
   getFile,
   getFileDetails,
   getFolder,
   getLibraryTree,
+  listCollections,
   listFiles,
   listFolders,
   listTags,
@@ -57,6 +59,7 @@ import type {
   DeleteTagError,
   GetAppStateData,
   GetAppStateResponse,
+  GetAppStatusData,
   GetCurrentSessionData,
   GetCurrentSessionResponse,
   GetFileData,
@@ -69,6 +72,8 @@ import type {
   GetFolderResponse,
   GetLibraryTreeData,
   GetLibraryTreeResponse,
+  ListCollectionsData,
+  ListCollectionsResponse,
   ListFilesData,
   ListFilesError,
   ListFilesResponse,
@@ -247,6 +252,34 @@ export const refreshAuthTokenMutation = (
   };
   return mutationOptions;
 };
+
+export const listCollectionsQueryKey = (
+  options?: Options<ListCollectionsData>,
+) => createQueryKey("listCollections", options);
+
+/**
+ * List Collections
+ */
+export const listCollectionsOptions = (
+  options?: Options<ListCollectionsData>,
+) =>
+  queryOptions<
+    ListCollectionsResponse,
+    DefaultError,
+    ListCollectionsResponse,
+    ReturnType<typeof listCollectionsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listCollections({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listCollectionsQueryKey(options),
+  });
 
 /**
  * Create Collection
@@ -810,3 +843,30 @@ export const createSetupUserMutation = (
   };
   return mutationOptions;
 };
+
+export const getAppStatusQueryKey = (options?: Options<GetAppStatusData>) =>
+  createQueryKey("getAppStatus", options);
+
+/**
+ * Status
+ *
+ * liveness / readiness probe
+ */
+export const getAppStatusOptions = (options?: Options<GetAppStatusData>) =>
+  queryOptions<
+    unknown,
+    DefaultError,
+    unknown,
+    ReturnType<typeof getAppStatusQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getAppStatus({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getAppStatusQueryKey(options),
+  });

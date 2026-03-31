@@ -4,6 +4,7 @@ import {
   updateTagMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { TagDetailResponse } from "@/api/types.gen";
+import { parseAPIError } from "@/common/error";
 import { GenericIconButton } from "@/components/ui/button";
 import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/toaster";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
-import { parseAPIError } from "@/utils/error";
 import {
   Badge,
   Box,
@@ -33,7 +33,7 @@ import {
   Text,
   parseColor,
 } from "@chakra-ui/react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuCheck, LuFile, LuTag } from "react-icons/lu";
 import { CardEmpty } from "./shared/common";
@@ -185,6 +185,7 @@ function EditTagDialog(props: {
     handleSubmit,
     state,
     Subscribe,
+    reset,
   } = useFormMutation({
     formOptions: {
       defaultValues: {
@@ -206,6 +207,11 @@ function EditTagDialog(props: {
     onSuccess: onClose,
   });
 
+  const handleClose = useCallback(() => {
+    reset();
+    onClose();
+  }, [onClose, reset]);
+
   const swatchesColors = useMemo(() => {
     const colors: Record<string, string> = {};
     for (const color of TagColors) {
@@ -217,7 +223,7 @@ function EditTagDialog(props: {
   return (
     <FormModal
       open={open}
-      close={onClose}
+      close={handleClose}
       title="Edit Tag"
       onSubmit={() => handleSubmit()}
       confirmBtnText="Update"

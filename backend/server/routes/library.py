@@ -13,6 +13,7 @@ from server.dependencies import (
 )
 from server.exceptions import FieldError, InvalidActionError
 from server.schemas.library import (
+    CollectionResponse,
     CreateCollectionRequest,
     CreateFolderRequest,
     FileResponse,
@@ -29,6 +30,15 @@ from server.schemas.library import (
 from server.schemas.security import AccessSessionContext
 
 router = APIRouter(prefix="/library")
+
+
+@router.get(path="/collections", operation_id="ListCollections", response_model=list[CollectionResponse])
+async def list_collections(
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    return await library_service.list_collections(user_id=access_session.user_id)
 
 
 @router.post(path="/collections", operation_id="CreateCollection")
@@ -48,9 +58,14 @@ async def update_collection(
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
-    await library_service.update_collection(
-        user_id=access_session.user_id, collection_id=collection_id, name=data.name, parent_id=data.parent_id
-    )
+    try:
+        await library_service.update_collection(
+            user_id=access_session.user_id, collection_id=collection_id, name=data.name, parent_id=data.parent_id
+        )
+    except InvalidActionError as e:
+        if e.rule == "collection_parent_self":
+            raise FieldError(field="parent_id", msg=str(e)) from e
+        raise
 
 
 @router.delete(path="/collections/{id}", operation_id="DeleteCollection")
@@ -222,6 +237,8 @@ async def list_files(
         is_favorite=query.is_favorite,
         tags=query.tags,
         text=query.text,
+        names=query.names,
+        descriptions=query.descriptions,
     )
 
 

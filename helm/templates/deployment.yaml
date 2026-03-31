@@ -67,20 +67,21 @@ spec:
             - mountPath: /app/storage
               name: storage
             {{- if .Values.persistence.additionalMounts }}
-              {{- .Values.persistence.additionalMounts | toYaml | nindent 12 }}
+            {{- .Values.persistence.additionalMounts | toYaml | nindent 12 }}
             {{- end }}
       volumes:
         - name: storage
-          {{- if .Values.persistence.enabled }}
+          {{- if .Values.persistence.customVolume }}
+          {{- toYaml .Values.persistence.customVolume | nindent 10 }}
+          {{- else if .Values.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.existingClaim | default (include "pdfmanager.fullname" .) }}
           {{- else }}
-          emptyDir:
-            sizeLimit: {{ .Values.persistence.size | quote }}
+          emptyDir: {}
           {{- end }}
-          {{- if .Values.persistence.additionalVolumes }}
-            {{- .Values.persistence.additionalVolumes | toYaml | nindent 8}}
-          {{- end }}
+        {{- if .Values.persistence.additionalVolumes }}
+        {{- .Values.persistence.additionalVolumes | toYaml | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

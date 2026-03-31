@@ -43,7 +43,7 @@ def file_backup(file_path: str | Path, delete_on_success: bool = True, suffix: s
     backup_path = f"{file_path}{suffix}"
 
     # Copy also replaces
-    shutil.copy(file_path, backup_path)
+    shutil.copyfile(file_path, backup_path)
     try:
         yield
     except Exception as e:

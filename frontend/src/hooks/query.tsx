@@ -1,4 +1,4 @@
-import { APIError, parseAPIError, parseFormError } from "@/utils/error";
+import { APIError, parseAPIError, parseFormError } from "@/common/error";
 import {
   type DefaultError,
   QueryClient,

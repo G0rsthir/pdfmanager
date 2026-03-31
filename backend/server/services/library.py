@@ -50,6 +50,9 @@ class LibraryService:
         collection = ORMCollection(name=name, parent_id=parent_id, user_id=user_id)
         self.collection_repo.create(collection)
 
+    async def list_collections(self, user_id: UUID):
+        return await self.collection_repo.get_by_user_id(user_id=user_id)
+
     async def list_folders(self, user_id: UUID):
         return await self.folder_repo.get_by_user_id(user_id=user_id)
 
@@ -109,6 +112,9 @@ class LibraryService:
             raise CollectionNotFoundError(
                 identifier=collection_id, msg=f"Collection with id {collection_id} not found."
             )
+
+        if parent_id == collection.id:
+            raise InvalidActionError(rule="collection_parent_self", msg="Collection cannot be its own parent.")
 
         if parent_id:
             parent_collection = await self.collection_repo.get_by_id(parent_id)
@@ -250,6 +256,8 @@ class LibraryService:
         is_favorite: bool | None = None,
         tags: list[str] | None = None,
         text: list[str] | None = None,
+        names: list[str] | None = None,
+        descriptions: list[str] | None = None,
     ) -> list[ORMFile]:
 
         return await self.file_repo.get_list(
@@ -258,6 +266,8 @@ class LibraryService:
             is_favorite=is_favorite,
             tags=tags,
             text=text,
+            names=names,
+            descriptions=descriptions,
         )
 
     async def get_library_tree(self, user_id: UUID) -> list[LibraryTreeNode]:

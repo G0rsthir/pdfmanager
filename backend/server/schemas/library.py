@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 class ListFilesQueryParams(BaseModel):
     is_favorite: bool | None = None
     tags: list[str] | None = None
+    names: list[str] | None = None
+    descriptions: list[str] | None = None
     text: list[str] | None = None
 
 
@@ -22,6 +24,14 @@ class CreateCollectionRequest(BaseModel):
 class UpdateCollectionRequest(BaseModel):
     model_config = ConfigDict(str_max_length=255, str_min_length=1)
 
+    name: str
+    parent_id: UUID | None = None
+
+
+class CollectionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
     name: str
     parent_id: UUID | None = None
 

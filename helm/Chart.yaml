@@ -14,4 +14,4 @@ version: 0.1.0
 # It is recommended to use it with quotes.
 appVersion: "latest"
 
-icon: https://raw.githubusercontent.com/G0rsthir/pdfmanager/main/frontend/public/app.ico
+icon: https://raw.githubusercontent.com/g0rsthir/pdfmanager/master/frontend/public/app.ico

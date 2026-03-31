@@ -144,6 +144,11 @@ persistence:
   enabled: false
   accessMode: ReadWriteOnce
   size: 10Gi
+
+  # Override the entire storage volume definition.
+  # When set, takes precedence over enabled/PVC settings.
+  customVolume: {}
+
   # Additional volumes on the output Deployment definition.
   additionalVolumes: []
   # - name: foo

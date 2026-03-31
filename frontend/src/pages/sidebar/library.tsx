@@ -4,10 +4,12 @@ import {
   deleteCollectionMutation,
   deleteFolderMutation,
   getLibraryTreeOptions,
+  listCollectionsOptions,
   updateCollectionMutation,
   updateFolderMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { LibraryTreeNode } from "@/api/types.gen";
+import { parseAPIError } from "@/common/error";
 import { GenericIconButton } from "@/components/ui/button";
 import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
@@ -20,8 +22,8 @@ import {
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import { useGlobalStore } from "@/store";
-import { parseAPIError } from "@/utils/error";
 import {
+  Combobox,
   createTreeCollection,
   Field,
   Group,
@@ -31,9 +33,12 @@ import {
   Portal,
   Text,
   TreeView,
+  useCombobox,
   useDisclosure,
+  useFilter,
+  useListCollection,
 } from "@chakra-ui/react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuChevronRight, LuFolderOpen, LuLibrary } from "react-icons/lu";
 import { useNavigate, useParams } from "react-router";
@@ -149,7 +154,7 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
 type NodeType = "collection" | "folder";
 
 type NodeDialog = {
-  type: "create" | "rename" | "delete";
+  type: "create" | "edit" | "delete";
   nodeType: NodeType;
 } | null;
 
@@ -187,13 +192,13 @@ function TreeNodeActions({
           </Menu.Item>
         )}
         <Menu.Item
-          value="rename"
+          value="edit"
           onClick={(e) => {
             e.stopPropagation();
-            setDialog({ type: "rename", nodeType: node.entity_type });
+            setDialog({ type: "edit", nodeType: node.entity_type });
           }}
         >
-          Rename
+          Edit
         </Menu.Item>
         <Menu.Item
           value="delete"
@@ -213,11 +218,11 @@ function TreeNodeActions({
         onClose={onClose}
         parent_id={node.id}
       />
-      <RenameNodeDialog
+      <EditNodeDialog
         type={dialog?.nodeType ?? "collection"}
-        open={dialog?.type === "rename"}
+        open={dialog?.type === "edit"}
         onClose={onClose}
-        parent_id={node.parent_id}
+        defaaultValues={node}
         id={node.id}
       />
       <DeleteNodeDialog
@@ -318,6 +323,7 @@ function CreateNodeDialog(props: {
     Field: FormField,
     handleSubmit,
     state,
+    reset,
   } = useFormMutation({
     formOptions: {
       defaultValues: {
@@ -332,10 +338,15 @@ function CreateNodeDialog(props: {
     onSuccess: onClose,
   });
 
+  const handleClose = useCallback(() => {
+    reset();
+    onClose();
+  }, [onClose, reset]);
+
   return (
     <FormModal
       open={open}
-      close={onClose}
+      close={handleClose}
       title={`New ${label}`}
       onSubmit={() => handleSubmit()}
       confirmBtnText="Create"
@@ -361,14 +372,109 @@ function CreateNodeDialog(props: {
   );
 }
 
-function RenameNodeDialog(props: {
+interface CollectionSelectProps {
+  onValueChange: (values?: string) => void;
+  defaultValue?: string;
+  onBlur: () => void;
+  required?: boolean;
+}
+
+export function CollectionSelect(props: CollectionSelectProps) {
+  const { onValueChange, defaultValue, required, onBlur } = props;
+
+  const hydrated = useRef(false);
+
+  const { contains } = useFilter({ sensitivity: "base" });
+
+  const { collection, filter, set } = useListCollection<{
+    label: string;
+    value: string;
+  }>({
+    initialItems: [],
+    filter: contains,
+  });
+
+  const combobox = useCombobox({
+    collection,
+    onInputValueChange: (e) =>
+      filter(
+        e.reason === "item-select" || e.reason === undefined
+          ? ""
+          : e.inputValue,
+      ),
+    onValueChange: ({ value }) => onValueChange(value[0] || ""),
+    openOnClick: true,
+    defaultValue: defaultValue ? [defaultValue] : [],
+    onInteractOutside: () => onBlur(),
+    required: required,
+  });
+
+  const query = useAPIQuery({
+    ...listCollectionsOptions(),
+  });
+
+  useEffect(() => {
+    if (query.isSuccess) {
+      set(
+        query.data.map((item) => ({
+          label: item.name,
+          value: item.id,
+        })),
+      );
+    }
+  }, [query.data, query.isSuccess, set]);
+
+  useEffect(() => {
+    if (combobox.value.length && collection.size && !hydrated.current) {
+      combobox.syncSelectedItems();
+      hydrated.current = true;
+    }
+  }, [combobox, collection.size]);
+
+  return (
+    <Combobox.RootProvider value={combobox}>
+      <Combobox.Label>Collection</Combobox.Label>
+      <Combobox.Control>
+        <Combobox.Input placeholder="Type to search" />
+        <Combobox.IndicatorGroup>
+          <Combobox.ClearTrigger />
+          <Combobox.Trigger />
+        </Combobox.IndicatorGroup>
+      </Combobox.Control>
+      <Portal>
+        <Combobox.Positioner>
+          <Combobox.Content maxH="300px" overflowY="auto">
+            <Combobox.Empty>No items found</Combobox.Empty>
+            {collection.items.map((item) => (
+              <Combobox.Item item={item} key={item.value}>
+                {item.label}
+                <Combobox.ItemIndicator />
+              </Combobox.Item>
+            ))}
+          </Combobox.Content>
+        </Combobox.Positioner>
+      </Portal>
+    </Combobox.RootProvider>
+  );
+}
+
+function EditNodeDialog(props: {
   type: NodeType;
   open: boolean;
   onClose: () => void;
-  parent_id?: string | null;
+  defaaultValues: {
+    parent_id?: string | null;
+    name: string;
+  };
   id: string;
 }) {
-  const { type, open, onClose, parent_id, id } = props;
+  const {
+    type,
+    open,
+    onClose,
+    defaaultValues: { parent_id, name },
+    id,
+  } = props;
 
   const label = nodeLabel(type);
 
@@ -376,10 +482,11 @@ function RenameNodeDialog(props: {
     Field: FormField,
     handleSubmit,
     state,
+    reset,
   } = useFormMutation({
     formOptions: {
       defaultValues: {
-        name: "",
+        name: name,
         parent_id: parent_id,
       },
     },
@@ -390,16 +497,24 @@ function RenameNodeDialog(props: {
     onSuccess: onClose,
   });
 
+  const handleClose = useCallback(() => {
+    reset();
+    onClose();
+  }, [onClose, reset]);
+
   return (
     <FormModal
       open={open}
-      close={onClose}
-      title={`Rename ${label}`}
+      close={handleClose}
+      title={`Edit ${label}`}
       onSubmit={() => handleSubmit()}
       confirmBtnText="Update"
     >
       <FormField
         name="name"
+        validators={{
+          onChange: ({ value }) => (!value ? "Name is required" : undefined),
+        }}
         children={({ state, handleChange, handleBlur }) => (
           <Field.Root invalid={!state.meta.isValid} required>
             <Field.Label>
@@ -411,6 +526,19 @@ function RenameNodeDialog(props: {
               onBlur={handleBlur}
             />
             <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
+          </Field.Root>
+        )}
+      />
+      <FormField
+        name="parent_id"
+        children={({ state: fieldState, handleChange, handleBlur }) => (
+          <Field.Root invalid={!fieldState.meta.isValid} required>
+            <CollectionSelect
+              defaultValue={fieldState.value ?? ""}
+              onValueChange={handleChange}
+              onBlur={handleBlur}
+            />
+            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>
         )}
       />

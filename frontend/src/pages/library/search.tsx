@@ -26,13 +26,15 @@ import { CardEmpty } from "./shared/common";
 import { FavoriteButton, FileCardActions } from "./shared/file";
 import { toFileUrl } from "./shared/path";
 
-type SearchParamKeys = "tag" | "text";
+type SearchParamKeys = "tag" | "text" | "name" | "description";
 
 type SearchParamDef = Record<SearchParamKeys, { type: "array" }>;
 
 const searchParamDef: SearchParamDef = {
   tag: { type: "array" },
   text: { type: "array" },
+  name: { type: "array" },
+  description: { type: "array" },
 };
 
 function useLibrarySearchParams() {
@@ -87,6 +89,14 @@ function SearchView({ tags }: { tags: TagResponse[] }) {
         label: "Tag",
         values: tags.map((item) => item.name),
       },
+      name: {
+        label: "Name",
+        values: [],
+      },
+      description: {
+        label: "Description",
+        values: [],
+      },
     }),
     [tags],
   );
@@ -128,6 +138,8 @@ function SearchQuery(props: SearchQueryProps) {
       query: {
         tags: searchParams.tag,
         text: searchParams.text,
+        names: searchParams.name,
+        descriptions: searchParams.description,
       },
     }),
   });

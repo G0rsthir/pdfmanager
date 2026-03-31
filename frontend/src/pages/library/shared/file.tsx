@@ -5,6 +5,7 @@ import {
   updateFileMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { FileResponse, TagResponse } from "@/api/types.gen";
+import { parseAPIError } from "@/common/error";
 import { GenericIconButton } from "@/components/ui/button";
 import { FormError } from "@/components/ui/error";
 import { FormModal } from "@/components/ui/form/modal";
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/toaster";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
-import { parseAPIError } from "@/utils/error";
 import {
   Badge,
   Card,
@@ -36,7 +36,7 @@ import {
   useListCollection,
   useTagsInput,
 } from "@chakra-ui/react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuFileText, LuStar } from "react-icons/lu";
 import { NavLink } from "react-router";
@@ -114,7 +114,7 @@ export function FileTagsInput(props: FileTagsInputProps) {
           Press Enter or Return to add tag
         </Span>
         <Combobox.Positioner>
-          <Combobox.Content>
+          <Combobox.Content maxH="300px" overflowY="auto">
             {collection.items.map((item) => (
               <Combobox.Item item={item} key={item}>
                 <Combobox.ItemText>{item}</Combobox.ItemText>
@@ -200,7 +200,7 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
       </Combobox.Control>
       <Portal>
         <Combobox.Positioner>
-          <Combobox.Content>
+          <Combobox.Content maxH="300px" overflowY="auto">
             <Combobox.Empty>No items found</Combobox.Empty>
             {collection.items.map((item) => (
               <Combobox.Item item={item} key={item.value}>
@@ -411,6 +411,7 @@ function EditFileDialog(props: {
     Field: FormField,
     handleSubmit,
     state,
+    reset,
   } = useFormMutation({
     formOptions: {
       defaultValues: {
@@ -426,10 +427,15 @@ function EditFileDialog(props: {
     onSuccess: onClose,
   });
 
+  const handleClose = useCallback(() => {
+    reset();
+    onClose();
+  }, [onClose, reset]);
+
   return (
     <FormModal
       open={open}
-      close={onClose}
+      close={handleClose}
       title="Edit file"
       onSubmit={() => handleSubmit()}
       confirmBtnText="Update"

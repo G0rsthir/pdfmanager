@@ -22,6 +22,7 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
+import { useCallback } from "react";
 import { LuFileText, LuHardDriveUpload, LuUpload } from "react-icons/lu";
 import { useParams } from "react-router";
 import { CardEmpty } from "./shared/common";
@@ -127,13 +128,15 @@ function UploadFileDialog(props: {
     onSuccess: onClose,
   });
 
+  const handleClose = useCallback(() => {
+    reset();
+    onClose();
+  }, [onClose, reset]);
+
   return (
     <FormModal
       open={open}
-      close={() => {
-        reset();
-        onClose();
-      }}
+      close={handleClose}
       title="Upload file"
       onSubmit={() => handleSubmit()}
       confirmBtnText="Upload"

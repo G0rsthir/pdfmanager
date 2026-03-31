@@ -33,7 +33,7 @@ export function Layout() {
           <UserProfileHeader />
         </Stack>
       </Stack>
-      <Box as="main" flex="1">
+      <Box as="main" flex="1" overflowY="auto" h="100vh">
         <Outlet />
       </Box>
     </Flex>

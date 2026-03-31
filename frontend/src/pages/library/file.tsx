@@ -1,11 +1,11 @@
 import { getFileDetailsOptions } from "@/api/@tanstack/react-query.gen";
 import { client } from "@/api/client.gen";
 import { patchFileState } from "@/api/sdk.gen";
+import { parseAPIError } from "@/common/error";
 import { QueryView } from "@/components/ui/feedback";
 import { ReactPDFViewer } from "@/components/ui/pdf";
 import { showErrorNotification } from "@/components/ui/toaster";
 import { useAPIQuery } from "@/hooks/query";
-import { parseAPIError } from "@/utils/error";
 import { useCallback } from "react";
 import { useParams } from "react-router";
 

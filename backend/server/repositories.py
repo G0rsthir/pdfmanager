@@ -188,6 +188,8 @@ class FileRepository:
         is_favorite: bool | None = None,
         tags: list[str] | None = None,
         text: list[str] | None = None,
+        names: list[str] | None = None,
+        descriptions: list[str] | None = None,
     ):
         stmt = select(models.ORMFile).where(models.ORMFile.user_id == user_id)
 
@@ -205,6 +207,16 @@ class FileRepository:
             for term in text:
                 pattern = f"%{term}%"
                 stmt = stmt.where(models.ORMFile.name.ilike(pattern) | models.ORMFile.description.ilike(pattern))
+
+        if names:
+            for name in names:
+                pattern = f"%{name}%"
+                stmt = stmt.where(models.ORMFile.name.ilike(pattern))
+
+        if descriptions:
+            for description in descriptions:
+                pattern = f"%{description}%"
+                stmt = stmt.where(models.ORMFile.description.ilike(pattern))
 
         records = await self.session.scalars(stmt)
         return list(records.all())
