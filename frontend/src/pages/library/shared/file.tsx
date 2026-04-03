@@ -442,17 +442,17 @@ function EditFileDialog(props: {
     >
       <FormField
         name="name"
-        children={({ state, handleChange, handleBlur }) => (
-          <Field.Root invalid={!state.meta.isValid} required>
+        children={({ state: fieldState, handleChange, handleBlur }) => (
+          <Field.Root invalid={!fieldState.meta.isValid} required>
             <Field.Label>
               Name <Field.RequiredIndicator />
             </Field.Label>
             <Input
-              value={state.value}
+              value={fieldState.value}
               onChange={(e) => handleChange(e.target.value)}
               onBlur={handleBlur}
             />
-            <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
+            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>
         )}
       />

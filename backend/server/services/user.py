@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import SecretStr
 
 from server.const import AuthProviderTypesEnum, RolesEnum
@@ -9,7 +11,9 @@ from server.security.password import BcryptPasswordHasher
 
 
 def validate_passwords(password: tuple[str, SecretStr], confirm: tuple[str, SecretStr]):
-
+    """
+    Raising FieldError is API responsibility, but to simplify code and avoid duplication, we can raise it from service layer.
+    """
     password_field, password_value = password
     confirm_field, confirm_value = confirm
 
@@ -67,3 +71,38 @@ class UserService:
         )
 
         self.user_repo.create(new_user)
+
+    async def update_details(self, user_id: UUID, name: str | None = None, email: str | None = None):
+        user = await self.user_repo.get_required(user_id)
+
+        if name is not None:
+            user.name = name
+
+        if email is not None:
+            user_wth_same_email = await self.user_repo.get_by_email(email=email)
+            if user_wth_same_email and user_wth_same_email.id != user_id:
+                raise InvalidActionError(rule="email_already_in_use", msg="Email is already in use")
+            user.email = email
+
+    async def change_password(
+        self, user_id: UUID, password_old: SecretStr, password_new: SecretStr, password_confirm: SecretStr
+    ):
+        user = await self.user_repo.get_required(user_id)
+
+        if not user.can_authenticate_by_local_password():
+            raise InvalidActionError(
+                rule="account_does_not_support_local_authentication",
+                msg="User account is disabled or does not support local authentication",
+            )
+
+        is_valid = self.password_hasher.verify(password_old.get_secret_value(), user.password_hash)
+
+        if not is_valid:
+            raise InvalidActionError(rule="invalid_old_password", msg="Invalid current password")
+
+        validate_passwords(
+            password=("password_new", password_new),
+            confirm=("password_confirm", password_confirm),
+        )
+
+        user.password_hash = self.password_hasher.hash(password_new.get_secret_value())

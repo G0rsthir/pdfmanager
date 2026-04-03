@@ -85,6 +85,25 @@ export const zCreateFolderRequest = z.object({
 });
 
 /**
+ * CredentialsUpdate
+ *
+ * This model is used to change user credentials.
+ */
+export const zCredentialsUpdate = z.object({
+  password_old: z.string(),
+  password_new: z.string(),
+  password_confirm: z.string(),
+});
+
+/**
+ * DetailsUpdate
+ */
+export const zDetailsUpdate = z.object({
+  email: z.string(),
+  name: z.string(),
+});
+
+/**
  * LibraryTreeNode
  */
 export const zLibraryTreeNode = z.object({
@@ -603,6 +622,18 @@ export const zCreateSetupUserResponse = zUserResponse;
 
 export const zGetAppStatusData = z.object({
   body: z.never().optional(),
+  path: z.never().optional(),
+  query: z.never().optional(),
+});
+
+export const zUpdateUserAccountDetailsData = z.object({
+  body: zDetailsUpdate,
+  path: z.never().optional(),
+  query: z.never().optional(),
+});
+
+export const zUpdateUserPasswordData = z.object({
+  body: zCredentialsUpdate,
   path: z.never().optional(),
   query: z.never().optional(),
 });

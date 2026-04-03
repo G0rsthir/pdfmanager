@@ -14,6 +14,7 @@ import {
   showErrorNotification,
   showSuccessNotification,
 } from "@/components/ui/toaster";
+import { PaletteColors } from "@/config/theme";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import {
@@ -24,7 +25,6 @@ import {
   Field,
   Group,
   Heading,
-  Icon,
   Input,
   Menu,
   Portal,
@@ -36,7 +36,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuCheck, LuFile, LuTag } from "react-icons/lu";
-import { CardEmpty } from "./shared/common";
+import { Empty } from "./shared/common";
 import { SearchTag } from "./shared/file";
 
 export function TagsPage() {
@@ -57,14 +57,10 @@ function TagsView({ tags }: { tags: TagDetailResponse[] }) {
       </Heading>
 
       {tags.length === 0 && (
-        <CardEmpty>
-          <Icon size="xl" color="fg.muted">
-            <LuTag />
-          </Icon>
-          <Text color="fg.muted" textStyle="sm">
-            No tags available. Tags will appear here when you add them to files.
-          </Text>
-        </CardEmpty>
+        <Empty
+          icon={<LuTag />}
+          title="No tags available. Tags will appear here when you add them to files."
+        />
       )}
 
       <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} gap="4">
@@ -158,20 +154,7 @@ function TagActions({ tag }: { tag: TagDetailResponse }) {
   );
 }
 
-const TagColors = [
-  "black",
-  "blue",
-  "cyan",
-  "gray",
-  "green",
-  "orange",
-  "pink",
-  "purple",
-  "red",
-  "teal",
-  "white",
-  "yellow",
-];
+const tagColors = PaletteColors.map((color) => color.value);
 
 function EditTagDialog(props: {
   tag: TagDetailResponse;
@@ -214,7 +197,7 @@ function EditTagDialog(props: {
 
   const swatchesColors = useMemo(() => {
     const colors: Record<string, string> = {};
-    for (const color of TagColors) {
+    for (const color of tagColors) {
       colors[parseColor(color).toString("hex")] = color;
     }
     return colors;

@@ -19,13 +19,12 @@ import {
   Icon,
   Input,
   Stack,
-  Text,
   useDisclosure,
 } from "@chakra-ui/react";
 import { useCallback } from "react";
 import { LuFileText, LuHardDriveUpload, LuUpload } from "react-icons/lu";
 import { useParams } from "react-router";
-import { CardEmpty } from "./shared/common";
+import { Empty } from "./shared/common";
 import { FileCard, FileTagsInput } from "./shared/file";
 
 export function FolderPage() {
@@ -52,15 +51,11 @@ function FolderView({ folder }: { folder: FolderResponse }) {
         <UploadFileAction folder_id={folder.id} />
       </Group>
 
-      {folder.files?.length === 0 && (
-        <CardEmpty>
-          <Icon size="xl" color="fg.muted">
-            <LuFileText />
-          </Icon>
-          <Text color="fg.muted" textStyle="sm">
-            No files yet. Upload a PDF to get started.
-          </Text>
-        </CardEmpty>
+      {folder.files?.length == 0 && (
+        <Empty
+          icon={<LuFileText />}
+          title="No files yet. Upload a PDF to get started."
+        />
       )}
 
       {folder.files?.map((file) => (

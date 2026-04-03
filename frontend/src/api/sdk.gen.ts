@@ -85,6 +85,12 @@ import type {
   UpdateTagData,
   UpdateTagErrors,
   UpdateTagResponses,
+  UpdateUserAccountDetailsData,
+  UpdateUserAccountDetailsErrors,
+  UpdateUserAccountDetailsResponses,
+  UpdateUserPasswordData,
+  UpdateUserPasswordErrors,
+  UpdateUserPasswordResponses,
   UploadFileData,
   UploadFileErrors,
   UploadFileResponses,
@@ -130,6 +136,8 @@ import {
   zUpdateFileData,
   zUpdateFolderData,
   zUpdateTagData,
+  zUpdateUserAccountDetailsData,
+  zUpdateUserPasswordData,
   zUploadFileData,
 } from "./zod.gen";
 
@@ -702,3 +710,51 @@ export const getAppStatus = <ThrowOnError extends boolean = false>(
       ...options,
     },
   );
+
+/**
+ * Update Details
+ *
+ * Update current user's details.
+ */
+export const updateUserAccountDetails = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateUserAccountDetailsData, ThrowOnError>,
+) =>
+  (options.client ?? client).put<
+    UpdateUserAccountDetailsResponses,
+    UpdateUserAccountDetailsErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await zUpdateUserAccountDetailsData.parseAsync(data),
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/account/details",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Update Password
+ *
+ * Update current user's password.
+ */
+export const updateUserPassword = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateUserPasswordData, ThrowOnError>,
+) =>
+  (options.client ?? client).put<
+    UpdateUserPasswordResponses,
+    UpdateUserPasswordErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await zUpdateUserPasswordData.parseAsync(data),
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/account/password",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });

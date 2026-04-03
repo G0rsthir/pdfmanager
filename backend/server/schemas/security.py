@@ -47,6 +47,18 @@ class Credentials(BaseModel):
     password: SecretStr
 
 
+class CredentialsUpdate(BaseModel):
+    """
+    This model is used to change user credentials.
+    """
+
+    model_config = ConfigDict(str_max_length=255, str_min_length=1)
+
+    password_old: SecretStr
+    password_new: SecretStr
+    password_confirm: SecretStr
+
+
 class Cookie(BaseModel):
     """
     An HTTP cookie

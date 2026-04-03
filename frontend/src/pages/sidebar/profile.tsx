@@ -10,6 +10,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { LuSettings } from "react-icons/lu";
+import { Link } from "react-router";
 
 export function UserProfileHeader() {
   const { session, logout } = useAuth();
@@ -38,6 +39,9 @@ export function UserProfileHeader() {
         <Portal>
           <Menu.Positioner>
             <Menu.Content>
+              <Menu.Item value="account" asChild>
+                <Link to="/account">Account</Link>
+              </Menu.Item>
               <Menu.Item
                 value="logout"
                 color="fg.error"

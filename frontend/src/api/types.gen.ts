@@ -173,6 +173,40 @@ export type CreateFolderRequest = {
 };
 
 /**
+ * CredentialsUpdate
+ *
+ * This model is used to change user credentials.
+ */
+export type CredentialsUpdate = {
+  /**
+   * Password Old
+   */
+  password_old: string;
+  /**
+   * Password New
+   */
+  password_new: string;
+  /**
+   * Password Confirm
+   */
+  password_confirm: string;
+};
+
+/**
+ * DetailsUpdate
+ */
+export type DetailsUpdate = {
+  /**
+   * Email
+   */
+  email: string;
+  /**
+   * Name
+   */
+  name: string;
+};
+
+/**
  * FileResponse
  */
 export type FileResponse = {
@@ -1386,6 +1420,54 @@ export type GetAppStatusData = {
 };
 
 export type GetAppStatusResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type UpdateUserAccountDetailsData = {
+  body: DetailsUpdate;
+  path?: never;
+  query?: never;
+  url: "/api/v1/account/details";
+};
+
+export type UpdateUserAccountDetailsErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type UpdateUserAccountDetailsError =
+  UpdateUserAccountDetailsErrors[keyof UpdateUserAccountDetailsErrors];
+
+export type UpdateUserAccountDetailsResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type UpdateUserPasswordData = {
+  body: CredentialsUpdate;
+  path?: never;
+  query?: never;
+  url: "/api/v1/account/password";
+};
+
+export type UpdateUserPasswordErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type UpdateUserPasswordError =
+  UpdateUserPasswordErrors[keyof UpdateUserPasswordErrors];
+
+export type UpdateUserPasswordResponses = {
   /**
    * Successful Response
    */

@@ -1,7 +1,12 @@
 import { useGlobalStore } from "@/store";
 import { useShallow } from "zustand/shallow";
 
-import { loadSession, logout, signinWithPassword } from "./tokens";
+import {
+  loadSession,
+  logout,
+  refreshSession,
+  signinWithPassword,
+} from "./tokens";
 
 export function useAuth() {
   const state = useGlobalStore(
@@ -14,6 +19,7 @@ export function useAuth() {
   return {
     ...state,
     signinWithPassword,
+    refreshSession,
     loadSession,
     logout,
   };

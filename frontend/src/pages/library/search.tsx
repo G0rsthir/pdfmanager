@@ -15,14 +15,13 @@ import {
   Group,
   Heading,
   Highlight,
-  Icon,
   Stack,
   Text,
 } from "@chakra-ui/react";
 import { useCallback, useMemo } from "react";
 import { LuCompass, LuFileText, LuSearch } from "react-icons/lu";
 import { NavLink } from "react-router";
-import { CardEmpty } from "./shared/common";
+import { Empty } from "./shared/common";
 import { FavoriteButton, FileCardActions } from "./shared/file";
 import { toFileUrl } from "./shared/path";
 
@@ -109,16 +108,11 @@ function SearchView({ tags }: { tags: TagResponse[] }) {
 
       <SearchBar keys={searchkeys} value={tokens} onSearch={setTokens} />
 
-      {tokens.length === 0 && (
-        <CardEmpty>
-          <Icon size="xl" color="fg.muted">
-            <LuCompass />
-          </Icon>
-          <Text color="fg.muted" textStyle="sm">
-            Use the search bar above to find files by name, tag, or other
-            filters.
-          </Text>
-        </CardEmpty>
+      {tokens.length == 0 && (
+        <Empty
+          icon={<LuCompass />}
+          title="Use the search bar above to find files by name, tag, or other filters."
+        />
       )}
 
       {tokens.length > 0 && <SearchQuery searchParams={searchParams} />}
@@ -161,14 +155,10 @@ function SearchResults(props: SearchResultsProps) {
 
   if (files.length === 0) {
     return (
-      <CardEmpty>
-        <Icon size="xl" color="fg.muted">
-          <LuSearch />
-        </Icon>
-        <Text color="fg.muted" textStyle="sm">
-          No files match your search. Try adjusting your filters.
-        </Text>
-      </CardEmpty>
+      <Empty
+        icon={<LuSearch />}
+        title="No files match your search. Try adjusting your filters."
+      />
     );
   }
 

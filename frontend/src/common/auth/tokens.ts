@@ -72,6 +72,11 @@ export async function deleteUserSession() {
   return res.data;
 }
 
+export async function refreshSession() {
+  const res = await getUserSession();
+  useGlobalStore.getState().updateSession(res.data);
+}
+
 /**
  * Should be called once on the initial app load
  */

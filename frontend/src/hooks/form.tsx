@@ -14,6 +14,7 @@ export function useFormMutation<
   onMutate,
   successMessage,
   onSuccess,
+  resetForm = true,
 }: {
   formOptions: { defaultValues: TFormValues } & Record<string, unknown>;
   mutationOptions: () => UseMutationOptions<
@@ -24,6 +25,7 @@ export function useFormMutation<
   onMutate: (value: TFormValues) => TMutationVariables;
   successMessage?: string;
   onSuccess?: () => void;
+  resetForm?: boolean;
 }) {
   const form = useForm({
     ...formOptions,
@@ -36,7 +38,7 @@ export function useFormMutation<
     ...mutationOptions(),
     onSuccess() {
       if (successMessage) showSuccessNotification(successMessage);
-      form.reset();
+      if (resetForm) form.reset();
       onSuccess?.();
     },
     setErrorMap: form.setErrorMap,

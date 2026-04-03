@@ -2,9 +2,9 @@ import { listFilesOptions } from "@/api/@tanstack/react-query.gen";
 import type { FileResponse } from "@/api/types.gen";
 import { QueryView } from "@/components/ui/feedback";
 import { useAPIQuery } from "@/hooks/query";
-import { Heading, Icon, Stack, Text } from "@chakra-ui/react";
+import { Heading, Stack } from "@chakra-ui/react";
 import { LuStar } from "react-icons/lu";
-import { CardEmpty } from "./shared/common";
+import { Empty } from "./shared/common";
 import { FileCard } from "./shared/file";
 
 export function FavoritesPage() {
@@ -30,15 +30,11 @@ function FavoriteFileView({ files }: { files: FileResponse[] }) {
         Favorites
       </Heading>
 
-      {files.length === 0 && (
-        <CardEmpty>
-          <Icon size="xl" color="fg.muted">
-            <LuStar />
-          </Icon>
-          <Text color="fg.muted" textStyle="sm">
-            No favorites yet. Star a file to quickly find it here.
-          </Text>
-        </CardEmpty>
+      {files.length == 0 && (
+        <Empty
+          icon={<LuStar />}
+          title="No favorites yet. Star a file to quickly find it here."
+        />
       )}
 
       {files.map((file) => (

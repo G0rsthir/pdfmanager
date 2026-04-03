@@ -36,6 +36,8 @@ import {
   updateFile,
   updateFolder,
   updateTag,
+  updateUserAccountDetails,
+  updateUserPassword,
   uploadFile,
 } from "../sdk.gen";
 import type {
@@ -96,6 +98,10 @@ import type {
   UpdateFolderError,
   UpdateTagData,
   UpdateTagError,
+  UpdateUserAccountDetailsData,
+  UpdateUserAccountDetailsError,
+  UpdateUserPasswordData,
+  UpdateUserPasswordError,
   UploadFileData,
   UploadFileError,
 } from "../types.gen";
@@ -870,3 +876,61 @@ export const getAppStatusOptions = (options?: Options<GetAppStatusData>) =>
     },
     queryKey: getAppStatusQueryKey(options),
   });
+
+/**
+ * Update Details
+ *
+ * Update current user's details.
+ */
+export const updateUserAccountDetailsMutation = (
+  options?: Partial<Options<UpdateUserAccountDetailsData>>,
+): UseMutationOptions<
+  unknown,
+  UpdateUserAccountDetailsError,
+  Options<UpdateUserAccountDetailsData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    UpdateUserAccountDetailsError,
+    Options<UpdateUserAccountDetailsData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await updateUserAccountDetails({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Update Password
+ *
+ * Update current user's password.
+ */
+export const updateUserPasswordMutation = (
+  options?: Partial<Options<UpdateUserPasswordData>>,
+): UseMutationOptions<
+  unknown,
+  UpdateUserPasswordError,
+  Options<UpdateUserPasswordData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    UpdateUserPasswordError,
+    Options<UpdateUserPasswordData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await updateUserPassword({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};

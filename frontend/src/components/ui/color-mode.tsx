@@ -1,8 +1,19 @@
 "use client";
 
+import { type PaletteColor } from "@/config/theme";
 import { useColorMode } from "@/hooks/theme";
 import type { IconButtonProps, SpanProps } from "@chakra-ui/react";
-import { ClientOnly, Skeleton, Span } from "@chakra-ui/react";
+import {
+  ClientOnly,
+  createListCollection,
+  HStack,
+  IconButton,
+  Portal,
+  Select,
+  Skeleton,
+  Span,
+  useSelectContext,
+} from "@chakra-ui/react";
 import type { ThemeProviderProps } from "next-themes";
 import { ThemeProvider } from "next-themes";
 import * as React from "react";
@@ -40,7 +51,7 @@ export const ColorModeButton = React.forwardRef<
           },
         }}
       >
-        {colorMode === "dark" ? <LuMoon /> : <LuSun />}
+        {colorMode !== "dark" ? <LuMoon /> : <LuSun />}
       </GenericIconButton>
     </ClientOnly>
   );
@@ -77,3 +88,62 @@ export const DarkMode = React.forwardRef<HTMLSpanElement, SpanProps>(
     );
   },
 );
+
+const SelectTrigger = () => {
+  const select = useSelectContext();
+  const items = select.selectedItems as PaletteColor[];
+
+  return (
+    <IconButton
+      size="md"
+      colorPalette={items[0]?.value ?? "blue"}
+      {...select.getTriggerProps()}
+    ></IconButton>
+  );
+};
+
+interface ColorPaletteSelectProps {
+  onValueChange: (value: string) => void;
+  defaultValue: string;
+  colors: PaletteColor[];
+}
+
+export function ColorPaletteSelect(props: ColorPaletteSelectProps) {
+  const { onValueChange, defaultValue, colors: paletteColors } = props;
+
+  const colors = React.useMemo(() => {
+    return createListCollection({
+      items: paletteColors,
+    });
+  }, [paletteColors]);
+
+  return (
+    <Select.Root
+      positioning={{ sameWidth: false, placement: "bottom" }}
+      collection={colors}
+      size="sm"
+      defaultValue={[defaultValue]}
+      onValueChange={(e) => onValueChange(e.value[0])}
+    >
+      <Select.HiddenSelect />
+      <Select.Control>
+        <SelectTrigger />
+      </Select.Control>
+      <Portal>
+        <Select.Positioner>
+          <Select.Content maxHeight="300px" minWidth="150px">
+            {colors.items.map((color) => (
+              <Select.Item item={color} key={color.value}>
+                <HStack>
+                  <IconButton size="xs" colorPalette={color.value}></IconButton>
+                  {color.label}
+                </HStack>
+                <Select.ItemIndicator />
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
+  );
+}

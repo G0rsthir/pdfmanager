@@ -1,5 +1,6 @@
 import { StateLoader } from "@/common/state/loader";
 import { Block } from "@/components/ui/display";
+import { CurrentUserAccountPage } from "@/pages/account";
 import { SessionExpiredPage } from "@/pages/auth/expired";
 import { LoginPage } from "@/pages/auth/login";
 import { Error404Page } from "@/pages/error/404";
@@ -71,6 +72,10 @@ const router = createBrowserRouter([
               {
                 path: "search",
                 element: <SearchPage />,
+              },
+              {
+                path: "account",
+                element: <CurrentUserAccountPage />,
               },
             ],
           },

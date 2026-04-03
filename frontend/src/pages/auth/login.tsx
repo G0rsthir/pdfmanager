@@ -56,35 +56,47 @@ export function LoginPage() {
                 </Heading>
                 <FormField
                   name="username"
-                  children={({ state, handleChange, handleBlur }) => (
-                    <Field.Root invalid={!state.meta.isValid} required>
+                  children={({
+                    state: fieldState,
+                    handleChange,
+                    handleBlur,
+                  }) => (
+                    <Field.Root invalid={!fieldState.meta.isValid} required>
                       <Field.Label>
                         Email <Field.RequiredIndicator />
                       </Field.Label>
                       <Input
                         placeholder="Enter your email"
-                        value={state.value}
+                        value={fieldState.value}
                         onChange={(e) => handleChange(e.target.value)}
                         onBlur={handleBlur}
                       />
-                      <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
+                      <Field.ErrorText>
+                        {fieldState.meta.errors}
+                      </Field.ErrorText>
                     </Field.Root>
                   )}
                 />
                 <FormField
                   name="password"
-                  children={({ state, handleChange, handleBlur }) => (
-                    <Field.Root required invalid={!state.meta.isValid}>
+                  children={({
+                    state: fieldState,
+                    handleChange,
+                    handleBlur,
+                  }) => (
+                    <Field.Root required invalid={!fieldState.meta.isValid}>
                       <Field.Label>
                         Password <Field.RequiredIndicator />
                       </Field.Label>
                       <PasswordInput
                         placeholder="********"
-                        value={state.value}
+                        value={fieldState.value}
                         onChange={(e) => handleChange(e.target.value)}
                         onBlur={handleBlur}
                       />
-                      <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
+                      <Field.ErrorText>
+                        {fieldState.meta.errors}
+                      </Field.ErrorText>
                     </Field.Root>
                   )}
                 />

@@ -27,7 +27,7 @@ class TagEnum(StrEnum):
     SETTINGS = "settings"
     SETUP = "setup"
     LOGS = "logs"
-    PROFILE = "profile"
+    ACCOUNT = "account"
     GENERAL = "general"
 
 

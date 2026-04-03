@@ -1,13 +1,19 @@
-import { Card, Stack } from "@chakra-ui/react";
+import { EmptyState, VStack } from "@chakra-ui/react";
 
-export function CardEmpty({ children }: { children: React.ReactNode }) {
+export function Empty(props: {
+  title: React.ReactNode;
+  icon: React.ReactNode;
+}) {
+  const { title, icon } = props;
+
   return (
-    <Card.Root variant="subtle">
-      <Card.Body>
-        <Stack align="center" gap={2} py={6}>
-          {children}
-        </Stack>
-      </Card.Body>
-    </Card.Root>
+    <EmptyState.Root bg="bg.subtle">
+      <EmptyState.Content>
+        <EmptyState.Indicator>{icon}</EmptyState.Indicator>
+        <VStack textAlign="center">
+          <EmptyState.Title fontWeight="normal">{title}</EmptyState.Title>
+        </VStack>
+      </EmptyState.Content>
+    </EmptyState.Root>
   );
 }

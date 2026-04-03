@@ -1,27 +1,10 @@
 import react from "@vitejs/plugin-react";
-import fs from "node:fs";
-import { createRequire } from "node:module";
-import path from "node:path";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-function copyPdfAssets() {
-  return {
-    name: "copy-pdf-assets",
-    buildStart() {
-      const require = createRequire(import.meta.url);
-      const pdfjsDistPath = path.dirname(
-        require.resolve("pdfjs-dist/package.json"),
-      );
-      const pdfWorkerPath = path.join(pdfjsDistPath, "build", "pdf.worker.mjs");
-      fs.cpSync(pdfWorkerPath, "./public/pdf.worker.mjs");
-    },
-  };
-}
-
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tsconfigPaths(), copyPdfAssets()],
+  plugins: [react(), tsconfigPaths()],
   server: {
     port: 5173,
     host: "0.0.0.0",

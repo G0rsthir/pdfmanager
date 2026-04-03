@@ -255,6 +255,49 @@ export const CreateFolderRequestSchema = {
   title: "CreateFolderRequest",
 } as const;
 
+export const CredentialsUpdateSchema = {
+  properties: {
+    password_old: {
+      type: "string",
+      format: "password",
+      title: "Password Old",
+      writeOnly: true,
+    },
+    password_new: {
+      type: "string",
+      format: "password",
+      title: "Password New",
+      writeOnly: true,
+    },
+    password_confirm: {
+      type: "string",
+      format: "password",
+      title: "Password Confirm",
+      writeOnly: true,
+    },
+  },
+  type: "object",
+  required: ["password_old", "password_new", "password_confirm"],
+  title: "CredentialsUpdate",
+  description: "This model is used to change user credentials.",
+} as const;
+
+export const DetailsUpdateSchema = {
+  properties: {
+    email: {
+      type: "string",
+      title: "Email",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["email", "name"],
+  title: "DetailsUpdate",
+} as const;
+
 export const FileResponseSchema = {
   properties: {
     id: {
