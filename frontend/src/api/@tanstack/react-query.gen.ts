@@ -11,11 +11,15 @@ import {
   createAuthToken,
   createCollection,
   createFolder,
+  createOidcAuthProvider,
   createSetupUser,
+  createUser,
   deleteCollection,
   deleteFile,
   deleteFolder,
+  deleteOidcAuthProvider,
   deleteTag,
+  deleteUser,
   getAppState,
   getAppStatus,
   getCurrentSession,
@@ -23,19 +27,29 @@ import {
   getFileDetails,
   getFolder,
   getLibraryTree,
+  getOidcAuthProvider,
+  listAuthProviders,
   listCollections,
   listFiles,
   listFolders,
+  listOidcAuthProviders,
+  listRoles,
   listTags,
   listUncategorizedFiles,
+  listUsers,
+  oidcCallback,
+  oidcLogin,
   type Options,
   patchFileState,
   refreshAuthToken,
+  resetUserPassword,
   revokeToken,
   updateCollection,
   updateFile,
   updateFolder,
+  updateOidcAuthProvider,
   updateTag,
+  updateUser,
   updateUserAccountDetails,
   updateUserPassword,
   uploadFile,
@@ -48,17 +62,25 @@ import type {
   CreateCollectionError,
   CreateFolderData,
   CreateFolderError,
+  CreateOidcAuthProviderData,
+  CreateOidcAuthProviderError,
   CreateSetupUserData,
   CreateSetupUserError,
   CreateSetupUserResponse,
+  CreateUserData,
+  CreateUserError,
   DeleteCollectionData,
   DeleteCollectionError,
   DeleteFileData,
   DeleteFileError,
   DeleteFolderData,
   DeleteFolderError,
+  DeleteOidcAuthProviderData,
+  DeleteOidcAuthProviderError,
   DeleteTagData,
   DeleteTagError,
+  DeleteUserData,
+  DeleteUserError,
   GetAppStateData,
   GetAppStateResponse,
   GetAppStatusData,
@@ -74,6 +96,11 @@ import type {
   GetFolderResponse,
   GetLibraryTreeData,
   GetLibraryTreeResponse,
+  GetOidcAuthProviderData,
+  GetOidcAuthProviderError,
+  GetOidcAuthProviderResponse,
+  ListAuthProvidersData,
+  ListAuthProvidersResponse,
   ListCollectionsData,
   ListCollectionsResponse,
   ListFilesData,
@@ -81,25 +108,42 @@ import type {
   ListFilesResponse,
   ListFoldersData,
   ListFoldersResponse,
+  ListOidcAuthProvidersData,
+  ListOidcAuthProvidersResponse,
+  ListRolesData,
+  ListRolesResponse,
   ListTagsData,
   ListTagsResponse,
   ListUncategorizedFilesData,
   ListUncategorizedFilesResponse,
+  ListUsersData,
+  ListUsersResponse,
+  OidcCallbackData,
+  OidcCallbackError,
+  OidcLoginData,
+  OidcLoginError,
   PatchFileStateData,
   PatchFileStateError,
   RefreshAuthTokenData,
   RefreshAuthTokenResponse,
+  ResetUserPasswordData,
+  ResetUserPasswordError,
   RevokeTokenData,
+  RevokeTokenResponse,
   UpdateCollectionData,
   UpdateCollectionError,
   UpdateFileData,
   UpdateFileError,
   UpdateFolderData,
   UpdateFolderError,
+  UpdateOidcAuthProviderData,
+  UpdateOidcAuthProviderError,
   UpdateTagData,
   UpdateTagError,
   UpdateUserAccountDetailsData,
   UpdateUserAccountDetailsError,
+  UpdateUserData,
+  UpdateUserError,
   UpdateUserPasswordData,
   UpdateUserPasswordError,
   UploadFileData,
@@ -183,9 +227,13 @@ export const getCurrentSessionOptions = (
  */
 export const revokeTokenMutation = (
   options?: Partial<Options<RevokeTokenData>>,
-): UseMutationOptions<unknown, DefaultError, Options<RevokeTokenData>> => {
+): UseMutationOptions<
+  RevokeTokenResponse,
+  DefaultError,
+  Options<RevokeTokenData>
+> => {
   const mutationOptions: UseMutationOptions<
-    unknown,
+    RevokeTokenResponse,
     DefaultError,
     Options<RevokeTokenData>
   > = {
@@ -258,6 +306,56 @@ export const refreshAuthTokenMutation = (
   };
   return mutationOptions;
 };
+
+export const oidcLoginQueryKey = (options: Options<OidcLoginData>) =>
+  createQueryKey("oidcLogin", options);
+
+/**
+ * Oidc Authorize
+ */
+export const oidcLoginOptions = (options: Options<OidcLoginData>) =>
+  queryOptions<
+    unknown,
+    OidcLoginError,
+    unknown,
+    ReturnType<typeof oidcLoginQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await oidcLogin({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: oidcLoginQueryKey(options),
+  });
+
+export const oidcCallbackQueryKey = (options: Options<OidcCallbackData>) =>
+  createQueryKey("oidcCallback", options);
+
+/**
+ * Oidc Callback
+ */
+export const oidcCallbackOptions = (options: Options<OidcCallbackData>) =>
+  queryOptions<
+    unknown,
+    OidcCallbackError,
+    unknown,
+    ReturnType<typeof oidcCallbackQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await oidcCallback({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: oidcCallbackQueryKey(options),
+  });
 
 export const listCollectionsQueryKey = (
   options?: Options<ListCollectionsData>,
@@ -925,6 +1023,317 @@ export const updateUserPasswordMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await updateUserPassword({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const listRolesQueryKey = (options?: Options<ListRolesData>) =>
+  createQueryKey("listRoles", options);
+
+/**
+ * List Roles
+ */
+export const listRolesOptions = (options?: Options<ListRolesData>) =>
+  queryOptions<
+    ListRolesResponse,
+    DefaultError,
+    ListRolesResponse,
+    ReturnType<typeof listRolesQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listRoles({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listRolesQueryKey(options),
+  });
+
+export const listUsersQueryKey = (options?: Options<ListUsersData>) =>
+  createQueryKey("listUsers", options);
+
+/**
+ * List Users
+ */
+export const listUsersOptions = (options?: Options<ListUsersData>) =>
+  queryOptions<
+    ListUsersResponse,
+    DefaultError,
+    ListUsersResponse,
+    ReturnType<typeof listUsersQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listUsers({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listUsersQueryKey(options),
+  });
+
+/**
+ * Create User
+ */
+export const createUserMutation = (
+  options?: Partial<Options<CreateUserData>>,
+): UseMutationOptions<unknown, CreateUserError, Options<CreateUserData>> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    CreateUserError,
+    Options<CreateUserData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await createUser({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Delete User
+ */
+export const deleteUserMutation = (
+  options?: Partial<Options<DeleteUserData>>,
+): UseMutationOptions<unknown, DeleteUserError, Options<DeleteUserData>> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    DeleteUserError,
+    Options<DeleteUserData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await deleteUser({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Update User
+ */
+export const updateUserMutation = (
+  options?: Partial<Options<UpdateUserData>>,
+): UseMutationOptions<unknown, UpdateUserError, Options<UpdateUserData>> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    UpdateUserError,
+    Options<UpdateUserData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await updateUser({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Reset User Password
+ */
+export const resetUserPasswordMutation = (
+  options?: Partial<Options<ResetUserPasswordData>>,
+): UseMutationOptions<
+  unknown,
+  ResetUserPasswordError,
+  Options<ResetUserPasswordData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    ResetUserPasswordError,
+    Options<ResetUserPasswordData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await resetUserPassword({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const listAuthProvidersQueryKey = (
+  options?: Options<ListAuthProvidersData>,
+) => createQueryKey("listAuthProviders", options);
+
+/**
+ * List Providers
+ */
+export const listAuthProvidersOptions = (
+  options?: Options<ListAuthProvidersData>,
+) =>
+  queryOptions<
+    ListAuthProvidersResponse,
+    DefaultError,
+    ListAuthProvidersResponse,
+    ReturnType<typeof listAuthProvidersQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listAuthProviders({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listAuthProvidersQueryKey(options),
+  });
+
+export const listOidcAuthProvidersQueryKey = (
+  options?: Options<ListOidcAuthProvidersData>,
+) => createQueryKey("listOidcAuthProviders", options);
+
+/**
+ * List Oidc Providers
+ */
+export const listOidcAuthProvidersOptions = (
+  options?: Options<ListOidcAuthProvidersData>,
+) =>
+  queryOptions<
+    ListOidcAuthProvidersResponse,
+    DefaultError,
+    ListOidcAuthProvidersResponse,
+    ReturnType<typeof listOidcAuthProvidersQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listOidcAuthProviders({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listOidcAuthProvidersQueryKey(options),
+  });
+
+/**
+ * Create Provider Oidc
+ */
+export const createOidcAuthProviderMutation = (
+  options?: Partial<Options<CreateOidcAuthProviderData>>,
+): UseMutationOptions<
+  unknown,
+  CreateOidcAuthProviderError,
+  Options<CreateOidcAuthProviderData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    CreateOidcAuthProviderError,
+    Options<CreateOidcAuthProviderData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await createOidcAuthProvider({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Delete Oidc Provider
+ */
+export const deleteOidcAuthProviderMutation = (
+  options?: Partial<Options<DeleteOidcAuthProviderData>>,
+): UseMutationOptions<
+  unknown,
+  DeleteOidcAuthProviderError,
+  Options<DeleteOidcAuthProviderData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    DeleteOidcAuthProviderError,
+    Options<DeleteOidcAuthProviderData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await deleteOidcAuthProvider({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const getOidcAuthProviderQueryKey = (
+  options: Options<GetOidcAuthProviderData>,
+) => createQueryKey("getOidcAuthProvider", options);
+
+/**
+ * Get Oidc Provider
+ */
+export const getOidcAuthProviderOptions = (
+  options: Options<GetOidcAuthProviderData>,
+) =>
+  queryOptions<
+    GetOidcAuthProviderResponse,
+    GetOidcAuthProviderError,
+    GetOidcAuthProviderResponse,
+    ReturnType<typeof getOidcAuthProviderQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getOidcAuthProvider({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getOidcAuthProviderQueryKey(options),
+  });
+
+/**
+ * Update Provider Oidc
+ */
+export const updateOidcAuthProviderMutation = (
+  options?: Partial<Options<UpdateOidcAuthProviderData>>,
+): UseMutationOptions<
+  unknown,
+  UpdateOidcAuthProviderError,
+  Options<UpdateOidcAuthProviderData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    UpdateOidcAuthProviderError,
+    Options<UpdateOidcAuthProviderData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await updateOidcAuthProvider({
         ...options,
         ...fnOptions,
         throwOnError: true,

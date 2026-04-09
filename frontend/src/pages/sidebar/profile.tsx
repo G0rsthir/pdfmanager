@@ -9,7 +9,7 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { LuSettings } from "react-icons/lu";
+import { LuGripVertical } from "react-icons/lu";
 import { Link } from "react-router";
 
 export function UserProfileHeader() {
@@ -33,7 +33,7 @@ export function UserProfileHeader() {
       <Menu.Root>
         <Menu.Trigger asChild>
           <GenericIconButton variant="ghost" size="xs" aria-label="User menu">
-            <LuSettings />
+            <LuGripVertical />
           </GenericIconButton>
         </Menu.Trigger>
         <Portal>

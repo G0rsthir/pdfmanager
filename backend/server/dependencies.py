@@ -22,10 +22,10 @@ from server.repositories import (
 from server.runtime import RuntimeContainer
 from server.security.loader import AUTH_TOKEN_URL
 from server.services.auth import AuthService
+from server.services.identity import IdentityService
 from server.services.library import LibraryService
 from server.services.storage import StorageService
 from server.services.token import TokenResponseService
-from server.services.user import UserService
 
 from .schemas.security import AccessSessionContext, RefreshSessionContext
 from .security.manager import AuthManager
@@ -87,12 +87,12 @@ def get_auth_service(
     )
 
 
-def get_user_service(
+def get_identity_service(
     user_repo: UserRepositoryDependency,
     auth_provider_repo: AuthProviderRepositoryDependency,
     role_repo: RoleRepositoryDependency,
-) -> UserService:
-    return UserService(
+) -> IdentityService:
+    return IdentityService(
         user_repo=user_repo,
         role_repo=role_repo,
         provider_repo=auth_provider_repo,
@@ -191,15 +191,16 @@ AuthServiceDependency = Annotated[
     AuthService,
     Depends(get_auth_service),
 ]
-UserServiceDependency = Annotated[
-    UserService,
-    Depends(get_user_service),
+IdentityServiceDependency = Annotated[
+    IdentityService,
+    Depends(get_identity_service),
 ]
 
 LibraryServiceDependency = Annotated[
     LibraryService,
     Depends(get_library_service),
 ]
+
 
 StorageServiceDependency = Annotated[
     StorageService,

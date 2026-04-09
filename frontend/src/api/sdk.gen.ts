@@ -23,9 +23,15 @@ import type {
   CreateFolderData,
   CreateFolderErrors,
   CreateFolderResponses,
+  CreateOidcAuthProviderData,
+  CreateOidcAuthProviderErrors,
+  CreateOidcAuthProviderResponses,
   CreateSetupUserData,
   CreateSetupUserErrors,
   CreateSetupUserResponses,
+  CreateUserData,
+  CreateUserErrors,
+  CreateUserResponses,
   DeleteCollectionData,
   DeleteCollectionErrors,
   DeleteCollectionResponses,
@@ -35,9 +41,15 @@ import type {
   DeleteFolderData,
   DeleteFolderErrors,
   DeleteFolderResponses,
+  DeleteOidcAuthProviderData,
+  DeleteOidcAuthProviderErrors,
+  DeleteOidcAuthProviderResponses,
   DeleteTagData,
   DeleteTagErrors,
   DeleteTagResponses,
+  DeleteUserData,
+  DeleteUserErrors,
+  DeleteUserResponses,
   GetAppStateData,
   GetAppStateResponses,
   GetAppStatusData,
@@ -55,6 +67,11 @@ import type {
   GetFolderResponses,
   GetLibraryTreeData,
   GetLibraryTreeResponses,
+  GetOidcAuthProviderData,
+  GetOidcAuthProviderErrors,
+  GetOidcAuthProviderResponses,
+  ListAuthProvidersData,
+  ListAuthProvidersResponses,
   ListCollectionsData,
   ListCollectionsResponses,
   ListFilesData,
@@ -62,15 +79,29 @@ import type {
   ListFilesResponses,
   ListFoldersData,
   ListFoldersResponses,
+  ListOidcAuthProvidersData,
+  ListOidcAuthProvidersResponses,
+  ListRolesData,
+  ListRolesResponses,
   ListTagsData,
   ListTagsResponses,
   ListUncategorizedFilesData,
   ListUncategorizedFilesResponses,
+  ListUsersData,
+  ListUsersResponses,
+  OidcCallbackData,
+  OidcCallbackErrors,
+  OidcLoginData,
+  OidcLoginErrors,
+  OidcLoginResponses,
   PatchFileStateData,
   PatchFileStateErrors,
   PatchFileStateResponses,
   RefreshAuthTokenData,
   RefreshAuthTokenResponses,
+  ResetUserPasswordData,
+  ResetUserPasswordErrors,
+  ResetUserPasswordResponses,
   RevokeTokenData,
   RevokeTokenResponses,
   UpdateCollectionData,
@@ -82,64 +113,25 @@ import type {
   UpdateFolderData,
   UpdateFolderErrors,
   UpdateFolderResponses,
+  UpdateOidcAuthProviderData,
+  UpdateOidcAuthProviderErrors,
+  UpdateOidcAuthProviderResponses,
   UpdateTagData,
   UpdateTagErrors,
   UpdateTagResponses,
   UpdateUserAccountDetailsData,
   UpdateUserAccountDetailsErrors,
   UpdateUserAccountDetailsResponses,
+  UpdateUserData,
+  UpdateUserErrors,
   UpdateUserPasswordData,
   UpdateUserPasswordErrors,
   UpdateUserPasswordResponses,
+  UpdateUserResponses,
   UploadFileData,
   UploadFileErrors,
   UploadFileResponses,
 } from "./types.gen";
-import {
-  zCreateAuthTokenData,
-  zCreateAuthTokenResponse,
-  zCreateCollectionData,
-  zCreateFolderData,
-  zCreateSetupUserData,
-  zCreateSetupUserResponse,
-  zDeleteCollectionData,
-  zDeleteFileData,
-  zDeleteFolderData,
-  zDeleteTagData,
-  zGetAppStateData,
-  zGetAppStateResponse,
-  zGetAppStatusData,
-  zGetCurrentSessionData,
-  zGetCurrentSessionResponse,
-  zGetFileData,
-  zGetFileDetailsData,
-  zGetFileDetailsResponse,
-  zGetFolderData,
-  zGetFolderResponse,
-  zGetLibraryTreeData,
-  zGetLibraryTreeResponse,
-  zListCollectionsData,
-  zListCollectionsResponse,
-  zListFilesData,
-  zListFilesResponse,
-  zListFoldersData,
-  zListFoldersResponse,
-  zListTagsData,
-  zListTagsResponse,
-  zListUncategorizedFilesData,
-  zListUncategorizedFilesResponse,
-  zPatchFileStateData,
-  zRefreshAuthTokenData,
-  zRefreshAuthTokenResponse,
-  zRevokeTokenData,
-  zUpdateCollectionData,
-  zUpdateFileData,
-  zUpdateFolderData,
-  zUpdateTagData,
-  zUpdateUserAccountDetailsData,
-  zUpdateUserPasswordData,
-  zUploadFileData,
-} from "./zod.gen";
 
 export type Options<
   TData extends TDataShape = TDataShape,
@@ -171,10 +163,6 @@ export const getCurrentSession = <ThrowOnError extends boolean = false>(
     unknown,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zGetCurrentSessionData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zGetCurrentSessionResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/auth/session",
     ...options,
@@ -193,7 +181,6 @@ export const revokeToken = <ThrowOnError extends boolean = false>(
     unknown,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zRevokeTokenData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/auth/token",
     ...options,
@@ -213,11 +200,7 @@ export const createAuthToken = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...urlSearchParamsBodySerializer,
-    requestValidator: async (data) =>
-      await zCreateAuthTokenData.parseAsync(data),
     responseTransformer: createAuthTokenResponseTransformer,
-    responseValidator: async (data) =>
-      await zCreateAuthTokenResponse.parseAsync(data),
     url: "/api/v1/auth/token",
     ...options,
     headers: {
@@ -239,13 +222,32 @@ export const refreshAuthToken = <ThrowOnError extends boolean = false>(
     unknown,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zRefreshAuthTokenData.parseAsync(data),
     responseTransformer: refreshAuthTokenResponseTransformer,
-    responseValidator: async (data) =>
-      await zRefreshAuthTokenResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/auth/refresh",
+    ...options,
+  });
+
+/**
+ * Oidc Authorize
+ */
+export const oidcLogin = <ThrowOnError extends boolean = false>(
+  options: Options<OidcLoginData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    OidcLoginResponses,
+    OidcLoginErrors,
+    ThrowOnError
+  >({ url: "/api/v1/auth/oidc/{id}", ...options });
+
+/**
+ * Oidc Callback
+ */
+export const oidcCallback = <ThrowOnError extends boolean = false>(
+  options: Options<OidcCallbackData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<unknown, OidcCallbackErrors, ThrowOnError>({
+    url: "/api/v1/auth/oidc/{id}/callback",
     ...options,
   });
 
@@ -260,10 +262,6 @@ export const listCollections = <ThrowOnError extends boolean = false>(
     unknown,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zListCollectionsData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zListCollectionsResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/collections",
     ...options,
@@ -280,8 +278,6 @@ export const createCollection = <ThrowOnError extends boolean = false>(
     CreateCollectionErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zCreateCollectionData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/collections",
     ...options,
@@ -302,8 +298,6 @@ export const deleteCollection = <ThrowOnError extends boolean = false>(
     DeleteCollectionErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zDeleteCollectionData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/collections/{id}",
     ...options,
@@ -320,8 +314,6 @@ export const updateCollection = <ThrowOnError extends boolean = false>(
     UpdateCollectionErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zUpdateCollectionData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/collections/{id}",
     ...options,
@@ -342,7 +334,6 @@ export const deleteFolder = <ThrowOnError extends boolean = false>(
     DeleteFolderErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zDeleteFolderData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/folders/{id}",
     ...options,
@@ -359,9 +350,6 @@ export const getFolder = <ThrowOnError extends boolean = false>(
     GetFolderErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zGetFolderData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zGetFolderResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/folders/{id}",
     ...options,
@@ -378,7 +366,6 @@ export const updateFolder = <ThrowOnError extends boolean = false>(
     UpdateFolderErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zUpdateFolderData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/folders/{id}",
     ...options,
@@ -395,9 +382,6 @@ export const listFolders = <ThrowOnError extends boolean = false>(
   options?: Options<ListFoldersData, ThrowOnError>,
 ) =>
   (options?.client ?? client).get<ListFoldersResponses, unknown, ThrowOnError>({
-    requestValidator: async (data) => await zListFoldersData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zListFoldersResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/folders",
     ...options,
@@ -414,7 +398,6 @@ export const createFolder = <ThrowOnError extends boolean = false>(
     CreateFolderErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zCreateFolderData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/folders",
     ...options,
@@ -435,7 +418,6 @@ export const deleteFile = <ThrowOnError extends boolean = false>(
     DeleteFileErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zDeleteFileData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/{id}",
     ...options,
@@ -452,10 +434,6 @@ export const getFileDetails = <ThrowOnError extends boolean = false>(
     GetFileDetailsErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zGetFileDetailsData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zGetFileDetailsResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/{id}",
     ...options,
@@ -472,7 +450,6 @@ export const updateFile = <ThrowOnError extends boolean = false>(
     UpdateFileErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zUpdateFileData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/{id}",
     ...options,
@@ -493,8 +470,6 @@ export const patchFileState = <ThrowOnError extends boolean = false>(
     PatchFileStateErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zPatchFileStateData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/{id}/state",
     ...options,
@@ -515,11 +490,7 @@ export const getLibraryTree = <ThrowOnError extends boolean = false>(
     unknown,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zGetLibraryTreeData.parseAsync(data),
     responseTransformer: getLibraryTreeResponseTransformer,
-    responseValidator: async (data) =>
-      await zGetLibraryTreeResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/tree",
     ...options,
@@ -532,8 +503,6 @@ export const listTags = <ThrowOnError extends boolean = false>(
   options?: Options<ListTagsData, ThrowOnError>,
 ) =>
   (options?.client ?? client).get<ListTagsResponses, unknown, ThrowOnError>({
-    requestValidator: async (data) => await zListTagsData.parseAsync(data),
-    responseValidator: async (data) => await zListTagsResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/tags",
     ...options,
@@ -550,7 +519,6 @@ export const deleteTag = <ThrowOnError extends boolean = false>(
     DeleteTagErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zDeleteTagData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/tags/{id}",
     ...options,
@@ -567,7 +535,6 @@ export const updateTag = <ThrowOnError extends boolean = false>(
     UpdateTagErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zUpdateTagData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/tags/{id}",
     ...options,
@@ -588,10 +555,6 @@ export const listUncategorizedFiles = <ThrowOnError extends boolean = false>(
     unknown,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zListUncategorizedFilesData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zListUncategorizedFilesResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/uncategorized",
     ...options,
@@ -608,9 +571,6 @@ export const listFiles = <ThrowOnError extends boolean = false>(
     ListFilesErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) => await zListFilesData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zListFilesResponse.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files",
     ...options,
@@ -628,7 +588,6 @@ export const uploadFile = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     ...formDataBodySerializer,
-    requestValidator: async (data) => await zUploadFileData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/upload",
     ...options,
@@ -646,7 +605,6 @@ export const getFile = <ThrowOnError extends boolean = false>(
 ) =>
   (options.client ?? client).get<GetFileResponses, GetFileErrors, ThrowOnError>(
     {
-      requestValidator: async (data) => await zGetFileData.parseAsync(data),
       security: [{ scheme: "bearer", type: "http" }],
       url: "/api/v1/library/files/{id}/download",
       ...options,
@@ -662,9 +620,6 @@ export const getAppState = <ThrowOnError extends boolean = false>(
   options?: Options<GetAppStateData, ThrowOnError>,
 ) =>
   (options?.client ?? client).get<GetAppStateResponses, unknown, ThrowOnError>({
-    requestValidator: async (data) => await zGetAppStateData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zGetAppStateResponse.parseAsync(data),
     url: "/api/v1/setup/state",
     ...options,
   });
@@ -682,10 +637,6 @@ export const createSetupUser = <ThrowOnError extends boolean = false>(
     CreateSetupUserErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zCreateSetupUserData.parseAsync(data),
-    responseValidator: async (data) =>
-      await zCreateSetupUserResponse.parseAsync(data),
     url: "/api/v1/setup/user",
     ...options,
     headers: {
@@ -703,12 +654,7 @@ export const getAppStatus = <ThrowOnError extends boolean = false>(
   options?: Options<GetAppStatusData, ThrowOnError>,
 ) =>
   (options?.client ?? client).get<GetAppStatusResponses, unknown, ThrowOnError>(
-    {
-      requestValidator: async (data) =>
-        await zGetAppStatusData.parseAsync(data),
-      url: "/api/v1/setup/status",
-      ...options,
-    },
+    { url: "/api/v1/setup/status", ...options },
   );
 
 /**
@@ -724,8 +670,6 @@ export const updateUserAccountDetails = <ThrowOnError extends boolean = false>(
     UpdateUserAccountDetailsErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zUpdateUserAccountDetailsData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/account/details",
     ...options,
@@ -748,10 +692,212 @@ export const updateUserPassword = <ThrowOnError extends boolean = false>(
     UpdateUserPasswordErrors,
     ThrowOnError
   >({
-    requestValidator: async (data) =>
-      await zUpdateUserPasswordData.parseAsync(data),
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/account/password",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * List Roles
+ */
+export const listRoles = <ThrowOnError extends boolean = false>(
+  options?: Options<ListRolesData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<ListRolesResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/roles",
+    ...options,
+  });
+
+/**
+ * List Users
+ */
+export const listUsers = <ThrowOnError extends boolean = false>(
+  options?: Options<ListUsersData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<ListUsersResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/users",
+    ...options,
+  });
+
+/**
+ * Create User
+ */
+export const createUser = <ThrowOnError extends boolean = false>(
+  options: Options<CreateUserData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    CreateUserResponses,
+    CreateUserErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/users",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete User
+ */
+export const deleteUser = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUserData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    DeleteUserResponses,
+    DeleteUserErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/users/{id}",
+    ...options,
+  });
+
+/**
+ * Update User
+ */
+export const updateUser = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateUserData, ThrowOnError>,
+) =>
+  (options.client ?? client).put<
+    UpdateUserResponses,
+    UpdateUserErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/users/{id}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Reset User Password
+ */
+export const resetUserPassword = <ThrowOnError extends boolean = false>(
+  options: Options<ResetUserPasswordData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ResetUserPasswordResponses,
+    ResetUserPasswordErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/users/{id}/password",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * List Providers
+ */
+export const listAuthProviders = <ThrowOnError extends boolean = false>(
+  options?: Options<ListAuthProvidersData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    ListAuthProvidersResponses,
+    unknown,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/auth_providers",
+    ...options,
+  });
+
+/**
+ * List Oidc Providers
+ */
+export const listOidcAuthProviders = <ThrowOnError extends boolean = false>(
+  options?: Options<ListOidcAuthProvidersData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    ListOidcAuthProvidersResponses,
+    unknown,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/auth_providers/oidc",
+    ...options,
+  });
+
+/**
+ * Create Provider Oidc
+ */
+export const createOidcAuthProvider = <ThrowOnError extends boolean = false>(
+  options: Options<CreateOidcAuthProviderData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    CreateOidcAuthProviderResponses,
+    CreateOidcAuthProviderErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/auth_providers/oidc",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete Oidc Provider
+ */
+export const deleteOidcAuthProvider = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteOidcAuthProviderData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    DeleteOidcAuthProviderResponses,
+    DeleteOidcAuthProviderErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/auth_providers/oidc/{id}",
+    ...options,
+  });
+
+/**
+ * Get Oidc Provider
+ */
+export const getOidcAuthProvider = <ThrowOnError extends boolean = false>(
+  options: Options<GetOidcAuthProviderData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetOidcAuthProviderResponses,
+    GetOidcAuthProviderErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/auth_providers/oidc/{id}",
+    ...options,
+  });
+
+/**
+ * Update Provider Oidc
+ */
+export const updateOidcAuthProvider = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateOidcAuthProviderData, ThrowOnError>,
+) =>
+  (options.client ?? client).put<
+    UpdateOidcAuthProviderResponses,
+    UpdateOidcAuthProviderErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/identity/auth_providers/oidc/{id}",
     ...options,
     headers: {
       "Content-Type": "application/json",

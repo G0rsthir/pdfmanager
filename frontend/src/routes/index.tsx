@@ -1,10 +1,17 @@
 import { StateLoader } from "@/common/state/loader";
 import { Block } from "@/components/ui/display";
+import { ScopesEnum } from "@/config/const";
 import { CurrentUserAccountPage } from "@/pages/account";
+import { AuthProvidersPage } from "@/pages/admin/identity/providers";
+import { RolesPage } from "@/pages/admin/identity/roles";
+import { UsersPage } from "@/pages/admin/identity/users";
+import { AdminLayout } from "@/pages/admin/layout";
 import { SessionExpiredPage } from "@/pages/auth/expired";
 import { LoginPage } from "@/pages/auth/login";
+import { LogoutPage } from "@/pages/auth/logout";
 import { Error404Page } from "@/pages/error/404";
 import { Error500Page } from "@/pages/error/500";
+import { DynamicErrorPage } from "@/pages/error/dynamic";
 import { Layout } from "@/pages/layout";
 import { FavoritesPage } from "@/pages/library/favorites";
 import { FilePage } from "@/pages/library/file";
@@ -13,7 +20,13 @@ import { SearchPage } from "@/pages/library/search";
 import { TagsPage } from "@/pages/library/tags";
 import { UncategorizedPage } from "@/pages/library/uncategorized";
 import SetupPage from "@/pages/setup";
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router";
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  RouterProvider,
+} from "react-router";
+import { AuthGuard } from "../common/auth/guard";
 
 const router = createBrowserRouter([
   {
@@ -31,7 +44,15 @@ const router = createBrowserRouter([
     element: <SetupPage />,
     errorElement: import.meta.env.PROD ? <Error500Page /> : undefined,
   },
-
+  {
+    path: "/logout",
+    element: <LogoutPage />,
+    errorElement: import.meta.env.PROD ? <Error500Page /> : undefined,
+  },
+  {
+    path: "/error",
+    element: <DynamicErrorPage />,
+  },
   {
     id: "app",
     path: "/",
@@ -86,6 +107,32 @@ const router = createBrowserRouter([
           {
             path: "uncategorized/file/:fileid",
             element: <FilePage />,
+          },
+          {
+            path: "admin",
+            element: (
+              <AuthGuard scopes={[ScopesEnum.ADMIN_READ]}>
+                <AdminLayout />
+              </AuthGuard>
+            ),
+            children: [
+              {
+                index: true,
+                element: <Navigate to="users" replace />,
+              },
+              {
+                path: "users",
+                element: <UsersPage />,
+              },
+              {
+                path: "roles",
+                element: <RolesPage />,
+              },
+              {
+                path: "providers",
+                element: <AuthProvidersPage />,
+              },
+            ],
           },
         ],
       },

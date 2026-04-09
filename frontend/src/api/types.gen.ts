@@ -33,6 +33,11 @@ export type AppStateResponse = {
    */
   is_initial_user_created?: boolean;
   /**
+   * Sso Servers
+   */
+  sso_servers?: Array<SsoConfigResponse>;
+  auto_login_sso_server?: SsoConfigResponse | null;
+  /**
    * Is Setup Complete
    *
    * Check if the setup is complete
@@ -41,7 +46,131 @@ export type AppStateResponse = {
 };
 
 /**
+ * AuthProviderOidcCreateRequest
+ */
+export type AuthProviderOidcCreateRequest = {
+  /**
+   * Name
+   */
+  name: string;
+};
+
+/**
+ * AuthProviderOidcResponse
+ */
+export type AuthProviderOidcResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Description
+   */
+  description?: string | null;
+  /**
+   * Entity Type
+   */
+  entity_type: "OIDC";
+  /**
+   * Is Enabled
+   */
+  is_enabled: boolean;
+  /**
+   * Is Protected
+   */
+  is_protected: boolean;
+  /**
+   * Client Id
+   */
+  client_id: string;
+  /**
+   * Client Secret
+   */
+  client_secret: string;
+  /**
+   * Group Claim Name
+   */
+  group_claim_name: string;
+  /**
+   * Auto Discovery Url
+   */
+  auto_discovery_url: string;
+  /**
+   * Additional Scopes
+   */
+  additional_scopes: string;
+  /**
+   * Auto Login
+   */
+  auto_login: boolean;
+  /**
+   * Group Claim Rules
+   */
+  group_claim_rules: Array<OidcGroupRuleOutput>;
+  /**
+   * Redirect Url
+   *
+   * URL to which the OIDC provider will redirect after successful authentication
+   */
+  redirect_url: string;
+  /**
+   * Authorize Url
+   *
+   * URL to which the frontend should redirect the user to initiate OIDC authentication
+   */
+  authorize_url: string;
+};
+
+/**
+ * AuthProviderOidcUpdateRequest
+ */
+export type AuthProviderOidcUpdateRequest = {
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Is Enabled
+   */
+  is_enabled?: boolean;
+  /**
+   * Client Id
+   */
+  client_id: string;
+  /**
+   * Auto Discovery Url
+   */
+  auto_discovery_url: string;
+  /**
+   * Additional Scopes
+   */
+  additional_scopes?: string;
+  /**
+   * Group Claim Name
+   *
+   * Claim name providing group names
+   */
+  group_claim_name?: string;
+  /**
+   * Group Claim Rules
+   */
+  group_claim_rules?: Array<OidcGroupRuleInput>;
+  /**
+   * Auto Login
+   */
+  auto_login?: boolean;
+};
+
+/**
  * AuthProviderResponse
+ *
+ * Generic response model for authentication providers.
+ *
+ * Specific provider types may have additional parameters, but all share these common parameters.
  */
 export type AuthProviderResponse = {
   /**
@@ -170,6 +299,22 @@ export type CreateFolderRequest = {
    * Parent Id
    */
   parent_id?: string | null;
+};
+
+/**
+ * CredentialsReset
+ *
+ * This model is used to reset (by admin) user credentials.
+ */
+export type CredentialsReset = {
+  /**
+   * Password
+   */
+  password: string;
+  /**
+   * Password Confirm
+   */
+  password_confirm: string;
 };
 
 /**
@@ -311,6 +456,42 @@ export type LibraryTreeNode = {
 };
 
 /**
+ * OidcGroupRule
+ */
+export type OidcGroupRuleInput = {
+  /**
+   * Group
+   *
+   * Name of the group as provided by the OIDC provider
+   */
+  group: string;
+  /**
+   * Role Id
+   *
+   * ID of the role to assign to users in this group
+   */
+  role_id: string;
+};
+
+/**
+ * OidcGroupRule
+ */
+export type OidcGroupRuleOutput = {
+  /**
+   * Group
+   *
+   * Name of the group as provided by the OIDC provider
+   */
+  group: string;
+  /**
+   * Role Id
+   *
+   * ID of the role to assign to users in this group
+   */
+  role_id: string;
+};
+
+/**
  * PatchFileStateRequest
  */
 export type PatchFileStateRequest = {
@@ -322,6 +503,16 @@ export type PatchFileStateRequest = {
    * Scale
    */
   scale?: string | null;
+};
+
+/**
+ * RevokeResponse
+ */
+export type RevokeResponse = {
+  /**
+   * Redirect Url
+   */
+  redirect_url?: string | null;
 };
 
 /**
@@ -368,6 +559,24 @@ export type SetupUser = {
    * Email
    */
   email: string;
+  /**
+   * Name
+   */
+  name: string;
+};
+
+/**
+ * SsoConfigResponse
+ */
+export type SsoConfigResponse = {
+  /**
+   * Url
+   */
+  url: string;
+  /**
+   * Is Auto Login Enabled
+   */
+  is_auto_login_enabled: boolean;
   /**
    * Name
    */
@@ -483,6 +692,28 @@ export type UpdateTagRequest = {
 };
 
 /**
+ * UserCreateRequest
+ */
+export type UserCreateRequest = {
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Email
+   */
+  email: string;
+  /**
+   * Is Enabled
+   */
+  is_enabled: boolean;
+  /**
+   * Role Id
+   */
+  role_id: string;
+};
+
+/**
  * UserResponse
  */
 export type UserResponse = {
@@ -511,6 +742,10 @@ export type UserResponse = {
    */
   role_id: string;
   role: RoleResponse;
+  /**
+   * Is External
+   */
+  is_external: boolean;
   auth_provider: AuthProviderResponse;
 };
 
@@ -529,6 +764,28 @@ export type UserSessionResponse = {
    * Session Id
    */
   session_id: string;
+};
+
+/**
+ * UserUpdateRequest
+ */
+export type UserUpdateRequest = {
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Email
+   */
+  email: string;
+  /**
+   * Is Enabled
+   */
+  is_enabled: boolean;
+  /**
+   * Role Id
+   */
+  role_id: string;
 };
 
 /**
@@ -567,6 +824,55 @@ export type AppStateResponseWritable = {
    * Is Initial User Created
    */
   is_initial_user_created?: boolean;
+  /**
+   * Sso Servers
+   */
+  sso_servers?: Array<SsoConfigResponse>;
+  auto_login_sso_server?: SsoConfigResponse | null;
+};
+
+/**
+ * AuthProviderOidcUpdateRequest
+ */
+export type AuthProviderOidcUpdateRequestWritable = {
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Is Enabled
+   */
+  is_enabled?: boolean;
+  /**
+   * Client Id
+   */
+  client_id: string;
+  /**
+   * Client Secret
+   */
+  client_secret: string;
+  /**
+   * Auto Discovery Url
+   */
+  auto_discovery_url: string;
+  /**
+   * Additional Scopes
+   */
+  additional_scopes?: string;
+  /**
+   * Group Claim Name
+   *
+   * Claim name providing group names
+   */
+  group_claim_name?: string;
+  /**
+   * Group Claim Rules
+   */
+  group_claim_rules?: Array<OidcGroupRuleInput>;
+  /**
+   * Auto Login
+   */
+  auto_login?: boolean;
 };
 
 /**
@@ -688,6 +994,36 @@ export type SetupUserWritable = {
 };
 
 /**
+ * UserCreateRequest
+ */
+export type UserCreateRequestWritable = {
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Email
+   */
+  email: string;
+  /**
+   * Password
+   */
+  password: string;
+  /**
+   * Password Confirm
+   */
+  password_confirm: string;
+  /**
+   * Is Enabled
+   */
+  is_enabled: boolean;
+  /**
+   * Role Id
+   */
+  role_id: string;
+};
+
+/**
  * UserResponse
  */
 export type UserResponseWritable = {
@@ -716,6 +1052,10 @@ export type UserResponseWritable = {
    */
   role_id: string;
   role: RoleResponseWritable;
+  /**
+   * Is External
+   */
+  is_external: boolean;
   auth_provider: AuthProviderResponse;
 };
 
@@ -764,8 +1104,11 @@ export type RevokeTokenResponses = {
   /**
    * Successful Response
    */
-  200: unknown;
+  200: RevokeResponse;
 };
+
+export type RevokeTokenResponse =
+  RevokeTokenResponses[keyof RevokeTokenResponses];
 
 export type CreateAuthTokenData = {
   body: BodyCreateAuthToken;
@@ -810,6 +1153,55 @@ export type RefreshAuthTokenResponses = {
 
 export type RefreshAuthTokenResponse =
   RefreshAuthTokenResponses[keyof RefreshAuthTokenResponses];
+
+export type OidcLoginData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/auth/oidc/{id}";
+};
+
+export type OidcLoginErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type OidcLoginError = OidcLoginErrors[keyof OidcLoginErrors];
+
+export type OidcLoginResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type OidcCallbackData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/auth/oidc/{id}/callback";
+};
+
+export type OidcCallbackErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type OidcCallbackError = OidcCallbackErrors[keyof OidcCallbackErrors];
 
 export type ListCollectionsData = {
   body?: never;
@@ -1468,6 +1860,302 @@ export type UpdateUserPasswordError =
   UpdateUserPasswordErrors[keyof UpdateUserPasswordErrors];
 
 export type UpdateUserPasswordResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ListRolesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/identity/roles";
+};
+
+export type ListRolesResponses = {
+  /**
+   * Response Listroles
+   *
+   * Successful Response
+   */
+  200: Array<RoleResponse>;
+};
+
+export type ListRolesResponse = ListRolesResponses[keyof ListRolesResponses];
+
+export type ListUsersData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/identity/users";
+};
+
+export type ListUsersResponses = {
+  /**
+   * Response Listusers
+   *
+   * Successful Response
+   */
+  200: Array<UserResponse>;
+};
+
+export type ListUsersResponse = ListUsersResponses[keyof ListUsersResponses];
+
+export type CreateUserData = {
+  body: UserCreateRequestWritable;
+  path?: never;
+  query?: never;
+  url: "/api/v1/identity/users";
+};
+
+export type CreateUserErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type CreateUserError = CreateUserErrors[keyof CreateUserErrors];
+
+export type CreateUserResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type DeleteUserData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/identity/users/{id}";
+};
+
+export type DeleteUserErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type DeleteUserError = DeleteUserErrors[keyof DeleteUserErrors];
+
+export type DeleteUserResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type UpdateUserData = {
+  body: UserUpdateRequest;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/identity/users/{id}";
+};
+
+export type UpdateUserErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type UpdateUserError = UpdateUserErrors[keyof UpdateUserErrors];
+
+export type UpdateUserResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ResetUserPasswordData = {
+  body: CredentialsReset;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/identity/users/{id}/password";
+};
+
+export type ResetUserPasswordErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ResetUserPasswordError =
+  ResetUserPasswordErrors[keyof ResetUserPasswordErrors];
+
+export type ResetUserPasswordResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ListAuthProvidersData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/identity/auth_providers";
+};
+
+export type ListAuthProvidersResponses = {
+  /**
+   * Response Listauthproviders
+   *
+   * Successful Response
+   */
+  200: Array<AuthProviderResponse>;
+};
+
+export type ListAuthProvidersResponse =
+  ListAuthProvidersResponses[keyof ListAuthProvidersResponses];
+
+export type ListOidcAuthProvidersData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/identity/auth_providers/oidc";
+};
+
+export type ListOidcAuthProvidersResponses = {
+  /**
+   * Response Listoidcauthproviders
+   *
+   * Successful Response
+   */
+  200: Array<AuthProviderOidcResponse>;
+};
+
+export type ListOidcAuthProvidersResponse =
+  ListOidcAuthProvidersResponses[keyof ListOidcAuthProvidersResponses];
+
+export type CreateOidcAuthProviderData = {
+  body: AuthProviderOidcCreateRequest;
+  path?: never;
+  query?: never;
+  url: "/api/v1/identity/auth_providers/oidc";
+};
+
+export type CreateOidcAuthProviderErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type CreateOidcAuthProviderError =
+  CreateOidcAuthProviderErrors[keyof CreateOidcAuthProviderErrors];
+
+export type CreateOidcAuthProviderResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type DeleteOidcAuthProviderData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/identity/auth_providers/oidc/{id}";
+};
+
+export type DeleteOidcAuthProviderErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type DeleteOidcAuthProviderError =
+  DeleteOidcAuthProviderErrors[keyof DeleteOidcAuthProviderErrors];
+
+export type DeleteOidcAuthProviderResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type GetOidcAuthProviderData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/identity/auth_providers/oidc/{id}";
+};
+
+export type GetOidcAuthProviderErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetOidcAuthProviderError =
+  GetOidcAuthProviderErrors[keyof GetOidcAuthProviderErrors];
+
+export type GetOidcAuthProviderResponses = {
+  /**
+   * Successful Response
+   */
+  200: AuthProviderOidcResponse;
+};
+
+export type GetOidcAuthProviderResponse =
+  GetOidcAuthProviderResponses[keyof GetOidcAuthProviderResponses];
+
+export type UpdateOidcAuthProviderData = {
+  body: AuthProviderOidcUpdateRequestWritable;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/identity/auth_providers/oidc/{id}";
+};
+
+export type UpdateOidcAuthProviderErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type UpdateOidcAuthProviderError =
+  UpdateOidcAuthProviderErrors[keyof UpdateOidcAuthProviderErrors];
+
+export type UpdateOidcAuthProviderResponses = {
   /**
    * Successful Response
    */

@@ -5,6 +5,8 @@ import uvicorn
 from typer import Option, Typer
 
 from server.const import EnvironmentsEnum
+from server.dependencies import get_auth_provider_repository
+from server.infrastructure.utils import async_to_sync
 from server.runtime import bootstrap_runtime, maybe_run_migrations, validate_server_startup
 
 # Main CLI app
@@ -69,3 +71,18 @@ def revision(
     """
     container = bootstrap_runtime(enviroment=EnvironmentsEnum.DEVELOPMENT)
     container.migrations.revision(message=message, autogenerate=autogenerate)
+
+
+@cli.command(name="disable-sso")
+def disable_sso():
+    """
+    Boy, if you messed up while configuring SSO, run this command
+    """
+    container = bootstrap_runtime(EnvironmentsEnum.PRODUCTION)
+
+    async def disable_all_auto_login():
+        async with container.db.get_session_context() as session:
+            provider_repo = get_auth_provider_repository(session)
+            await provider_repo.disable_auto_login_for_all_providers()
+
+    async_to_sync(disable_all_auto_login)

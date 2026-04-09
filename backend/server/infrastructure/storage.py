@@ -1,5 +1,6 @@
 import hashlib
 import re
+import shutil
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -29,7 +30,11 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, location: str) -> None:
+    async def delete(self, location: str):
+        pass
+
+    @abstractmethod
+    async def delete_scope(self, scope: str):
         pass
 
 
@@ -85,6 +90,12 @@ class LocalStorageBackend(StorageBackend):
         if not await aiofiles.os.path.exists(path):
             raise FileNotFoundError(f"File not found: {location}")
         await aiofiles.os.remove(path)
+
+    async def delete_scope(self, scope: str) -> None:
+        scope_dir = self._scope_dir(scope)
+        if not await aiofiles.os.path.exists(scope_dir):
+            return
+        shutil.rmtree(scope_dir)
 
     async def get_path(self, location: str) -> Path:
         path = self._resolve(location)

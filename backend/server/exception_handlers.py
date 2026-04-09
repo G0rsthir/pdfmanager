@@ -5,7 +5,7 @@ from fastapi import Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from server.exceptions import AuthenticationError, DomainError, FieldError, FieldValidationErrors
+from server.exceptions import AuthenticationError, DomainError, FieldError, FieldValidationErrors, InvalidActionError
 
 
 def build_field_error_detail(
@@ -47,6 +47,10 @@ async def validation_error_handler(request: Request, exc: FieldValidationErrors)
     )
 
 
+async def invalid_action_error_handler(request: Request, exc: InvalidActionError) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=jsonable_encoder({"detail": str(exc)}))
+
+
 async def domain_error_handler(request: Request, exc: DomainError) -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=jsonable_encoder({"detail": str(exc)}))
 
@@ -56,5 +60,6 @@ exception_handlers: dict[Union[int, type[Exception]], Callable[[Request, Any], C
     AuthenticationError: authentication_handler,
     FieldError: field_error_handler,
     FieldValidationErrors: validation_error_handler,
+    InvalidActionError: invalid_action_error_handler,
     DomainError: domain_error_handler,
 }

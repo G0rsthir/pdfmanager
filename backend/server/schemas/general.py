@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from pydantic import BaseModel
+
 
 @dataclass
 class StorageFile:
@@ -8,3 +10,7 @@ class StorageFile:
     hash: str
     original_name: str
     page_count: int
+
+
+class RevokeResponse(BaseModel):
+    redirect_url: str | None = None

@@ -9,7 +9,7 @@ import { GenericIconButton } from "@/components/ui/button";
 import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
 import { FormModal } from "@/components/ui/form/modal";
-import { ConfirmModal } from "@/components/ui/model";
+import { ConfirmModal } from "@/components/ui/modal";
 import {
   showErrorNotification,
   showSuccessNotification,

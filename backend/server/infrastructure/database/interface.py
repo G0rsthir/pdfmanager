@@ -44,12 +44,13 @@ class DBInterface:
     async def get_session(self) -> AsyncGenerator[AsyncSession]:
         """
         Provides an asynchronous session generator for database operations.
+
+        Note: This method does not automatically commit, because commit inside an generator is not compatible with Fastapi dependencies.
         """
         session = self.session()
         try:
             yield session
-            await session.commit()
-        except:
+        except Exception:
             await session.rollback()
             raise
         finally:
@@ -64,7 +65,7 @@ class DBInterface:
         try:
             yield session
             await session.commit()
-        except:
+        except Exception:
             await session.rollback()
             raise
         finally:

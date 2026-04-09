@@ -9,6 +9,7 @@ Simple PDF manager - nothing more.
 * Quality of Life - Tags, search, favorites
 * Tree-like grouping
 * File state tracking
+* SSO / OIDC
 
 ### Examples
 

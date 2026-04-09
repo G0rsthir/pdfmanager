@@ -42,13 +42,14 @@ class LibraryService:
             self.collection_repo.create(collection)
             return
 
-        parent_collection = await self.collection_repo.get_by_id(parent_id)
+        parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
 
         if not parent_collection:
             raise CollectionNotFoundError(identifier=parent_id, msg=f"Parent collection with id {parent_id} not found")
 
         collection = ORMCollection(name=name, parent_id=parent_id, user_id=user_id)
         self.collection_repo.create(collection)
+        await self.collection_repo.commit()
 
     async def list_collections(self, user_id: UUID):
         return await self.collection_repo.get_by_user_id(user_id=user_id)
@@ -63,16 +64,17 @@ class LibraryService:
             self.folder_repo.create(folder)
             return
 
-        parent_collection = await self.collection_repo.get_by_id(parent_id)
+        parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
 
         if not parent_collection:
             raise CollectionNotFoundError(identifier=parent_id, msg=f"Parent collection with id {parent_id} not found")
 
         folder = ORMFolder(name=name, collection_id=parent_id, user_id=user_id)
         self.folder_repo.create(folder)
+        await self.folder_repo.commit()
 
     async def delete_collection(self, user_id: UUID, collection_id: UUID):
-        collection = await self.collection_repo.get_required(collection_id)
+        collection = await self.collection_repo.get_by_id(collection_id)
 
         if collection.user_id != user_id:
             raise CollectionNotFoundError(
@@ -80,33 +82,37 @@ class LibraryService:
             )
 
         await self.collection_repo.delete(collection)
+        await self.collection_repo.commit()
 
     async def delete_folder(self, user_id: UUID, folder_id: UUID):
-        folder = await self.folder_repo.get_required(folder_id)
+        folder = await self.folder_repo.get_by_id(folder_id)
 
         if folder.user_id != user_id:
             raise CollectionNotFoundError(identifier=folder_id, msg=f"Folder with id {folder_id} not found.")
 
         await self.folder_repo.delete(folder)
+        await self.folder_repo.commit()
 
     async def delete_file(self, user_id: UUID, file_id: UUID):
-        file = await self.file_repo.get_required(file_id)
+        file = await self.file_repo.get_by_id(file_id)
 
         if file.user_id != user_id:
             raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
 
         await self.file_repo.delete(file)
+        await self.file_repo.commit()
 
     async def delete_tag(self, user_id: UUID, tag_id: UUID):
-        tag = await self.tags_repo.get_required(tag_id)
+        tag = await self.tags_repo.get_by_id(tag_id)
 
         if tag.user_id != user_id:
             raise TagNotFoundError(identifier=tag_id, msg=f"Tag with id {tag_id} not found.")
 
         await self.tags_repo.delete(tag)
+        await self.tags_repo.commit()
 
     async def update_collection(self, user_id: UUID, collection_id: UUID, name: str, parent_id: UUID | None = None):
-        collection = await self.collection_repo.get_required(collection_id)
+        collection = await self.collection_repo.get_by_id(collection_id)
 
         if collection.user_id != user_id:
             raise CollectionNotFoundError(
@@ -117,7 +123,7 @@ class LibraryService:
             raise InvalidActionError(rule="collection_parent_self", msg="Collection cannot be its own parent.")
 
         if parent_id:
-            parent_collection = await self.collection_repo.get_by_id(parent_id)
+            parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
 
             if not parent_collection or parent_collection.user_id != user_id:
                 raise CollectionNotFoundError(
@@ -126,15 +132,16 @@ class LibraryService:
 
         collection.name = name
         collection.parent_id = parent_id
+        await self.collection_repo.commit()
 
     async def update_folder(self, user_id: UUID, folder_id: UUID, name: str, parent_id: UUID | None = None):
-        folder = await self.folder_repo.get_required(folder_id)
+        folder = await self.folder_repo.get_by_id(folder_id)
 
         if folder.user_id != user_id:
             raise CollectionNotFoundError(identifier=folder_id, msg=f"Folder with id {folder_id} not found.")
 
         if parent_id:
-            parent_collection = await self.collection_repo.get_by_id(parent_id)
+            parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
 
             if not parent_collection or parent_collection.user_id != user_id:
                 raise CollectionNotFoundError(
@@ -143,6 +150,7 @@ class LibraryService:
 
         folder.name = name
         folder.collection_id = parent_id
+        await self.folder_repo.commit()
 
     async def resolve_tags(self, user_id: UUID, names: list[str]) -> list[ORMTag]:
         if not names:
@@ -158,7 +166,7 @@ class LibraryService:
                 tag = ORMTag(name=name, color="gray", user_id=user_id)
                 self.tags_repo.save(tag)
             tags.append(tag)
-
+        await self.tags_repo.flush()
         return tags
 
     async def update_file_state(
@@ -168,7 +176,7 @@ class LibraryService:
         current_page: int | None = None,
         scale: str | None = None,
     ):
-        file = await self.file_repo.get_required(file_id)
+        file = await self.file_repo.get_by_id(file_id)
 
         if not file or file.user_id != user_id:
             raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
@@ -177,6 +185,7 @@ class LibraryService:
             file.current_page = min(current_page, file.page_count)
         if scale is not None:
             file.scale = scale
+        await self.file_repo.commit()
 
     async def update_file(
         self,
@@ -188,13 +197,13 @@ class LibraryService:
         description: str | None = None,
         folder_id: UUID | None = None,
     ):
-        file = await self.file_repo.get_required(file_id)
+        file = await self.file_repo.get_by_id(file_id)
 
         if not file or file.user_id != user_id:
             raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
 
         if folder_id:
-            parent_folder = await self.folder_repo.get_by_id(folder_id)
+            parent_folder = await self.folder_repo.get_by_id_or_none(folder_id)
 
             if not parent_folder or parent_folder.user_id != user_id:
                 raise FolderNotFoundError(identifier=folder_id, msg=f"Parent folder with id {folder_id} not found")
@@ -205,6 +214,7 @@ class LibraryService:
         file.folder_id = folder_id
         file.is_favorite = is_favorite
         file.folder_id = folder_id
+        await self.file_repo.commit()
 
     async def create_file(
         self,
@@ -233,16 +243,17 @@ class LibraryService:
         )
 
         self.file_repo.save(file)
+        await self.file_repo.commit()
 
     async def get_file(self, user_id: UUID, file_id: UUID):
-        file = await self.file_repo.get_required(file_id)
+        file = await self.file_repo.get_by_id(file_id)
 
         if not file or file.user_id != user_id:
             raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
         return file
 
     async def get_folder(self, user_id: UUID, folder_id: UUID) -> ORMFolder:
-        folder = await self.folder_repo.get_required(folder_id)
+        folder = await self.folder_repo.get_by_id(folder_id)
 
         if folder.user_id != user_id:
             raise CollectionNotFoundError(identifier=folder_id, msg=f"Folder with id {folder_id} not found.")
@@ -310,7 +321,7 @@ class LibraryService:
         return [TagWithDetails(id=tag.id, name=tag.name, color=tag.color, file_count=count) for tag, count in tags]
 
     async def update_tag(self, user_id: UUID, tag_id: UUID, name: str, color: str):
-        tag = await self.tags_repo.get_required(tag_id)
+        tag = await self.tags_repo.get_by_id(tag_id)
 
         if not tag or tag.user_id != user_id:
             raise TagNotFoundError(identifier=tag_id, msg=f"Tag with id {tag_id} not found.")
@@ -322,3 +333,4 @@ class LibraryService:
 
         tag.name = name
         tag.color = color
+        await self.tags_repo.commit()

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, ForeignKey, Table, UniqueConstraint
+from sqlalchemy import JSON, Column, ForeignKey, Table, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from server.infrastructure.database.base import Base, DateTimeUTC
@@ -44,7 +44,7 @@ class ORMAuthProvider(Base):
 
     # Classification
     entity_type: Mapped[str]
-    is_protected: Mapped[bool] = mapped_column(default=True)
+    is_protected: Mapped[bool] = mapped_column(default=False)
 
     __mapper_args__ = {
         "polymorphic_on": "entity_type",
@@ -72,6 +72,47 @@ class ORMAuthProviderLocal(ORMAuthProvider):
     __mapper_args__ = {"polymorphic_identity": "LOCAL", "polymorphic_load": "inline"}
 
 
+class ORMAuthProviderOidc(ORMAuthProvider):
+    """
+    OIDC auth provider database model.
+    """
+
+    client_id: Mapped[str] = mapped_column(nullable=True, use_existing_column=True)
+    client_secret: Mapped[str] = mapped_column(nullable=True, use_existing_column=True)
+    auto_discovery_url: Mapped[str] = mapped_column(nullable=True, use_existing_column=True)
+    additional_scopes: Mapped[str] = mapped_column(nullable=True, use_existing_column=True)
+    group_claim_name: Mapped[str] = mapped_column(nullable=True, use_existing_column=True)
+    group_claim_rules: Mapped[list] = mapped_column(JSON, nullable=True, use_existing_column=True)
+    auto_login: Mapped[bool] = mapped_column(default=False, use_existing_column=True, nullable=True)
+
+    __base_required_scopes: str = "openid profile email"
+
+    __mapper_args__ = {"polymorphic_identity": "OIDC", "polymorphic_load": "inline"}
+
+    @property
+    def is_valid(self) -> bool:
+        return all(
+            isinstance(value, str) and value.strip()
+            for value in (
+                self.client_id,
+                self.client_secret,
+                self.group_claim_name,
+                self.auto_discovery_url,
+            )
+        )
+
+    @property
+    def required_scope_list(self) -> list[str]:
+        required_scopes = self.__base_required_scopes.split(" ")
+        if self.additional_scopes != "":
+            required_scopes.extend(self.additional_scopes.split(" "))
+        return required_scopes
+
+    @property
+    def required_scope_list_str(self) -> str:
+        return " ".join(self.required_scope_list)
+
+
 class ORMUser(Base):
     __tablename__ = "users"
 
@@ -80,6 +121,7 @@ class ORMUser(Base):
     # Password hash (nullable for non-local users)
     password_hash: Mapped[bytes | None]
     is_enabled: Mapped[bool] = mapped_column(default=True)
+    is_external: Mapped[bool] = mapped_column(default=False)
 
     # Classification
     entity_type: Mapped[str] = mapped_column(default="user", server_default="user")
@@ -100,7 +142,7 @@ class ORMUser(Base):
         if not self.can_authenticate():
             return False
 
-        if not self.password_hash:
+        if not self.password_hash or self.is_external:
             return False
 
         return True

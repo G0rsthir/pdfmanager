@@ -1,13 +1,15 @@
-import { Stack } from "@chakra-ui/react";
+import { HStack, Icon, Text } from "@chakra-ui/react";
 import { NavLink, type NavLinkProps } from "react-router";
 
 interface NavLinksProps extends NavLinkProps {
   label: string;
+  icon?: React.ReactNode;
 }
 
-export function ReactNavLink({ to, label, ...rest }: NavLinksProps) {
+export function ReactNavLink(props: NavLinksProps) {
+  const { to, label, icon, ...rest } = props;
   return (
-    <Stack
+    <HStack
       asChild
       py={1}
       px={3}
@@ -20,11 +22,15 @@ export function ReactNavLink({ to, label, ...rest }: NavLinksProps) {
           color: "fg",
         },
       }}
-      _currentPage={{ color: "colorPalette.300", bg: "colorPalette.900" }}
+      _currentPage={{ color: "colorPalette.600", bg: "colorPalette.200" }}
+      _dark={{
+        _currentPage: { color: "colorPalette.300", bg: "colorPalette.900" },
+      }}
     >
       <NavLink to={to} {...rest}>
-        {label}
+        {icon && <Icon>{icon}</Icon>}
+        <Text>{label}</Text>
       </NavLink>
-    </Stack>
+    </HStack>
   );
 }

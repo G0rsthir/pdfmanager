@@ -17,11 +17,9 @@ export default defineConfig({
       enums: "javascript",
       name: "@hey-api/typescript",
     },
-    "zod",
     {
       name: "@hey-api/sdk",
       transformer: true,
-      validator: true,
     },
     "@tanstack/react-query",
   ],

@@ -17,11 +17,19 @@ from server.exceptions import (
 )
 
 
-class UserRepository:
+class Repository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_required(self, user_id: UUID):
+    async def commit(self):
+        await self.session.commit()
+
+    async def flush(self):
+        await self.session.flush()
+
+
+class UserRepository(Repository):
+    async def get_by_id(self, user_id: UUID):
         record = await self.session.get(models.ORMUser, user_id)
         if not record:
             raise UserNotFoundError(user_id)
@@ -45,12 +53,22 @@ class UserRepository:
             return True
         return False
 
+    async def get_list(self) -> list[models.ORMUser]:
+        records = await self.session.scalars(select(models.ORMUser))
+        return list(records.all())
 
-class RoleRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    async def delete(self, user: models.ORMUser) -> None:
+        await self.session.delete(user)
 
-    async def get_required(self, role_id: UUID):
+    async def count_by_role_id(self, role_id: UUID, only_enabled: bool = False) -> int:
+        stmt = select(func.count()).where(models.ORMUser.role_id == role_id)
+        if only_enabled:
+            stmt = stmt.where(models.ORMUser.is_enabled)
+        return await self.session.scalar(stmt) or 0
+
+
+class RoleRepository(Repository):
+    async def get_by_id(self, role_id: UUID):
         record = await self.session.get(models.ORMUserRole, role_id)
         if not record:
             raise RoleNotFoundError(role_id)
@@ -62,13 +80,26 @@ class RoleRepository:
         )
         return record
 
+    async def get_list(self) -> list[models.ORMUserRole]:
+        records = await self.session.scalars(select(models.ORMUserRole))
+        return list(records.all())
 
-class AuthProviderRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
 
-    async def get_required(self, provider_id: UUID):
+class AuthProviderRepository(Repository):
+    async def get_by_id(self, provider_id: UUID):
         record = await self.session.get(models.ORMAuthProvider, provider_id)
+        if not record:
+            raise AuthProviderNotFoundError(provider_id)
+        return record
+
+    async def get_oidc_by_id(self, provider_id: UUID):
+        record = await self.session.get(models.ORMAuthProviderOidc, provider_id)
+        if not record:
+            raise AuthProviderNotFoundError(provider_id)
+        return record
+
+    async def get_local_by_id(self, provider_id: UUID):
+        record = await self.session.get(models.ORMAuthProviderLocal, provider_id)
         if not record:
             raise AuthProviderNotFoundError(provider_id)
         return record
@@ -79,12 +110,32 @@ class AuthProviderRepository:
         )
         return record
 
+    async def get_list(self) -> list[models.ORMAuthProvider]:
+        records = await self.session.scalars(select(models.ORMAuthProvider))
+        return list(records.all())
 
-class SessionRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    async def get_oidc_list(self) -> list[models.ORMAuthProviderOidc]:
+        records = await self.session.scalars(select(models.ORMAuthProviderOidc))
+        return list(records.all())
 
-    async def get_required(self, session_id: UUID):
+    def create(self, session: models.ORMAuthProvider):
+        self.session.add(session)
+
+    async def delete(self, provider: models.ORMAuthProvider):
+        await self.session.delete(provider)
+
+    async def disable_auto_login_for_all_providers(self, except_provider_id: UUID | None = None):
+        stmt = select(models.ORMAuthProviderOidc).where(models.ORMAuthProviderOidc.auto_login)
+        records = await self.session.scalars(stmt)
+        for record in records.all():
+            if except_provider_id is not None and record.id == except_provider_id:
+                continue
+            record.auto_login = False
+            self.session.add(record)
+
+
+class SessionRepository(Repository):
+    async def get_by_id(self, session_id: UUID):
         record = await self.session.get_one(models.ORMSession, session_id)
         if not record:
             raise SessionNotFoundError(session_id)
@@ -107,15 +158,12 @@ class SessionRepository:
         self.session.add(session)
 
 
-class CollectionRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def get_by_id(self, collection_id: UUID) -> models.ORMCollection | None:
+class CollectionRepository(Repository):
+    async def get_by_id_or_none(self, collection_id: UUID) -> models.ORMCollection | None:
         record = await self.session.get(models.ORMCollection, collection_id)
         return record
 
-    async def get_required(self, collection_id: UUID):
+    async def get_by_id(self, collection_id: UUID):
         record = await self.session.get(models.ORMCollection, collection_id)
         if not record:
             raise CollectionNotFoundError(collection_id)
@@ -140,15 +188,12 @@ class CollectionRepository:
         await self.session.delete(collection)
 
 
-class FolderRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def get_by_id(self, folder_id: UUID) -> models.ORMFolder | None:
+class FolderRepository(Repository):
+    async def get_by_id_or_none(self, folder_id: UUID) -> models.ORMFolder | None:
         record = await self.session.get(models.ORMFolder, folder_id)
         return record
 
-    async def get_required(self, folder_id: UUID):
+    async def get_by_id(self, folder_id: UUID):
         record = await self.session.get(models.ORMFolder, folder_id)
         if not record:
             raise FolderNotFoundError(folder_id)
@@ -171,11 +216,8 @@ class FolderRepository:
         await self.session.delete(folder)
 
 
-class FileRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def get_required(self, file_id: UUID):
+class FileRepository(Repository):
+    async def get_by_id(self, file_id: UUID):
         record = await self.session.get(models.ORMFile, file_id)
         if not record:
             raise LibraryFileNotFoundError(file_id)
@@ -232,11 +274,8 @@ class FileRepository:
         return await self.session.scalar(stmt) or 0
 
 
-class TagRepository:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-
-    async def get_required(self, tag_id: UUID):
+class TagRepository(Repository):
+    async def get_by_id(self, tag_id: UUID):
         record = await self.session.get(models.ORMTag, tag_id)
         if not record:
             raise TagNotFoundError(tag_id)

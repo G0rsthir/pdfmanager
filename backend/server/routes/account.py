@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from server.const import ScopesEnum
 from server.dependencies import (
     AccessSecurity,
-    UserServiceDependency,
+    IdentityServiceDependency,
 )
 from server.exceptions import FieldError, InvalidActionError
 from server.schemas.account import DetailsUpdate
@@ -18,13 +18,13 @@ router = APIRouter(prefix="/account")
 async def update_details(
     details_update: DetailsUpdate,
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
-    user_service: UserServiceDependency,
+    identity_service: IdentityServiceDependency,
 ):
     """
     Update current user's details.
     """
     try:
-        await user_service.update_details(
+        await identity_service.patch_local_user_details(
             user_id=access_session.user_id,
             name=details_update.name,
             email=details_update.email,
@@ -39,13 +39,13 @@ async def update_details(
 async def update_password(
     credentials: CredentialsUpdate,
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
-    user_service: UserServiceDependency,
+    identity_service: IdentityServiceDependency,
 ):
     """
     Update current user's password.
     """
     try:
-        await user_service.change_password(
+        await identity_service.change_user_password(
             user_id=access_session.user_id,
             password_confirm=credentials.password_confirm,
             password_new=credentials.password_new,

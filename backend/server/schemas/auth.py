@@ -4,6 +4,15 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, computed_field
 
 
+class AuthenticateOidcRequest(BaseModel):
+    model_config = ConfigDict(str_max_length=255, str_min_length=1)
+
+    email: str
+    auth_provider_id: UUID
+    groups: list[str]
+    name: str
+
+
 class AuthenticatePasswordRequest(BaseModel):
     model_config = ConfigDict(str_max_length=255, str_min_length=1)
 

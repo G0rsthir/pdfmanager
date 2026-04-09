@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import pluginQuery from "@tanstack/eslint-plugin-query";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import reactX from "eslint-plugin-react-x";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -16,6 +17,7 @@ export default defineConfig([
       tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
+      reactX.configs.recommended,
     ],
     languageOptions: {
       ecmaVersion: 2020,
@@ -26,6 +28,7 @@ export default defineConfig([
         "error",
         { argsIgnorePattern: "^_" },
       ],
+      "react-x/no-array-index-key": "off",
     },
   },
 ]);

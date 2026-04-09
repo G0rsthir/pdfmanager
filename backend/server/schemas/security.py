@@ -59,6 +59,17 @@ class CredentialsUpdate(BaseModel):
     password_confirm: SecretStr
 
 
+class CredentialsReset(BaseModel):
+    """
+    This model is used to reset (by admin) user credentials.
+    """
+
+    model_config = ConfigDict(str_max_length=255, str_min_length=1)
+
+    password: SecretStr
+    password_confirm: SecretStr
+
+
 class Cookie(BaseModel):
     """
     An HTTP cookie
@@ -68,6 +79,20 @@ class Cookie(BaseModel):
     value: str = ""
     max_age: int | None = None
     expires: datetime | str | int | None = None
-    httponly: bool = False
+    httponly: bool = True
     path: str | None = "/"
     samesite: Literal["lax", "strict", "none"] | None = "strict"
+
+
+class OidcUser(BaseModel):
+    name: str
+    email: str
+    groups: list[str]
+    subject: str | None = None
+    session_id: str | None = None
+
+
+class OidcAuthResult(BaseModel):
+    token: dict
+    user_info: dict
+    user: OidcUser

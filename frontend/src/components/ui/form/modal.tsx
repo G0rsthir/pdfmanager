@@ -1,4 +1,5 @@
 import { Button, CloseButton, Dialog, Portal, Stack } from "@chakra-ui/react";
+import { AdminWriteButton } from "../button";
 
 export function FormModal(props: {
   open: boolean;
@@ -6,6 +7,7 @@ export function FormModal(props: {
   children: React.ReactNode;
   title: React.ReactNode;
   confirmBtnText?: string;
+  confirmBtnType?: "generic" | "adminWrite";
   confirmBtnPalette?: string;
   onSubmit: () => void;
   isPending?: boolean;
@@ -16,10 +18,13 @@ export function FormModal(props: {
     children,
     title,
     confirmBtnPalette,
+    confirmBtnType,
     confirmBtnText = "Confirm",
     onSubmit,
     isPending,
   } = props;
+
+  const ConfirmBtn = confirmBtnType == "adminWrite" ? AdminWriteButton : Button;
 
   return (
     <Dialog.Root
@@ -49,13 +54,13 @@ export function FormModal(props: {
               >
                 Cancel
               </Button>
-              <Button
+              <ConfirmBtn
                 colorPalette={confirmBtnPalette}
                 onClick={onSubmit}
                 loading={isPending}
               >
                 {confirmBtnText}
-              </Button>
+              </ConfirmBtn>
             </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Positioner>

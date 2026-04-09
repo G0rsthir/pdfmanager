@@ -50,3 +50,26 @@ export function QueryView<T>({ query, children }: QueryViewProps<T>) {
   if (query.isSuccess && query.data !== undefined) return children(query.data);
   return null;
 }
+
+/**
+ * TODO: Write proper generic types
+ */
+interface MultiQueryViewProps {
+  queries: QueryViewProps<unknown>["query"][];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  children: (data: (any | undefined)[]) => ReactNode;
+}
+
+export function MultiQueryView({ queries, children }: MultiQueryViewProps) {
+  const error = queries.find((query) => query.isError);
+  if (error) return <LoadingError>{error.apiError?.message}</LoadingError>;
+
+  if (queries.some((query) => query.isLoading))
+    return <ContentLoadingOverlay />;
+
+  if (queries.every((query) => query.isSuccess && query.data !== undefined)) {
+    return children(queries.map((query) => query.data));
+  }
+
+  return null;
+}

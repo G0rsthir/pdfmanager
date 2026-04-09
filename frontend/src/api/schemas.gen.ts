@@ -29,6 +29,23 @@ export const AppStateResponseSchema = {
       title: "Is Initial User Created",
       default: false,
     },
+    sso_servers: {
+      items: {
+        $ref: "#/components/schemas/SsoConfigResponse",
+      },
+      type: "array",
+      title: "Sso Servers",
+    },
+    auto_login_sso_server: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/SsoConfigResponse",
+        },
+        {
+          type: "null",
+        },
+      ],
+    },
     is_setup_complete: {
       type: "boolean",
       title: "Is Setup Complete",
@@ -39,6 +56,168 @@ export const AppStateResponseSchema = {
   type: "object",
   required: ["is_setup_complete"],
   title: "AppStateResponse",
+} as const;
+
+export const AuthProviderOidcCreateRequestSchema = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["name"],
+  title: "AuthProviderOidcCreateRequest",
+} as const;
+
+export const AuthProviderOidcResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    description: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Description",
+    },
+    entity_type: {
+      type: "string",
+      const: "OIDC",
+      title: "Entity Type",
+    },
+    is_enabled: {
+      type: "boolean",
+      title: "Is Enabled",
+    },
+    is_protected: {
+      type: "boolean",
+      title: "Is Protected",
+    },
+    client_id: {
+      type: "string",
+      title: "Client Id",
+    },
+    client_secret: {
+      type: "string",
+      title: "Client Secret",
+    },
+    group_claim_name: {
+      type: "string",
+      title: "Group Claim Name",
+    },
+    auto_discovery_url: {
+      type: "string",
+      title: "Auto Discovery Url",
+    },
+    additional_scopes: {
+      type: "string",
+      title: "Additional Scopes",
+    },
+    auto_login: {
+      type: "boolean",
+      title: "Auto Login",
+    },
+    group_claim_rules: {
+      items: {
+        $ref: "#/components/schemas/OidcGroupRule-Output",
+      },
+      type: "array",
+      title: "Group Claim Rules",
+    },
+    redirect_url: {
+      type: "string",
+      title: "Redirect Url",
+      description:
+        "URL to which the OIDC provider will redirect after successful authentication",
+    },
+    authorize_url: {
+      type: "string",
+      title: "Authorize Url",
+      description:
+        "URL to which the frontend should redirect the user to initiate OIDC authentication",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "name",
+    "entity_type",
+    "is_enabled",
+    "is_protected",
+    "client_id",
+    "client_secret",
+    "group_claim_name",
+    "auto_discovery_url",
+    "additional_scopes",
+    "auto_login",
+    "group_claim_rules",
+    "redirect_url",
+    "authorize_url",
+  ],
+  title: "AuthProviderOidcResponse",
+} as const;
+
+export const AuthProviderOidcUpdateRequestSchema = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    is_enabled: {
+      type: "boolean",
+      title: "Is Enabled",
+      default: false,
+    },
+    client_id: {
+      type: "string",
+      title: "Client Id",
+    },
+    auto_discovery_url: {
+      type: "string",
+      maxLength: 2083,
+      minLength: 1,
+      format: "uri",
+      title: "Auto Discovery Url",
+    },
+    additional_scopes: {
+      type: "string",
+      title: "Additional Scopes",
+      default: "",
+    },
+    group_claim_name: {
+      type: "string",
+      title: "Group Claim Name",
+      description: "Claim name providing group names",
+      default: "groups",
+    },
+    group_claim_rules: {
+      items: {
+        $ref: "#/components/schemas/OidcGroupRule-Input",
+      },
+      type: "array",
+      title: "Group Claim Rules",
+    },
+    auto_login: {
+      type: "boolean",
+      title: "Auto Login",
+      default: false,
+    },
+  },
+  type: "object",
+  required: ["name", "client_id", "auto_discovery_url"],
+  title: "AuthProviderOidcUpdateRequest",
 } as const;
 
 export const AuthProviderResponseSchema = {
@@ -79,6 +258,8 @@ export const AuthProviderResponseSchema = {
   type: "object",
   required: ["id", "name", "entity_type", "is_enabled", "is_protected"],
   title: "AuthProviderResponse",
+  description:
+    "Generic response model for authentication providers.\n\nSpecific provider types may have additional parameters, but all share these common parameters.",
 } as const;
 
 export const Body_CreateAuthTokenSchema = {
@@ -253,6 +434,27 @@ export const CreateFolderRequestSchema = {
   type: "object",
   required: ["name"],
   title: "CreateFolderRequest",
+} as const;
+
+export const CredentialsResetSchema = {
+  properties: {
+    password: {
+      type: "string",
+      format: "password",
+      title: "Password",
+      writeOnly: true,
+    },
+    password_confirm: {
+      type: "string",
+      format: "password",
+      title: "Password Confirm",
+      writeOnly: true,
+    },
+  },
+  type: "object",
+  required: ["password", "password_confirm"],
+  title: "CredentialsReset",
+  description: "This model is used to reset (by admin) user credentials.",
 } as const;
 
 export const CredentialsUpdateSchema = {
@@ -468,6 +670,43 @@ export const LibraryTreeNodeSchema = {
   title: "LibraryTreeNode",
 } as const;
 
+export const OidcGroupRule_InputSchema = {
+  properties: {
+    group: {
+      type: "string",
+      title: "Group",
+      description: "Name of the group as provided by the OIDC provider",
+    },
+    role_id: {
+      type: "string",
+      format: "uuid",
+      title: "Role Id",
+      description: "ID of the role to assign to users in this group",
+    },
+  },
+  type: "object",
+  required: ["group", "role_id"],
+  title: "OidcGroupRule",
+} as const;
+
+export const OidcGroupRule_OutputSchema = {
+  properties: {
+    group: {
+      type: "string",
+      title: "Group",
+      description: "Name of the group as provided by the OIDC provider",
+    },
+    role_id: {
+      type: "string",
+      title: "Role Id",
+      description: "ID of the role to assign to users in this group",
+    },
+  },
+  type: "object",
+  required: ["group", "role_id"],
+  title: "OidcGroupRule",
+} as const;
+
 export const PatchFileStateRequestSchema = {
   properties: {
     current_page: {
@@ -496,6 +735,24 @@ export const PatchFileStateRequestSchema = {
   },
   type: "object",
   title: "PatchFileStateRequest",
+} as const;
+
+export const RevokeResponseSchema = {
+  properties: {
+    redirect_url: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Redirect Url",
+    },
+  },
+  type: "object",
+  title: "RevokeResponse",
 } as const;
 
 export const RoleResponseSchema = {
@@ -562,6 +819,26 @@ export const SetupUserSchema = {
   required: ["email", "name"],
   title: "SetupUser",
   description: "Create initial application user",
+} as const;
+
+export const SsoConfigResponseSchema = {
+  properties: {
+    url: {
+      type: "string",
+      title: "Url",
+    },
+    is_auto_login_enabled: {
+      type: "boolean",
+      title: "Is Auto Login Enabled",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["url", "is_auto_login_enabled", "name"],
+  title: "SsoConfigResponse",
 } as const;
 
 export const TagDetailResponseSchema = {
@@ -724,6 +1001,31 @@ export const UpdateTagRequestSchema = {
   title: "UpdateTagRequest",
 } as const;
 
+export const UserCreateRequestSchema = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    email: {
+      type: "string",
+      title: "Email",
+    },
+    is_enabled: {
+      type: "boolean",
+      title: "Is Enabled",
+    },
+    role_id: {
+      type: "string",
+      format: "uuid",
+      title: "Role Id",
+    },
+  },
+  type: "object",
+  required: ["name", "email", "is_enabled", "role_id"],
+  title: "UserCreateRequest",
+} as const;
+
 export const UserResponseSchema = {
   properties: {
     id: {
@@ -756,6 +1058,10 @@ export const UserResponseSchema = {
     role: {
       $ref: "#/components/schemas/RoleResponse",
     },
+    is_external: {
+      type: "boolean",
+      title: "Is External",
+    },
     auth_provider: {
       $ref: "#/components/schemas/AuthProviderResponse",
     },
@@ -769,6 +1075,7 @@ export const UserResponseSchema = {
     "is_enabled",
     "role_id",
     "role",
+    "is_external",
     "auth_provider",
   ],
   title: "UserResponse",
@@ -795,6 +1102,31 @@ export const UserSessionResponseSchema = {
   title: "UserSessionResponse",
   description:
     "Provides relevant information about the logged-in user. Should not include authentication data.",
+} as const;
+
+export const UserUpdateRequestSchema = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    email: {
+      type: "string",
+      title: "Email",
+    },
+    is_enabled: {
+      type: "boolean",
+      title: "Is Enabled",
+    },
+    role_id: {
+      type: "string",
+      format: "uuid",
+      title: "Role Id",
+    },
+  },
+  type: "object",
+  required: ["name", "email", "is_enabled", "role_id"],
+  title: "UserUpdateRequest",
 } as const;
 
 export const ValidationErrorSchema = {
@@ -841,9 +1173,83 @@ export const AppStateResponseWritableSchema = {
       title: "Is Initial User Created",
       default: false,
     },
+    sso_servers: {
+      items: {
+        $ref: "#/components/schemas/SsoConfigResponse",
+      },
+      type: "array",
+      title: "Sso Servers",
+    },
+    auto_login_sso_server: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/SsoConfigResponse",
+        },
+        {
+          type: "null",
+        },
+      ],
+    },
   },
   type: "object",
   title: "AppStateResponse",
+} as const;
+
+export const AuthProviderOidcUpdateRequestWritableSchema = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    is_enabled: {
+      type: "boolean",
+      title: "Is Enabled",
+      default: false,
+    },
+    client_id: {
+      type: "string",
+      title: "Client Id",
+    },
+    client_secret: {
+      type: "string",
+      format: "password",
+      title: "Client Secret",
+      writeOnly: true,
+    },
+    auto_discovery_url: {
+      type: "string",
+      maxLength: 2083,
+      minLength: 1,
+      format: "uri",
+      title: "Auto Discovery Url",
+    },
+    additional_scopes: {
+      type: "string",
+      title: "Additional Scopes",
+      default: "",
+    },
+    group_claim_name: {
+      type: "string",
+      title: "Group Claim Name",
+      description: "Claim name providing group names",
+      default: "groups",
+    },
+    group_claim_rules: {
+      items: {
+        $ref: "#/components/schemas/OidcGroupRule-Input",
+      },
+      type: "array",
+      title: "Group Claim Rules",
+    },
+    auto_login: {
+      type: "boolean",
+      title: "Auto Login",
+      default: false,
+    },
+  },
+  type: "object",
+  required: ["name", "client_id", "client_secret", "auto_discovery_url"],
+  title: "AuthProviderOidcUpdateRequest",
 } as const;
 
 export const FileResponseWritableSchema = {
@@ -1021,6 +1427,50 @@ export const SetupUserWritableSchema = {
   description: "Create initial application user",
 } as const;
 
+export const UserCreateRequestWritableSchema = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    email: {
+      type: "string",
+      title: "Email",
+    },
+    password: {
+      type: "string",
+      format: "password",
+      title: "Password",
+      writeOnly: true,
+    },
+    password_confirm: {
+      type: "string",
+      format: "password",
+      title: "Password Confirm",
+      writeOnly: true,
+    },
+    is_enabled: {
+      type: "boolean",
+      title: "Is Enabled",
+    },
+    role_id: {
+      type: "string",
+      format: "uuid",
+      title: "Role Id",
+    },
+  },
+  type: "object",
+  required: [
+    "name",
+    "email",
+    "password",
+    "password_confirm",
+    "is_enabled",
+    "role_id",
+  ],
+  title: "UserCreateRequest",
+} as const;
+
 export const UserResponseWritableSchema = {
   properties: {
     id: {
@@ -1053,6 +1503,10 @@ export const UserResponseWritableSchema = {
     role: {
       $ref: "#/components/schemas/RoleResponseWritable",
     },
+    is_external: {
+      type: "boolean",
+      title: "Is External",
+    },
     auth_provider: {
       $ref: "#/components/schemas/AuthProviderResponse",
     },
@@ -1066,6 +1520,7 @@ export const UserResponseWritableSchema = {
     "is_enabled",
     "role_id",
     "role",
+    "is_external",
     "auth_provider",
   ],
   title: "UserResponse",

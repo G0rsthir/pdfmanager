@@ -1,18 +1,16 @@
-import { Alert, Box, Group, Link, Stack, Text } from "@chakra-ui/react";
+import { Alert, Box, Group, HStack, Link, Stack, Text } from "@chakra-ui/react";
 import { useLocation, useNavigate } from "react-router";
 
 /**
  * This can be used to show form errors that are returned from the API and are not field validation errors.
  * By default, it looks for the "form" field. This field is automatically set using the parseFormError function.
  */
-export function FormError({
-  errors,
-  errorField = "form",
-  ...other
-}: {
+export function FormError(props: {
   errors?: Record<string, React.ReactNode>;
   errorField?: string;
 }) {
+  const { errors, errorField = "form", ...other } = props;
+
   const errorMessage = errors?.[errorField];
   if (!errorMessage) return null;
 
@@ -33,48 +31,58 @@ interface UnrecoverableErrorProps {
   title?: React.ReactNode;
 }
 
-export function UnrecoverableError({
-  description,
-  title,
-  errorCode,
-}: UnrecoverableErrorProps) {
+export function UnrecoverableError(props: UnrecoverableErrorProps) {
+  const { description, title, errorCode } = props;
+
   const navigate = useNavigate();
   const location = useLocation();
 
   const isLastLocationExists = location.key !== "default";
 
   return (
-    <Group gap="5rem" h="100vh" mx="15rem">
-      <Box>
-        <Text fontWeight="normal" textStyle="lg" color="rgb(59, 130, 246)">
-          {errorCode}
+    <Box>
+      <Text fontWeight="normal" textStyle="lg" color="blue.600">
+        {errorCode}
+      </Text>
+      <Stack>
+        <Text fontWeight={700} textStyle="2xl" w="40vw">
+          {title}
         </Text>
-        <Stack>
-          <Text fontWeight={700} textStyle="2xl" w="40vw">
-            {title}
+        {description && (
+          <Text color="red" width="40vw">
+            {description}
           </Text>
-          {description && (
-            <Text color="red" width="40vw">
-              {description}
-            </Text>
-          )}
+        )}
 
-          <Text textStyle="lg" mt="3rem">
-            Here are some helpful links:
-          </Text>
-          <Group>
-            <Link
-              onClick={() =>
-                isLastLocationExists ? navigate(-1) : navigate("/")
-              }
-              variant="underline"
-            >
-              Return
-            </Link>
-          </Group>
-        </Stack>
-      </Box>
-    </Group>
+        <Text textStyle="lg" mt="3rem">
+          Here are some helpful links:
+        </Text>
+        <Group>
+          <Link
+            onClick={() =>
+              isLastLocationExists ? navigate(-1) : navigate("/")
+            }
+            variant="underline"
+          >
+            Return
+          </Link>
+        </Group>
+      </Stack>
+    </Box>
+  );
+}
+
+export function ErrorScreen(props: UnrecoverableErrorProps) {
+  const { description, title, errorCode } = props;
+
+  return (
+    <HStack h="100vh" mx="15rem">
+      <UnrecoverableError
+        description={description}
+        title={title}
+        errorCode={errorCode}
+      />
+    </HStack>
   );
 }
 
@@ -88,13 +96,13 @@ export function ApplicationError({
   children,
 }: ApplicationErrorProps) {
   return (
-    <UnrecoverableError
+    <ErrorScreen
       errorCode="500 Internal Server Error"
       title="An unexpected error has occurred"
       description={description}
     >
       {children}
-    </UnrecoverableError>
+    </ErrorScreen>
   );
 }
 
@@ -111,5 +119,21 @@ export function LoadingError({ children }: { children?: React.ReactNode }) {
         <Alert.Description>{children}</Alert.Description>
       </Alert.Content>
     </Alert.Root>
+  );
+}
+
+interface ForbiddenErrorProps {
+  description?: string;
+}
+
+export function ForbiddenError({ description }: ForbiddenErrorProps) {
+  return (
+    <HStack h="full" mx="15rem">
+      <UnrecoverableError
+        errorCode="403 Forbidden"
+        title="We are sorry, but you don't have the required permissions to access this page"
+        description={description}
+      />
+    </HStack>
   );
 }

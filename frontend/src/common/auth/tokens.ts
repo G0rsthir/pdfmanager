@@ -111,7 +111,16 @@ export async function loadSession() {
 }
 
 export async function logout() {
-  await deleteUserSession();
+  const response = await deleteUserSession();
+  const appState = useGlobalStore.getState().appState;
   useGlobalStore.getState().updateSession(undefined);
-  window.location.replace("/login");
+  if (response?.redirect_url) {
+    window.location.href = response.redirect_url;
+    return;
+  }
+  if (!appState?.auto_login_sso_server?.is_auto_login_enabled) {
+    window.location.href = "/login";
+    return;
+  }
+  window.location.href = "/logout";
 }

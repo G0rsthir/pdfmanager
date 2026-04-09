@@ -1,8 +1,8 @@
 import {
   Box,
-  Field,
   Grid,
   GridItem,
+  Span,
   Stack,
   Text,
   type BoxProps,
@@ -24,6 +24,7 @@ export interface SettingsOptionProps {
   required?: boolean;
   labelSpan?: number;
   fieldSpan?: number;
+  fontWeight?: "bold" | "normal";
   children: React.ReactNode;
 }
 
@@ -33,6 +34,7 @@ export function SettingsOption(props: SettingsOptionProps) {
     description,
     required,
     children,
+    fontWeight = "bold",
     labelSpan = 6,
     fieldSpan = 6,
   } = props;
@@ -41,10 +43,15 @@ export function SettingsOption(props: SettingsOptionProps) {
     <Grid templateColumns="repeat(12, 1fr)">
       <GridItem colSpan={labelSpan}>
         <Stack gap={0}>
-          <Text fontWeight="bold">
-            {title} {required && <Field.RequiredIndicator />}
+          <Text fontWeight={fontWeight}>
+            {title}{" "}
+            {required && (
+              <Span color="fg.error" aria-hidden>
+                *
+              </Span>
+            )}
           </Text>
-          <Text color="fg.muted" fontSize="md">
+          <Text color="fg.muted" fontSize="sm">
             {description}
           </Text>
         </Stack>

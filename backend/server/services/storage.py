@@ -26,5 +26,8 @@ class StorageService:
     async def get_path(self, location: str):
         return await self.backend.get_path(location=location)
 
-    async def delete_file(self, location: str) -> None:
+    async def delete_file(self, location: str):
         await self.backend.delete(location)
+
+    async def delete_user_files(self, user_id: UUID):
+        await self.backend.delete_scope(f"pdf/{str(user_id)}")

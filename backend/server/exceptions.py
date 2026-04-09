@@ -150,3 +150,13 @@ class FieldValidationErrors(DomainError):
         super().__init__(msg)
         for error in errors:
             self.add_note(f"{error.field}: {error.msg}")
+
+
+class OAuthError(Exception):
+    def __init__(
+        self,
+        description: str,
+    ):
+
+        self.description = description
+        super().__init__(self.description)

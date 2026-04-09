@@ -9,6 +9,7 @@ import { Form } from "@/components/ui/form/container";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useFormMutation } from "@/hooks/form";
 import {
+  Alert,
   Button,
   Field,
   Group,
@@ -21,9 +22,19 @@ import {
 import { LuShieldCheck } from "react-icons/lu";
 
 export function ProfileContent() {
+  const { session } = useAuth();
+
   return (
     <Block bg="bg.panel">
       <Stack gap={8}>
+        {session?.user.is_external && (
+          <Alert.Root status="warning">
+            <Alert.Indicator />
+            <Alert.Title>
+              Your account is managed by an external provider.
+            </Alert.Title>
+          </Alert.Root>
+        )}
         <SettingsOption
           title="Account"
           description="Set your account details"
@@ -78,7 +89,11 @@ function EditAccountDetails() {
         <FormField
           name="name"
           children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} required>
+            <Field.Root
+              invalid={!fieldState.meta.isValid}
+              required
+              disabled={session?.user.is_external}
+            >
               <Field.Label>
                 Name <Field.RequiredIndicator />
               </Field.Label>
@@ -94,7 +109,11 @@ function EditAccountDetails() {
         <FormField
           name="email"
           children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} required>
+            <Field.Root
+              invalid={!fieldState.meta.isValid}
+              required
+              disabled={session?.user.is_external}
+            >
               <Field.Label>
                 Email <Field.RequiredIndicator />
               </Field.Label>
@@ -115,7 +134,9 @@ function EditAccountDetails() {
               <>
                 {isDirty && (
                   <Group justifyContent="flex-end">
-                    <Button type="submit">Update</Button>
+                    <Button type="submit" disabled={session?.user.is_external}>
+                      Update
+                    </Button>
                   </Group>
                 )}
               </>
@@ -129,6 +150,7 @@ function EditAccountDetails() {
 
 function ChangePassword() {
   const { open, onOpen, onClose } = useDisclosure();
+  const { session } = useAuth();
 
   const {
     Field: FormField,
@@ -160,7 +182,12 @@ function ChangePassword() {
             <Text>Secure</Text>
           </Group>
         </Group>
-        <Button size="xs" variant="outline" onClick={onOpen}>
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={onOpen}
+          disabled={session?.user.is_external}
+        >
           Edit
         </Button>
       </Group>
