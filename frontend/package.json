@@ -27,9 +27,9 @@
   "devDependencies": {
     "@chakra-ui/cli": "^3.34.0",
     "@eslint/js": "^9.39.1",
-    "@hey-api/openapi-ts": "^0.94.5",
+    "@hey-api/openapi-ts": "^0.95.0",
     "@tanstack/eslint-plugin-query": "^5.97.0",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.12.2",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -39,7 +39,7 @@
     "eslint-plugin-react-x": "^2.13.0",
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0",
+    "typescript-eslint": "^8.58.1",
     "vite": "^7.3.2",
     "vite-tsconfig-paths": "^6.1.1"
   }
