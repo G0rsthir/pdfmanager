@@ -180,12 +180,18 @@ class IdentityService:
         self.user_repo.create(new_user)
         await self.user_repo.commit()
 
-    async def update_local_user(self, user_id: UUID, data: UserUpdateRequest):
+    async def update_user(self, user_id: UUID, data: UserUpdateRequest):
         user = await self.user_repo.get_by_id(user_id)
 
         is_email_in_use = await self.user_repo.get_by_email(email=data.email)
         if is_email_in_use and is_email_in_use.id != user_id:
             raise InvalidActionError(rule="email_already_in_use", msg="Email is already in use")
+
+        if user.is_external:
+            raise InvalidActionError(
+                rule="external_user_details_update_forbidden",
+                msg="You cannot update details of an external user",
+            )
 
         if not data.is_enabled:
             # Check if we are trying to disable the last admin account

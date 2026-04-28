@@ -34,8 +34,9 @@ class OidcClient:
             return None
 
     def _create_client(self) -> StarletteOAuth2App:
-        if not self.config.is_enabled:
-            raise OAuthError("SSO provider is disabled")
+
+        if not self.config.is_valid:
+            raise OAuthError("OIDC provider configuration is invalid")
 
         oauth = OAuth()
         oauth.register(

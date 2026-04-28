@@ -72,6 +72,14 @@ class UserResponse(BaseModel):
     auth_provider: AuthProviderResponse
 
 
+class UserSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    email: StrictStr
+
+
 class UserSessionResponse(BaseModel):
     """
     Provides relevant information about the logged-in user. Should not include authentication data.
@@ -123,7 +131,7 @@ class AuthProviderOidcUpdateRequest(BaseModel):
     client_id: str
     client_secret: SecretStr
     auto_discovery_url: HttpUrl
-    additional_scopes: str = ""
+    additional_scopes: str = Field(default="", min_length=0)
 
     group_claim_name: str = Field(default="groups")
     group_claim_rules: list[OidcGroupRule] = Field(default_factory=list)

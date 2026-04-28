@@ -1,12 +1,10 @@
 import {
   createCollectionMutation,
-  createFolderMutation,
   deleteCollectionMutation,
-  deleteFolderMutation,
+  getCollectionPermissionsOptions,
   getLibraryTreeOptions,
   listCollectionsOptions,
   updateCollectionMutation,
-  updateFolderMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { LibraryTreeNode } from "@/api/types.gen";
 import { parseAPIError } from "@/common/error";
@@ -23,14 +21,18 @@ import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import { useGlobalStore } from "@/store";
 import {
+  Button,
+  CloseButton,
   Combobox,
   createTreeCollection,
+  Dialog,
   Field,
   Group,
   Input,
   Link,
   Menu,
   Portal,
+  Stack,
   Text,
   TreeView,
   useCombobox,
@@ -40,9 +42,15 @@ import {
 } from "@chakra-ui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { LuChevronRight, LuFolderOpen, LuLibrary } from "react-icons/lu";
+import {
+  LuChevronRight,
+  LuFolderOpen,
+  LuLibrary,
+  LuLink2,
+} from "react-icons/lu";
 import { useNavigate, useParams } from "react-router";
 import { useShallow } from "zustand/shallow";
+import { PermissionsView } from "../library/shared/permissions";
 
 export function Library() {
   const query = useAPIQuery({
@@ -75,7 +83,7 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
           id: "ROOT",
           name: "",
           children: data,
-          entity_type: "collection",
+          entity_type: "group",
         },
       }),
     [data],
@@ -106,6 +114,7 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
                   <TreeView.Item onClick={() => navigate("folder/" + node.id)}>
                     <LuFolderOpen />
                     <TreeView.ItemText>{node.name}</TreeView.ItemText>
+                    <SharedIndicator shared={node.is_shared} />
                     <TreeNodeActions node={node} indexPath={indexPath} />
                   </TreeView.Item>
                 );
@@ -117,6 +126,7 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
                       <LuChevronRight />
                     </TreeView.BranchIndicator>
                     <TreeView.BranchText>{node.name}</TreeView.BranchText>
+                    <SharedIndicator shared={node.is_shared} />
                     <TreeNodeActions node={node} indexPath={indexPath} />
                   </TreeView.BranchControl>
                 );
@@ -125,6 +135,7 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
                 <TreeView.Item>
                   <LuLibrary />
                   <TreeView.ItemText>{node.name}</TreeView.ItemText>
+                  <SharedIndicator shared={node.is_shared} />
                   <TreeNodeActions node={node} indexPath={indexPath} />
                 </TreeView.Item>
               );
@@ -146,22 +157,29 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
           </Link>
         </Text>
       )}
-      <CreateNodeDialog type="collection" open={open} onClose={onClose} />
+      <CreateNodeDialog type="group" open={open} onClose={onClose} />
     </>
   );
 }
 
-type NodeType = "collection" | "folder";
+function SharedIndicator({ shared }: { shared?: boolean }) {
+  if (!shared) return null;
+  return (
+    <LuLink2 size={12} title="Shared" style={{ opacity: 0.6, flexShrink: 0 }} />
+  );
+}
+
+type NodeType = LibraryTreeNode["entity_type"];
 
 type NodeDialog = {
-  type: "create" | "edit" | "delete";
+  type: "create" | "edit" | "delete" | "permissions";
   nodeType: NodeType;
 } | null;
 
 function TreeNodeActions({
   node,
 }: TreeView.NodeProviderProps<LibraryTreeNode>) {
-  const isCollection = node.entity_type == "collection";
+  const isGroup = node.entity_type == "group";
 
   const [dialog, setDialog] = useState<NodeDialog>(null);
   const onClose = () => setDialog(null);
@@ -169,18 +187,18 @@ function TreeNodeActions({
   return (
     <>
       <TreeNodeMenu opacitySelector=".css-wurrfy:hover &">
-        {isCollection && (
+        {isGroup && (
           <Menu.Item
-            value="createCollection"
+            value="createGroup"
             onClick={(e) => {
               e.stopPropagation();
-              setDialog({ type: "create", nodeType: "collection" });
+              setDialog({ type: "create", nodeType: "group" });
             }}
           >
             Create collection
           </Menu.Item>
         )}
-        {isCollection && (
+        {isGroup && (
           <Menu.Item
             value="createFolder"
             onClick={(e) => {
@@ -201,6 +219,15 @@ function TreeNodeActions({
           Edit
         </Menu.Item>
         <Menu.Item
+          value="permissions"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDialog({ type: "permissions", nodeType: node.entity_type });
+          }}
+        >
+          Manage access
+        </Menu.Item>
+        <Menu.Item
           value="delete"
           color="fg.error"
           _hover={{ bg: "bg.error", color: "fg.error" }}
@@ -213,23 +240,29 @@ function TreeNodeActions({
         </Menu.Item>
       </TreeNodeMenu>
       <CreateNodeDialog
-        type={dialog?.nodeType ?? "collection"}
+        type={dialog?.nodeType ?? "group"}
         open={dialog?.type === "create"}
         onClose={onClose}
         parent_id={node.id}
       />
       <EditNodeDialog
-        type={dialog?.nodeType ?? "collection"}
+        type={dialog?.nodeType ?? "group"}
         open={dialog?.type === "edit"}
         onClose={onClose}
         defaaultValues={node}
         id={node.id}
       />
       <DeleteNodeDialog
-        type={dialog?.nodeType ?? "collection"}
+        type={dialog?.nodeType ?? "group"}
         open={dialog?.type === "delete"}
         onClose={onClose}
         node={node}
+      />
+      <PermissionsDialog
+        open={dialog?.type === "permissions"}
+        onClose={onClose}
+        resourceId={node.id}
+        resourceName={node.name}
       />
     </>
   );
@@ -279,8 +312,8 @@ function LibraryActions() {
     <>
       <TreeNodeMenu opacitySelector=".chakra-group:hover &">
         <Menu.Item
-          value="createCollection"
-          onClick={() => setDialog({ type: "create", nodeType: "collection" })}
+          value="createGroup"
+          onClick={() => setDialog({ type: "create", nodeType: "group" })}
         >
           Create collection
         </Menu.Item>
@@ -292,7 +325,7 @@ function LibraryActions() {
         </Menu.Item>
       </TreeNodeMenu>
       <CreateNodeDialog
-        type={dialog?.nodeType ?? "collection"}
+        type={dialog?.nodeType ?? "group"}
         open={dialog?.type === "create"}
         onClose={onClose}
       />
@@ -306,7 +339,7 @@ function containsNode(node: LibraryTreeNode, targetId: string): boolean {
 }
 
 function nodeLabel(type: NodeType) {
-  return type == "collection" ? "Collection" : "Folder";
+  return type == "group" ? "Collection" : "Folder";
 }
 
 function CreateNodeDialog(props: {
@@ -329,10 +362,10 @@ function CreateNodeDialog(props: {
       defaultValues: {
         name: "",
         parent_id: parent_id,
+        entity_type: type,
       },
     },
-    mutationOptions:
-      type == "collection" ? createCollectionMutation : createFolderMutation,
+    mutationOptions: createCollectionMutation,
     onMutate: (value) => ({ body: value }),
     successMessage: `${label} created successfully`,
     onSuccess: onClose,
@@ -402,7 +435,7 @@ export function CollectionSelect(props: CollectionSelectProps) {
           ? ""
           : e.inputValue,
       ),
-    onValueChange: ({ value }) => onValueChange(value[0] || ""),
+    onValueChange: ({ value }) => onValueChange(value?.[0]),
     openOnClick: true,
     defaultValue: defaultValue ? [defaultValue] : [],
     onInteractOutside: () => onBlur(),
@@ -490,8 +523,7 @@ function EditNodeDialog(props: {
         parent_id: parent_id,
       },
     },
-    mutationOptions:
-      type === "collection" ? updateCollectionMutation : updateFolderMutation,
+    mutationOptions: updateCollectionMutation,
     onMutate: (value) => ({ path: { id }, body: value }),
     successMessage: `${label} updated successfully`,
     onSuccess: onClose,
@@ -560,11 +592,8 @@ function DeleteNodeDialog(props: {
   const { folderid } = useParams();
   const navigate = useNavigate();
 
-  const mutation =
-    type == "collection" ? deleteCollectionMutation() : deleteFolderMutation();
-
   const { mutate: deleteRequest } = useAPIMutation({
-    ...mutation,
+    ...deleteCollectionMutation(),
     onSuccess() {
       showSuccessNotification(`${label} deleted successfully`);
       onClose();
@@ -590,7 +619,64 @@ function DeleteNodeDialog(props: {
       confirmBtnPalette="red"
     >
       This action cannot be undone. This will permanently delete this
-      {type === "collection" ? " and nested collections" : " folder"}.
+      {type == "group" ? " and nested collections" : " folder"}.
     </ConfirmModal>
+  );
+}
+
+export function PermissionsDialog(props: {
+  open: boolean;
+  onClose: () => void;
+  resourceId: string;
+  resourceName?: string;
+}) {
+  const { open, onClose, resourceId, resourceName } = props;
+
+  const query = useAPIQuery({
+    ...getCollectionPermissionsOptions({
+      path: {
+        id: resourceId,
+      },
+    }),
+    enabled: open,
+  });
+
+  return (
+    <Dialog.Root open={open} size="md" onOpenChange={() => onClose()}>
+      <Portal>
+        <Dialog.Backdrop onClick={(e) => e.stopPropagation()} />
+        <Dialog.Positioner onClick={(e) => e.stopPropagation()}>
+          <Dialog.Content>
+            <Dialog.CloseTrigger asChild>
+              <CloseButton colorPalette="gray" />
+            </Dialog.CloseTrigger>
+            <Dialog.Header>
+              <Stack gap={0}>
+                <Dialog.Title>Permissions</Dialog.Title>
+                {resourceName && (
+                  <Text textStyle="xs" color="fg.muted">
+                    {resourceName}
+                  </Text>
+                )}
+              </Stack>
+            </Dialog.Header>
+            <Dialog.Body>
+              <QueryView query={query}>
+                {(access) => <PermissionsView access={access} />}
+              </QueryView>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                variant="surface"
+                colorPalette="gray"
+                onClick={() => onClose()}
+              >
+                Close
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
   );
 }

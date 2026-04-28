@@ -1,172 +1,163 @@
-from dataclasses import dataclass
+from contextlib import asynccontextmanager
+from io import BytesIO
+from logging import getLogger
+from pathlib import Path
 from uuid import UUID
 
-from server.const import UNSET, UnsetEnum
+from fastapi import UploadFile
+
 from server.exceptions import (
-    CollectionNotFoundError,
-    FolderNotFoundError,
+    InsufficientPermissionError,
     InvalidActionError,
-    LibraryFileNotFoundError,
-    TagNotFoundError,
 )
-from server.models import ORMCollection, ORMFile, ORMFolder, ORMTag
-from server.repositories import CollectionRepository, FileRepository, FolderRepository, TagRepository
-from server.schemas.library import LibraryTreeNode
-
-
-@dataclass(kw_only=True)
-class TagWithDetails:
-    id: UUID
-    name: str
-    color: str
-    file_count: int
+from server.infrastructure.pdf import PdfFile
+from server.infrastructure.search import ContentFragment, SearchBackend
+from server.infrastructure.storage import StorageBackend
+from server.models import ORMCollection, ORMFile, ORMFileState, ORMTag, ORMUserTagPreference
+from server.repositories import (
+    CollectionRepository,
+    FileRepository,
+    FileWithDetails,
+    PermissionAssignment,
+    PermissionRepository,
+    TagRepository,
+)
+from server.schemas.general import PdfStorageFile
+from server.schemas.library import CreateCollectionRequest, LibraryTreeNode
 
 
 class LibraryService:
     def __init__(
         self,
         collection_repo: CollectionRepository,
-        folder_repo: FolderRepository,
         file_repo: FileRepository,
         tags_repo: TagRepository,
+        search_engine: SearchBackend,
+        permission_repo: PermissionRepository,
+        storage_backend: StorageBackend,
     ):
-        self.collection_repo = collection_repo
-        self.folder_repo = folder_repo
-        self.file_repo = file_repo
-        self.tags_repo = tags_repo
+        self._collection_repo = collection_repo
+        self._file_repo = file_repo
+        self._tags_repo = tags_repo
+        self._search_engine = search_engine
+        self._permission_repo = permission_repo
+        self._storage_backend = storage_backend
+        self._logger = getLogger(__name__)
 
-    async def create_collection(self, user_id: UUID, name: str, parent_id: UUID | None = None):
+    async def get_collection(self, user_id: UUID, collection_id: UUID):
 
-        if not parent_id:
-            collection = ORMCollection(name=name, user_id=user_id)
-            self.collection_repo.create(collection)
-            return
+        collection = await self._collection_repo.get_by_id(collection_id)
 
-        parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
+        perm = await self._permission_repo.get_effective_for_collection(collection_id=collection_id, user_id=user_id)
+        if not perm or not perm.can_read:
+            raise InsufficientPermissionError(action="read", resource="Collection", identifier=collection_id)
 
-        if not parent_collection:
-            raise CollectionNotFoundError(identifier=parent_id, msg=f"Parent collection with id {parent_id} not found")
+        return collection
 
-        collection = ORMCollection(name=name, parent_id=parent_id, user_id=user_id)
-        self.collection_repo.create(collection)
-        await self.collection_repo.commit()
+    async def create_collection(self, user_id: UUID, data: CreateCollectionRequest):
+        if data.parent_id:
+            perm = await self._permission_repo.get_effective_for_collection(data.parent_id, user_id)
+            if not perm or not perm.can_modify:
+                raise InsufficientPermissionError(action="create", resource="Collection", identifier=data.parent_id)
 
-    async def list_collections(self, user_id: UUID):
-        return await self.collection_repo.get_by_user_id(user_id=user_id)
+        collection = ORMCollection(
+            name=data.name,
+            entity_type=data.entity_type,
+            parent_id=data.parent_id,
+        )
+        self._collection_repo.create(collection)
+        await self._collection_repo.flush()
 
-    async def list_folders(self, user_id: UUID):
-        return await self.folder_repo.get_by_user_id(user_id=user_id)
+        # Only roots need a direct grant. Nested collections inherit.
+        if not data.parent_id:
+            await self._permission_repo.grant(collection.id, user_id, "owner")
 
-    async def create_folder(self, user_id: UUID, name: str, parent_id: UUID | None = None):
+        await self._collection_repo.commit()
 
-        if not parent_id:
-            folder = ORMFolder(name=name, user_id=user_id)
-            self.folder_repo.create(folder)
-            return
+    async def list_collections(self, user_id: UUID) -> list[ORMCollection]:
+        # TODO ability to exclude read-only collections
+        visible = await self._permission_repo.list_visible_collection_ids(user_id)
+        if not visible:
+            return []
 
-        parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
-
-        if not parent_collection:
-            raise CollectionNotFoundError(identifier=parent_id, msg=f"Parent collection with id {parent_id} not found")
-
-        folder = ORMFolder(name=name, collection_id=parent_id, user_id=user_id)
-        self.folder_repo.create(folder)
-        await self.folder_repo.commit()
+        return await self._collection_repo.list_by_ids(visible)
 
     async def delete_collection(self, user_id: UUID, collection_id: UUID):
-        collection = await self.collection_repo.get_by_id(collection_id)
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="delete", resource="Collection", identifier=collection_id)
 
-        if collection.user_id != user_id:
-            raise CollectionNotFoundError(
-                identifier=collection_id, msg=f"Collection with id {collection_id} not found."
-            )
+        # Collect what needs external cleanup.
+        files = await self._file_repo.list_all_in_collection_tree(collection_id)
+        file_ids = [f.id for f in files]
+        storage_keys = [k for f in files for k in (f.storage_key, f.thumbnail) if k]
 
-        await self.collection_repo.delete(collection)
-        await self.collection_repo.commit()
+        collection = await self._collection_repo.get_by_id(collection_id)
+        await self._collection_repo.delete(collection)
+        await self._collection_repo.commit()
 
-    async def delete_folder(self, user_id: UUID, folder_id: UUID):
-        folder = await self.folder_repo.get_by_id(folder_id)
+        if file_ids:
+            await self._search_engine.delete_by_docs(file_ids)
 
-        if folder.user_id != user_id:
-            raise CollectionNotFoundError(identifier=folder_id, msg=f"Folder with id {folder_id} not found.")
-
-        await self.folder_repo.delete(folder)
-        await self.folder_repo.commit()
+        await self._storage_backend.delete_many(storage_keys)
 
     async def delete_file(self, user_id: UUID, file_id: UUID):
-        file = await self.file_repo.get_by_id(file_id)
+        file = await self._file_repo.get_by_id(file_id)
 
-        if file.user_id != user_id:
-            raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="delete", resource="File", identifier=file_id)
 
-        await self.file_repo.delete(file)
-        await self.file_repo.commit()
+        await self._file_repo.delete(file)
+        await self._file_repo.commit()
 
-    async def delete_tag(self, user_id: UUID, tag_id: UUID):
-        tag = await self.tags_repo.get_by_id(tag_id)
+        await self._storage_backend.delete(file.storage_key)
+        await self._search_engine.delete_by_docs([file_id])
 
-        if tag.user_id != user_id:
-            raise TagNotFoundError(identifier=tag_id, msg=f"Tag with id {tag_id} not found.")
+        if file.thumbnail:
+            await self._storage_backend.delete(file.thumbnail)
 
-        await self.tags_repo.delete(tag)
-        await self.tags_repo.commit()
+    async def update_collection(self, user_id, collection_id, name, parent_id=None):
+        collection = await self._collection_repo.get_by_id(collection_id)
 
-    async def update_collection(self, user_id: UUID, collection_id: UUID, name: str, parent_id: UUID | None = None):
-        collection = await self.collection_repo.get_by_id(collection_id)
-
-        if collection.user_id != user_id:
-            raise CollectionNotFoundError(
-                identifier=collection_id, msg=f"Collection with id {collection_id} not found."
-            )
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="update", resource="Collection", identifier=collection_id)
 
         if parent_id == collection.id:
             raise InvalidActionError(rule="collection_parent_self", msg="Collection cannot be its own parent.")
 
-        if parent_id:
-            parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
+        is_move = parent_id != collection.parent_id
 
-            if not parent_collection or parent_collection.user_id != user_id:
-                raise CollectionNotFoundError(
-                    identifier=parent_id, msg=f"Parent collection with id {parent_id} not found"
-                )
+        if is_move and not perm.is_owner:
+            raise InsufficientPermissionError(action="move", resource="Collection", identifier=collection_id)
+
+        if is_move and parent_id is not None:
+            parent_perm = await self._permission_repo.get_effective_for_collection(parent_id, user_id)
+            if not parent_perm or not parent_perm.is_owner:
+                raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=parent_id)
 
         collection.name = name
         collection.parent_id = parent_id
-        await self.collection_repo.commit()
+        await self._collection_repo.commit()
 
-    async def update_folder(self, user_id: UUID, folder_id: UUID, name: str, parent_id: UUID | None = None):
-        folder = await self.folder_repo.get_by_id(folder_id)
-
-        if folder.user_id != user_id:
-            raise CollectionNotFoundError(identifier=folder_id, msg=f"Folder with id {folder_id} not found.")
-
-        if parent_id:
-            parent_collection = await self.collection_repo.get_by_id_or_none(parent_id)
-
-            if not parent_collection or parent_collection.user_id != user_id:
-                raise CollectionNotFoundError(
-                    identifier=parent_id, msg=f"Parent collection with id {parent_id} not found"
-                )
-
-        folder.name = name
-        folder.collection_id = parent_id
-        await self.folder_repo.commit()
-
-    async def resolve_tags(self, user_id: UUID, names: list[str]) -> list[ORMTag]:
+    async def resolve_tags(self, names: list[str]) -> list[ORMTag]:
         if not names:
             return []
 
-        existing = await self.tags_repo.get_by_names(user_id, names)
+        normalized = {name.strip().lower() for name in names if name.strip()}
+        existing = await self._tags_repo.get_by_names(list(normalized))
         existing_by_name = {t.name.lower(): t for t in existing}
 
         tags: list[ORMTag] = []
-        for name in names:
-            tag = existing_by_name.get(name.lower())
+        for name in normalized:
+            tag = existing_by_name.get(name)
             if not tag:
-                tag = ORMTag(name=name, color="gray", user_id=user_id)
-                self.tags_repo.save(tag)
+                tag = ORMTag(name=name)
+                self._tags_repo.save(tag)
             tags.append(tag)
-        await self.tags_repo.flush()
+
+        await self._tags_repo.flush()
         return tags
 
     async def update_file_state(
@@ -175,17 +166,29 @@ class LibraryService:
         user_id: UUID,
         current_page: int | None = None,
         scale: str | None = None,
+        is_favorite: bool | None = None,
     ):
-        file = await self.file_repo.get_by_id(file_id)
 
-        if not file or file.user_id != user_id:
-            raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_read:
+            raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
+
+        state = await self._file_repo.get_state_or_none(file_id=file_id, user_id=user_id)
+        if not state:
+            state = ORMFileState(file_id=file_id, user_id=user_id)
+            self._file_repo.save(state)
+            await self._file_repo.flush()
 
         if current_page is not None:
-            file.current_page = min(current_page, file.page_count)
+            state.current_page = min(current_page, file.page_count)
         if scale is not None:
-            file.scale = scale
-        await self.file_repo.commit()
+            state.scale = scale
+        if is_favorite is not None:
+            state.is_favorite = is_favorite
+
+        await self._file_repo.commit()
 
     async def update_file(
         self,
@@ -193,144 +196,274 @@ class LibraryService:
         file_id: UUID,
         name: str,
         tags: list[str],
-        is_favorite: bool = False,
+        collection_id: UUID,
         description: str | None = None,
-        folder_id: UUID | None = None,
     ):
-        file = await self.file_repo.get_by_id(file_id)
 
-        if not file or file.user_id != user_id:
-            raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
+        file = await self._file_repo.get_by_id(file_id)
 
-        if folder_id:
-            parent_folder = await self.folder_repo.get_by_id_or_none(folder_id)
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="update", resource="File", identifier=file_id)
 
-            if not parent_folder or parent_folder.user_id != user_id:
-                raise FolderNotFoundError(identifier=folder_id, msg=f"Parent folder with id {folder_id} not found")
+        parent_perm = await self._permission_repo.get_effective_for_collection(
+            collection_id=collection_id, user_id=user_id
+        )
+        if not parent_perm or not parent_perm.can_modify:
+            raise InsufficientPermissionError(action="update", resource="File", identifier=file_id)
 
-        file.name = name
-        file.description = description
-        file.tags = await self.resolve_tags(user_id, tags)
-        file.folder_id = folder_id
-        file.is_favorite = is_favorite
-        file.folder_id = folder_id
-        await self.file_repo.commit()
+        collection = await self._collection_repo.get_by_id(collection_id)
+        if collection.entity_type != "folder":
+            raise InvalidActionError(rule="file_collection_must_be_folder", msg="File can only be added to folders.")
 
-    async def create_file(
+        if file.name != name:
+            file.name = name
+            await self._search_engine.delete_fragments(doc_id=file.id, fragment_type="name")
+            await self._search_engine.index(
+                [
+                    ContentFragment(
+                        content=name,
+                        doc_id=file.id,
+                        entity_type=file.content_type,
+                        fragment_type="name",
+                    ),
+                ]
+            )
+
+        if file.description != description:
+            file.description = description
+            await self._search_engine.delete_fragments(doc_id=file.id, fragment_type="description")
+            await self._search_engine.index(
+                [
+                    ContentFragment(
+                        content=description or "",
+                        doc_id=file.id,
+                        entity_type=file.content_type,
+                        fragment_type="description",
+                    ),
+                ]
+            )
+
+        await self._tags_repo.delete_orphaned()
+
+        resolved_tags = await self.resolve_tags(tags)
+        await self._tags_repo.replace_file_tags(file_id=file_id, tags=resolved_tags)
+
+        file.collection_id = collection_id
+
+        await self._file_repo.commit()
+
+    async def upload_pdf_file(
         self,
+        file: UploadFile,
         name: str,
-        folder_id: UUID,
+        collection_id: UUID,
         user_id: UUID,
-        file_storage: str,
-        file_size: int,
-        file_hash: str,
         tags: list[str],
-        page_count: int,
         description: str | None = None,
-    ):
-        resolved_tags = await self.resolve_tags(user_id, tags)
+    ) -> ORMFile:
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="modify", resource="Collection", identifier=collection_id)
 
-        file = ORMFile(
-            name=name,
-            description=description,
-            folder_id=folder_id,
-            user_id=user_id,
-            file_storage=file_storage,
-            file_size=file_size,
-            file_hash=file_hash,
-            tags=resolved_tags,
-            page_count=page_count,
+        stored_file = await self._store_pdf_file(file=file, user_id=user_id)
+
+        try:
+            file_record = await self._create_file_record(
+                file=stored_file,
+                name=name,
+                description=description,
+                collection_id=collection_id,
+                tags=tags,
+            )
+
+            await self._search_engine.index(
+                [
+                    ContentFragment(
+                        content=name,
+                        doc_id=file_record.id,
+                        entity_type=file_record.content_type,
+                        fragment_type="name",
+                    ),
+                    ContentFragment(
+                        content=description or "",
+                        doc_id=file_record.id,
+                        entity_type=file_record.content_type,
+                        fragment_type="description",
+                    ),
+                ]
+            )
+
+            return file_record
+        except Exception:
+            await self._storage_backend.delete(stored_file.storage_key)
+            if stored_file.thumbnail:
+                await self._storage_backend.delete(stored_file.thumbnail)
+            raise
+
+    async def _store_pdf_file(
+        self,
+        file: UploadFile,
+        user_id: UUID,
+    ) -> PdfStorageFile:
+        filename = file.filename or "unnamed.pdf"
+
+        stored_file = await self._storage_backend.save(scope=f"pdf/{str(user_id)}", filename=filename, data=file.file)
+
+        async with self._storage_backend.open_path(stored_file.storage_key) as path:
+            pfg_file = PdfFile(path)
+
+            thumb_img = pfg_file.render_page_as_image(1)
+            thumb_name = Path(filename).stem + thumb_img.extension
+
+            thumb = await self._storage_backend.save(
+                scope=f"thumbnails/{str(user_id)}", filename=thumb_name, data=BytesIO(thumb_img.image_bytes)
+            )
+
+        return PdfStorageFile(
+            **stored_file.to_dict(),
+            page_count=pfg_file.page_count,
+            thumbnail=thumb.storage_key,
         )
 
-        self.file_repo.save(file)
-        await self.file_repo.commit()
+    async def _create_file_record(
+        self,
+        file: PdfStorageFile,
+        name: str,
+        collection_id: UUID,
+        tags: list[str],
+        description: str | None = None,
+    ):
 
-    async def get_file(self, user_id: UUID, file_id: UUID):
-        file = await self.file_repo.get_by_id(file_id)
+        file_record = ORMFile(
+            name=name,
+            description=description,
+            collection_id=collection_id,
+            storage_key=file.storage_key,
+            file_size=file.size,
+            file_hash=file.hash,
+            page_count=file.page_count,
+            thumbnail=file.thumbnail,
+            content_type=file.content_type,
+        )
 
-        if not file or file.user_id != user_id:
-            raise LibraryFileNotFoundError(identifier=file_id, msg=f"File with id {file_id} not found.")
-        return file
+        self._file_repo.save(file_record)
+        await self._file_repo.flush()
 
-    async def get_folder(self, user_id: UUID, folder_id: UUID) -> ORMFolder:
-        folder = await self.folder_repo.get_by_id(folder_id)
+        await self._tags_repo.delete_orphaned()
+        resolved_tags = await self.resolve_tags(tags)
+        await self._tags_repo.replace_file_tags(file_id=file_record.id, tags=resolved_tags)
 
-        if folder.user_id != user_id:
-            raise CollectionNotFoundError(identifier=folder_id, msg=f"Folder with id {folder_id} not found.")
+        await self._file_repo.commit()
 
-        return folder
+        return file_record
+
+    @asynccontextmanager
+    async def open_file(self, storage_key: str):
+        async with self._storage_backend.open_path(storage_key) as path:
+            yield path
+
+    async def get_file(self, user_id: UUID, file_id: UUID) -> FileWithDetails:
+
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_read:
+            raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
+
+        state = await self._file_repo.get_state_or_none(file_id, user_id)
+
+        tags_by_file = await self._tags_repo.list_personalized_by_files([file.id], user_id)
+
+        return FileWithDetails(file=file, state=state, tags=tags_by_file.get(file.id, []))
 
     async def list_files(
         self,
         user_id: UUID,
-        folder_id: UUID | None | UnsetEnum = UNSET,
+        collection_id: UUID | None = None,
         is_favorite: bool | None = None,
         tags: list[str] | None = None,
-        text: list[str] | None = None,
-        names: list[str] | None = None,
-        descriptions: list[str] | None = None,
-    ) -> list[ORMFile]:
-
-        return await self.file_repo.get_list(
-            user_id=user_id,
-            folder_id=folder_id,
-            is_favorite=is_favorite,
-            tags=tags,
-            text=text,
-            names=names,
-            descriptions=descriptions,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> list[FileWithDetails]:
+        files = await self._file_repo.list_visible_to_user(
+            user_id, collection_id=collection_id, is_favorite=is_favorite, tags=tags, name=name, description=description
         )
+        if not files:
+            return []
+        file_ids = [f.id for f in files]
+        states = await self._file_repo.list_states(file_ids, user_id)
+        states = {state.file_id: state for state in states}
+        tags_by_file = await self._tags_repo.list_personalized_by_files(file_ids, user_id)
+        return [
+            FileWithDetails(
+                file=f,
+                state=states.get(f.id),
+                tags=tags_by_file.get(f.id, []),
+            )
+            for f in files
+        ]
 
     async def get_library_tree(self, user_id: UUID) -> list[LibraryTreeNode]:
-        collections = await self.collection_repo.get_by_user_id(user_id)
-        folders = await self.folder_repo.get_by_user_id(user_id)
+        visible = await self._permission_repo.list_visible_collection_ids(user_id)
+        if not visible:
+            return []
 
-        library_roots: list[LibraryTreeNode] = []
-        collection_map: dict[UUID, LibraryTreeNode] = {}
+        collections = await self._collection_repo.list_by_ids(visible)
 
-        for col in collections:
-            node = LibraryTreeNode(
-                id=col.id, name=col.name, children=[], entity_type="collection", parent_id=col.parent_id
+        nodes = {
+            c.id: LibraryTreeNode(
+                id=c.id,
+                name=c.name,
+                entity_type=c.entity_type,
+                parent_id=c.parent_id,
+                children=[],
+                # TODO
+                # is_shared=True
             )
-            collection_map[col.id] = node
-            if not col.parent_id:
-                library_roots.append(node)
-
-        for folder in folders:
-            node = LibraryTreeNode(
-                id=folder.id, name=folder.name, children=[], entity_type="folder", parent_id=folder.collection_id
-            )
-            if not folder.collection_id:
-                library_roots.append(node)
-                continue
-            parent_node = collection_map[folder.collection_id]
-            parent_node.children.append(node)
-
-        for col in collections:
-            if not col.parent_id:
-                continue
-
-            parent_node = collection_map[col.parent_id]
-            parent_node.children.append(collection_map[col.id])
-
-        return library_roots
+            for c in collections
+        }
+        roots = []
+        for n in nodes.values():
+            parent = nodes.get(n.parent_id) if n.parent_id else None
+            if parent:
+                parent.children.append(n)
+            else:
+                roots.append(n)
+        return roots
 
     async def list_tags_with_details(self, user_id: UUID):
-        tags = await self.tags_repo.get_with_file_counts(user_id=user_id)
+        return await self._tags_repo.list_personalized_with_details(user_id=user_id)
 
-        return [TagWithDetails(id=tag.id, name=tag.name, color=tag.color, file_count=count) for tag, count in tags]
+    async def update_tag(self, user_id: UUID, tag_id: UUID, color: str):
 
-    async def update_tag(self, user_id: UUID, tag_id: UUID, name: str, color: str):
-        tag = await self.tags_repo.get_by_id(tag_id)
+        tag = await self._tags_repo.get_personalized_by_id_or_none(tag_id=tag_id, user_id=user_id)
 
-        if not tag or tag.user_id != user_id:
-            raise TagNotFoundError(identifier=tag_id, msg=f"Tag with id {tag_id} not found.")
+        if not tag:
+            generic_tag = await self._tags_repo.get_by_id(tag_id=tag_id)
 
-        tag_with_name = await self.tags_repo.get_by_name(user_id=user_id, tag_name=name)
+            tag = ORMUserTagPreference(tag_id=generic_tag.id, user_id=user_id, color="gray")
+            self._tags_repo.save(tag)
 
-        if tag_with_name and tag_with_name.id != tag_id:
-            raise InvalidActionError(rule="tag_name_exists", msg=f"Tag with name {name} already exists.")
-
-        tag.name = name
         tag.color = color
-        await self.tags_repo.commit()
+        await self._tags_repo.commit()
+
+    async def delete_library(self, user_id: UUID):
+        files = await self._file_repo.list_owned_by(user_id)
+
+        if files:
+            await self._search_engine.delete_by_docs([f.id for f in files])
+
+        await self._storage_backend.delete_scope(f"pdf/{str(user_id)}")
+        await self._storage_backend.delete_scope(f"thumbnails/{str(user_id)}")
+
+    async def list_collection_permissions(self, user_id: UUID, collection_id: UUID) -> list[PermissionAssignment]:
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
+        if not perm or not perm.can_read:
+            raise InsufficientPermissionError(
+                action="read",
+                resource="Permissions",
+                identifier=collection_id,
+            )
+
+        return await self._permission_repo.list_for_collection(collection_id)

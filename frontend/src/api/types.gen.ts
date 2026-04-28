@@ -46,6 +46,21 @@ export type AppStateResponse = {
 };
 
 /**
+ * AssignmentResponse
+ */
+export type AssignmentResponse = {
+  user: UserSummaryResponse;
+  /**
+   * Inherited From
+   */
+  inherited_from?: string | null;
+  /**
+   * Permission
+   */
+  permission: "owner" | "read" | "modify";
+};
+
+/**
  * AuthProviderOidcCreateRequest
  */
 export type AuthProviderOidcCreateRequest = {
@@ -151,8 +166,6 @@ export type AuthProviderOidcUpdateRequest = {
   additional_scopes?: string;
   /**
    * Group Claim Name
-   *
-   * Claim name providing group names
    */
   group_claim_name?: string;
   /**
@@ -246,9 +259,9 @@ export type BodyUploadFile = {
    */
   description?: string | null;
   /**
-   * Folder Id
+   * Collection Id
    */
-  folder_id: string;
+  collection_id: string;
   /**
    * Tags
    */
@@ -271,6 +284,36 @@ export type CollectionResponse = {
    * Parent Id
    */
   parent_id?: string | null;
+  /**
+   * Entity Type
+   */
+  entity_type: "folder" | "group";
+};
+
+/**
+ * CollectionWithDetailsResponse
+ */
+export type CollectionWithDetailsResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Parent Id
+   */
+  parent_id?: string | null;
+  /**
+   * Entity Type
+   */
+  entity_type: "folder" | "group";
+  /**
+   * Files
+   */
+  files?: Array<FileResponse>;
 };
 
 /**
@@ -285,20 +328,10 @@ export type CreateCollectionRequest = {
    * Parent Id
    */
   parent_id?: string | null;
-};
-
-/**
- * CreateFolderRequest
- */
-export type CreateFolderRequest = {
   /**
-   * Name
+   * Entity Type
    */
-  name: string;
-  /**
-   * Parent Id
-   */
-  parent_id?: string | null;
+  entity_type: "folder" | "group";
 };
 
 /**
@@ -364,25 +397,55 @@ export type FileResponse = {
    */
   name: string;
   /**
-   * Folder Id
+   * Collection Id
    */
-  folder_id?: string | null;
+  collection_id?: string | null;
   /**
    * Description
    */
   description?: string | null;
   /**
+   * Page Count
+   */
+  page_count: number;
+  /**
+   * Thumbnail
+   */
+  thumbnail?: string | null;
+  /**
    * Tags
    */
   tags?: Array<TagResponse>;
+  state: FileStateResponse;
+  /**
+   * Tags Name List
+   */
+  readonly tags_name_list: Array<string>;
+};
+
+/**
+ * FileSearchResponse
+ */
+export type FileSearchResponse = {
+  file: FileResponse;
+  /**
+   * Hits
+   */
+  hits: Array<SearchHitResponse>;
+  /**
+   * Score
+   */
+  score: "weak" | "good" | "strong";
+};
+
+/**
+ * FileStateResponse
+ */
+export type FileStateResponse = {
   /**
    * Is Favorite
    */
   is_favorite: boolean;
-  /**
-   * Page Count
-   */
-  page_count: number;
   /**
    * Current Page
    */
@@ -391,32 +454,6 @@ export type FileResponse = {
    * Scale
    */
   scale: string;
-  /**
-   * Tags Name List
-   */
-  readonly tags_name_list: Array<string>;
-};
-
-/**
- * FolderResponse
- */
-export type FolderResponse = {
-  /**
-   * Id
-   */
-  id: string;
-  /**
-   * Name
-   */
-  name: string;
-  /**
-   * Parent Id
-   */
-  parent_id?: string | null;
-  /**
-   * Files
-   */
-  files?: Array<FileResponse>;
 };
 
 /**
@@ -448,11 +485,15 @@ export type LibraryTreeNode = {
   /**
    * Entity Type
    */
-  entity_type: "collection" | "folder";
+  entity_type: "group" | "folder";
   /**
    * Parent Id
    */
   parent_id?: string | null;
+  /**
+   * Is Shared
+   */
+  is_shared?: boolean;
 };
 
 /**
@@ -503,6 +544,28 @@ export type PatchFileStateRequest = {
    * Scale
    */
   scale?: string | null;
+  /**
+   * Is Favorite
+   */
+  is_favorite?: boolean | null;
+};
+
+/**
+ * ResourcePermissionResponse
+ */
+export type ResourcePermissionResponse = {
+  /**
+   * Entity Type
+   */
+  entity_type: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Assignments
+   */
+  assignments: Array<AssignmentResponse>;
 };
 
 /**
@@ -550,6 +613,28 @@ export type RoleResponse = {
 };
 
 /**
+ * SearchHitResponse
+ */
+export type SearchHitResponse = {
+  /**
+   * Snippet
+   */
+  snippet: string;
+  /**
+   * Page Number
+   */
+  page_number?: number | null;
+  /**
+   * Fragment Type
+   */
+  fragment_type: string;
+  /**
+   * Rank
+   */
+  rank: number;
+};
+
+/**
  * SetupUser
  *
  * Create initial application user
@@ -584,9 +669,27 @@ export type SsoConfigResponse = {
 };
 
 /**
- * TagDetailResponse
+ * TagResponse
  */
-export type TagDetailResponse = {
+export type TagResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Color
+   */
+  color: string;
+};
+
+/**
+ * TagWithDetailsResponse
+ */
+export type TagWithDetailsResponse = {
   /**
    * Id
    */
@@ -603,24 +706,6 @@ export type TagDetailResponse = {
    * File Count
    */
   file_count: number;
-};
-
-/**
- * TagResponse
- */
-export type TagResponse = {
-  /**
-   * Id
-   */
-  id: string;
-  /**
-   * Name
-   */
-  name: string;
-  /**
-   * Color
-   */
-  color: string;
 };
 
 /**
@@ -654,37 +739,15 @@ export type UpdateFileRequest = {
    */
   tags?: Array<string>;
   /**
-   * Folder Id
+   * Collection Id
    */
-  folder_id?: string | null;
-  /**
-   * Is Favorite
-   */
-  is_favorite?: boolean;
-};
-
-/**
- * UpdateFolderRequest
- */
-export type UpdateFolderRequest = {
-  /**
-   * Name
-   */
-  name: string;
-  /**
-   * Parent Id
-   */
-  parent_id?: string | null;
+  collection_id: string;
 };
 
 /**
  * UpdateTagRequest
  */
 export type UpdateTagRequest = {
-  /**
-   * Name
-   */
-  name: string;
   /**
    * Color
    */
@@ -764,6 +827,24 @@ export type UserSessionResponse = {
    * Session Id
    */
   session_id: string;
+};
+
+/**
+ * UserSummaryResponse
+ */
+export type UserSummaryResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Email
+   */
+  email: string;
 };
 
 /**
@@ -861,8 +942,6 @@ export type AuthProviderOidcUpdateRequestWritable = {
   additional_scopes?: string;
   /**
    * Group Claim Name
-   *
-   * Claim name providing group names
    */
   group_claim_name?: string;
   /**
@@ -873,6 +952,32 @@ export type AuthProviderOidcUpdateRequestWritable = {
    * Auto Login
    */
   auto_login?: boolean;
+};
+
+/**
+ * CollectionWithDetailsResponse
+ */
+export type CollectionWithDetailsResponseWritable = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Parent Id
+   */
+  parent_id?: string | null;
+  /**
+   * Entity Type
+   */
+  entity_type: "folder" | "group";
+  /**
+   * Files
+   */
+  files?: Array<FileResponseWritable>;
 };
 
 /**
@@ -888,55 +993,37 @@ export type FileResponseWritable = {
    */
   name: string;
   /**
-   * Folder Id
+   * Collection Id
    */
-  folder_id?: string | null;
+  collection_id?: string | null;
   /**
    * Description
    */
   description?: string | null;
   /**
-   * Tags
-   */
-  tags?: Array<TagResponse>;
-  /**
-   * Is Favorite
-   */
-  is_favorite: boolean;
-  /**
    * Page Count
    */
   page_count: number;
   /**
-   * Current Page
+   * Thumbnail
    */
-  current_page: number;
+  thumbnail?: string | null;
   /**
-   * Scale
+   * Tags
    */
-  scale: string;
+  tags?: Array<TagResponse>;
+  state: FileStateResponse;
 };
 
 /**
- * FolderResponse
+ * FileSearchResponse
  */
-export type FolderResponseWritable = {
+export type FileSearchResponseWritable = {
+  file: FileResponseWritable;
   /**
-   * Id
+   * Hits
    */
-  id: string;
-  /**
-   * Name
-   */
-  name: string;
-  /**
-   * Parent Id
-   */
-  parent_id?: string | null;
-  /**
-   * Files
-   */
-  files?: Array<FileResponseWritable>;
+  hits: Array<SearchHitResponse>;
 };
 
 /**
@@ -1275,6 +1362,37 @@ export type DeleteCollectionResponses = {
   200: unknown;
 };
 
+export type GetCollectionData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/collections/{id}";
+};
+
+export type GetCollectionErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetCollectionError = GetCollectionErrors[keyof GetCollectionErrors];
+
+export type GetCollectionResponses = {
+  /**
+   * Successful Response
+   */
+  200: CollectionWithDetailsResponse;
+};
+
+export type GetCollectionResponse =
+  GetCollectionResponses[keyof GetCollectionResponses];
+
 export type UpdateCollectionData = {
   body: UpdateCollectionRequest;
   path: {
@@ -1304,7 +1422,7 @@ export type UpdateCollectionResponses = {
   200: unknown;
 };
 
-export type DeleteFolderData = {
+export type GetCollectionPermissionsData = {
   body?: never;
   path: {
     /**
@@ -1313,124 +1431,28 @@ export type DeleteFolderData = {
     id: string;
   };
   query?: never;
-  url: "/api/v1/library/folders/{id}";
+  url: "/api/v1/library/collections/{id}/permissions";
 };
 
-export type DeleteFolderErrors = {
+export type GetCollectionPermissionsErrors = {
   /**
    * Validation Error
    */
   422: HttpValidationError;
 };
 
-export type DeleteFolderError = DeleteFolderErrors[keyof DeleteFolderErrors];
+export type GetCollectionPermissionsError =
+  GetCollectionPermissionsErrors[keyof GetCollectionPermissionsErrors];
 
-export type DeleteFolderResponses = {
+export type GetCollectionPermissionsResponses = {
   /**
    * Successful Response
    */
-  200: unknown;
+  200: ResourcePermissionResponse;
 };
 
-export type GetFolderData = {
-  body?: never;
-  path: {
-    /**
-     * Id
-     */
-    id: string;
-  };
-  query?: never;
-  url: "/api/v1/library/folders/{id}";
-};
-
-export type GetFolderErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError;
-};
-
-export type GetFolderError = GetFolderErrors[keyof GetFolderErrors];
-
-export type GetFolderResponses = {
-  /**
-   * Successful Response
-   */
-  200: FolderResponse;
-};
-
-export type GetFolderResponse = GetFolderResponses[keyof GetFolderResponses];
-
-export type UpdateFolderData = {
-  body: UpdateFolderRequest;
-  path: {
-    /**
-     * Id
-     */
-    id: string;
-  };
-  query?: never;
-  url: "/api/v1/library/folders/{id}";
-};
-
-export type UpdateFolderErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError;
-};
-
-export type UpdateFolderError = UpdateFolderErrors[keyof UpdateFolderErrors];
-
-export type UpdateFolderResponses = {
-  /**
-   * Successful Response
-   */
-  200: unknown;
-};
-
-export type ListFoldersData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: "/api/v1/library/folders";
-};
-
-export type ListFoldersResponses = {
-  /**
-   * Response Listfolders
-   *
-   * Successful Response
-   */
-  200: Array<FolderResponse>;
-};
-
-export type ListFoldersResponse =
-  ListFoldersResponses[keyof ListFoldersResponses];
-
-export type CreateFolderData = {
-  body: CreateFolderRequest;
-  path?: never;
-  query?: never;
-  url: "/api/v1/library/folders";
-};
-
-export type CreateFolderErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError;
-};
-
-export type CreateFolderError = CreateFolderErrors[keyof CreateFolderErrors];
-
-export type CreateFolderResponses = {
-  /**
-   * Successful Response
-   */
-  200: unknown;
-};
+export type GetCollectionPermissionsResponse =
+  GetCollectionPermissionsResponses[keyof GetCollectionPermissionsResponses];
 
 export type DeleteFileData = {
   body?: never;
@@ -1520,6 +1542,39 @@ export type UpdateFileResponses = {
   200: unknown;
 };
 
+export type GetFileStateData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{id}/state";
+};
+
+export type GetFileStateErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetFileStateError = GetFileStateErrors[keyof GetFileStateErrors];
+
+export type GetFileStateResponses = {
+  /**
+   * Response Getfilestate
+   *
+   * Successful Response
+   */
+  200: Array<FileStateResponse>;
+};
+
+export type GetFileStateResponse =
+  GetFileStateResponses[keyof GetFileStateResponses];
+
 export type PatchFileStateData = {
   body: PatchFileStateRequest;
   path: {
@@ -1568,80 +1623,6 @@ export type GetLibraryTreeResponses = {
 export type GetLibraryTreeResponse =
   GetLibraryTreeResponses[keyof GetLibraryTreeResponses];
 
-export type ListTagsData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: "/api/v1/library/tags";
-};
-
-export type ListTagsResponses = {
-  /**
-   * Response Listtags
-   *
-   * Successful Response
-   */
-  200: Array<TagDetailResponse>;
-};
-
-export type ListTagsResponse = ListTagsResponses[keyof ListTagsResponses];
-
-export type DeleteTagData = {
-  body?: never;
-  path: {
-    /**
-     * Id
-     */
-    id: string;
-  };
-  query?: never;
-  url: "/api/v1/library/tags/{id}";
-};
-
-export type DeleteTagErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError;
-};
-
-export type DeleteTagError = DeleteTagErrors[keyof DeleteTagErrors];
-
-export type DeleteTagResponses = {
-  /**
-   * Successful Response
-   */
-  200: unknown;
-};
-
-export type UpdateTagData = {
-  body: UpdateTagRequest;
-  path: {
-    /**
-     * Id
-     */
-    id: string;
-  };
-  query?: never;
-  url: "/api/v1/library/tags/{id}";
-};
-
-export type UpdateTagErrors = {
-  /**
-   * Validation Error
-   */
-  422: HttpValidationError;
-};
-
-export type UpdateTagError = UpdateTagErrors[keyof UpdateTagErrors];
-
-export type UpdateTagResponses = {
-  /**
-   * Successful Response
-   */
-  200: unknown;
-};
-
 export type ListUncategorizedFilesData = {
   body?: never;
   path?: never;
@@ -1674,17 +1655,13 @@ export type ListFilesData = {
      */
     tags?: Array<string> | null;
     /**
-     * Names
+     * Name
      */
-    names?: Array<string> | null;
+    name?: string | null;
     /**
-     * Descriptions
+     * Description
      */
-    descriptions?: Array<string> | null;
-    /**
-     * Text
-     */
-    text?: Array<string> | null;
+    description?: string | null;
   };
   url: "/api/v1/library/files";
 };
@@ -1759,6 +1736,138 @@ export type GetFileResponses = {
    */
   200: unknown;
 };
+
+export type GetFileThumbnailData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{id}/thumbnail";
+};
+
+export type GetFileThumbnailErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetFileThumbnailError =
+  GetFileThumbnailErrors[keyof GetFileThumbnailErrors];
+
+export type GetFileThumbnailResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ListTagsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/tags";
+};
+
+export type ListTagsResponses = {
+  /**
+   * Response Listtags
+   *
+   * Successful Response
+   */
+  200: Array<TagWithDetailsResponse>;
+};
+
+export type ListTagsResponse = ListTagsResponses[keyof ListTagsResponses];
+
+export type UpdateTagData = {
+  body: UpdateTagRequest;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/tags/{id}";
+};
+
+export type UpdateTagErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type UpdateTagError = UpdateTagErrors[keyof UpdateTagErrors];
+
+export type UpdateTagResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type SearchFilesData = {
+  body?: never;
+  path?: never;
+  query?: {
+    /**
+     * Page Index
+     *
+     * Page index
+     */
+    page_index?: number;
+    /**
+     * Page Size
+     *
+     * Number of items per page
+     */
+    page_size?: number;
+    /**
+     * Tags
+     */
+    tags?: Array<string> | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Text
+     */
+    text?: string | null;
+  };
+  url: "/api/v1/search/files";
+};
+
+export type SearchFilesErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type SearchFilesError = SearchFilesErrors[keyof SearchFilesErrors];
+
+export type SearchFilesResponses = {
+  /**
+   * Response Searchfiles
+   *
+   * Successful Response
+   */
+  200: Array<FileSearchResponse>;
+};
+
+export type SearchFilesResponse =
+  SearchFilesResponses[keyof SearchFilesResponses];
 
 export type GetAppStateData = {
   body?: never;

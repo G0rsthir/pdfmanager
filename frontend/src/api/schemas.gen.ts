@@ -58,6 +58,34 @@ export const AppStateResponseSchema = {
   title: "AppStateResponse",
 } as const;
 
+export const AssignmentResponseSchema = {
+  properties: {
+    user: {
+      $ref: "#/components/schemas/UserSummaryResponse",
+    },
+    inherited_from: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Inherited From",
+    },
+    permission: {
+      type: "string",
+      enum: ["owner", "read", "modify"],
+      title: "Permission",
+    },
+  },
+  type: "object",
+  required: ["user", "permission"],
+  title: "AssignmentResponse",
+} as const;
+
 export const AuthProviderOidcCreateRequestSchema = {
   properties: {
     name: {
@@ -193,13 +221,13 @@ export const AuthProviderOidcUpdateRequestSchema = {
     },
     additional_scopes: {
       type: "string",
+      minLength: 0,
       title: "Additional Scopes",
       default: "",
     },
     group_claim_name: {
       type: "string",
       title: "Group Claim Name",
-      description: "Claim name providing group names",
       default: "groups",
     },
     group_claim_rules: {
@@ -341,10 +369,10 @@ export const Body_UploadFileSchema = {
       ],
       title: "Description",
     },
-    folder_id: {
+    collection_id: {
       type: "string",
       format: "uuid",
-      title: "Folder Id",
+      title: "Collection Id",
     },
     tags: {
       items: {
@@ -355,7 +383,7 @@ export const Body_UploadFileSchema = {
     },
   },
   type: "object",
-  required: ["file", "name", "folder_id"],
+  required: ["file", "name", "collection_id"],
   title: "Body_UploadFile",
 } as const;
 
@@ -382,10 +410,56 @@ export const CollectionResponseSchema = {
       ],
       title: "Parent Id",
     },
+    entity_type: {
+      type: "string",
+      enum: ["folder", "group"],
+      title: "Entity Type",
+    },
   },
   type: "object",
-  required: ["id", "name"],
+  required: ["id", "name", "entity_type"],
   title: "CollectionResponse",
+} as const;
+
+export const CollectionWithDetailsResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    parent_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Parent Id",
+    },
+    entity_type: {
+      type: "string",
+      enum: ["folder", "group"],
+      title: "Entity Type",
+    },
+    files: {
+      items: {
+        $ref: "#/components/schemas/FileResponse",
+      },
+      type: "array",
+      title: "Files",
+    },
+  },
+  type: "object",
+  required: ["id", "name", "entity_type"],
+  title: "CollectionWithDetailsResponse",
 } as const;
 
 export const CreateCollectionRequestSchema = {
@@ -406,34 +480,15 @@ export const CreateCollectionRequestSchema = {
       ],
       title: "Parent Id",
     },
-  },
-  type: "object",
-  required: ["name"],
-  title: "CreateCollectionRequest",
-} as const;
-
-export const CreateFolderRequestSchema = {
-  properties: {
-    name: {
+    entity_type: {
       type: "string",
-      title: "Name",
-    },
-    parent_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Parent Id",
+      enum: ["folder", "group"],
+      title: "Entity Type",
     },
   },
   type: "object",
-  required: ["name"],
-  title: "CreateFolderRequest",
+  required: ["name", "entity_type"],
+  title: "CreateCollectionRequest",
 } as const;
 
 export const CredentialsResetSchema = {
@@ -511,7 +566,7 @@ export const FileResponseSchema = {
       type: "string",
       title: "Name",
     },
-    folder_id: {
+    collection_id: {
       anyOf: [
         {
           type: "string",
@@ -521,7 +576,7 @@ export const FileResponseSchema = {
           type: "null",
         },
       ],
-      title: "Folder Id",
+      title: "Collection Id",
     },
     description: {
       anyOf: [
@@ -534,6 +589,21 @@ export const FileResponseSchema = {
       ],
       title: "Description",
     },
+    page_count: {
+      type: "integer",
+      title: "Page Count",
+    },
+    thumbnail: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Thumbnail",
+    },
     tags: {
       items: {
         $ref: "#/components/schemas/TagResponse",
@@ -541,21 +611,8 @@ export const FileResponseSchema = {
       type: "array",
       title: "Tags",
     },
-    is_favorite: {
-      type: "boolean",
-      title: "Is Favorite",
-    },
-    page_count: {
-      type: "integer",
-      title: "Page Count",
-    },
-    current_page: {
-      type: "integer",
-      title: "Current Page",
-    },
-    scale: {
-      type: "string",
-      title: "Scale",
+    state: {
+      $ref: "#/components/schemas/FileStateResponse",
     },
     tags_name_list: {
       items: {
@@ -567,52 +624,52 @@ export const FileResponseSchema = {
     },
   },
   type: "object",
-  required: [
-    "id",
-    "name",
-    "is_favorite",
-    "page_count",
-    "current_page",
-    "scale",
-    "tags_name_list",
-  ],
+  required: ["id", "name", "page_count", "state", "tags_name_list"],
   title: "FileResponse",
 } as const;
 
-export const FolderResponseSchema = {
+export const FileSearchResponseSchema = {
   properties: {
-    id: {
-      type: "string",
-      format: "uuid",
-      title: "Id",
+    file: {
+      $ref: "#/components/schemas/FileResponse",
     },
-    name: {
-      type: "string",
-      title: "Name",
-    },
-    parent_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Parent Id",
-    },
-    files: {
+    hits: {
       items: {
-        $ref: "#/components/schemas/FileResponse",
+        $ref: "#/components/schemas/SearchHitResponse",
       },
       type: "array",
-      title: "Files",
+      title: "Hits",
+    },
+    score: {
+      type: "string",
+      enum: ["weak", "good", "strong"],
+      title: "Score",
+      readOnly: true,
     },
   },
   type: "object",
-  required: ["id", "name"],
-  title: "FolderResponse",
+  required: ["file", "hits", "score"],
+  title: "FileSearchResponse",
+} as const;
+
+export const FileStateResponseSchema = {
+  properties: {
+    is_favorite: {
+      type: "boolean",
+      title: "Is Favorite",
+    },
+    current_page: {
+      type: "integer",
+      title: "Current Page",
+    },
+    scale: {
+      type: "string",
+      title: "Scale",
+    },
+  },
+  type: "object",
+  required: ["is_favorite", "current_page", "scale"],
+  title: "FileStateResponse",
 } as const;
 
 export const HTTPValidationErrorSchema = {
@@ -649,7 +706,7 @@ export const LibraryTreeNodeSchema = {
     },
     entity_type: {
       type: "string",
-      enum: ["collection", "folder"],
+      enum: ["group", "folder"],
       title: "Entity Type",
     },
     parent_id: {
@@ -663,6 +720,11 @@ export const LibraryTreeNodeSchema = {
         },
       ],
       title: "Parent Id",
+    },
+    is_shared: {
+      type: "boolean",
+      title: "Is Shared",
+      default: false,
     },
   },
   type: "object",
@@ -732,9 +794,43 @@ export const PatchFileStateRequestSchema = {
       ],
       title: "Scale",
     },
+    is_favorite: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Is Favorite",
+    },
   },
   type: "object",
   title: "PatchFileStateRequest",
+} as const;
+
+export const ResourcePermissionResponseSchema = {
+  properties: {
+    entity_type: {
+      type: "string",
+      title: "Entity Type",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    assignments: {
+      items: {
+        $ref: "#/components/schemas/AssignmentResponse",
+      },
+      type: "array",
+      title: "Assignments",
+    },
+  },
+  type: "object",
+  required: ["entity_type", "name", "assignments"],
+  title: "ResourcePermissionResponse",
 } as const;
 
 export const RevokeResponseSchema = {
@@ -804,6 +900,37 @@ export const RoleResponseSchema = {
   title: "RoleResponse",
 } as const;
 
+export const SearchHitResponseSchema = {
+  properties: {
+    snippet: {
+      type: "string",
+      title: "Snippet",
+    },
+    page_number: {
+      anyOf: [
+        {
+          type: "integer",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Page Number",
+    },
+    fragment_type: {
+      type: "string",
+      title: "Fragment Type",
+    },
+    rank: {
+      type: "number",
+      title: "Rank",
+    },
+  },
+  type: "object",
+  required: ["snippet", "fragment_type", "rank"],
+  title: "SearchHitResponse",
+} as const;
+
 export const SetupUserSchema = {
   properties: {
     email: {
@@ -841,7 +968,28 @@ export const SsoConfigResponseSchema = {
   title: "SsoConfigResponse",
 } as const;
 
-export const TagDetailResponseSchema = {
+export const TagResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    color: {
+      type: "string",
+      title: "Color",
+    },
+  },
+  type: "object",
+  required: ["id", "name", "color"],
+  title: "TagResponse",
+} as const;
+
+export const TagWithDetailsResponseSchema = {
   properties: {
     id: {
       type: "string",
@@ -863,28 +1011,7 @@ export const TagDetailResponseSchema = {
   },
   type: "object",
   required: ["id", "name", "color", "file_count"],
-  title: "TagDetailResponse",
-} as const;
-
-export const TagResponseSchema = {
-  properties: {
-    id: {
-      type: "string",
-      format: "uuid",
-      title: "Id",
-    },
-    name: {
-      type: "string",
-      title: "Name",
-    },
-    color: {
-      type: "string",
-      title: "Color",
-    },
-  },
-  type: "object",
-  required: ["id", "name", "color"],
-  title: "TagResponse",
+  title: "TagWithDetailsResponse",
 } as const;
 
 export const UpdateCollectionRequestSchema = {
@@ -938,66 +1065,26 @@ export const UpdateFileRequestSchema = {
       type: "array",
       title: "Tags",
     },
-    folder_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Folder Id",
-    },
-    is_favorite: {
-      type: "boolean",
-      title: "Is Favorite",
-      default: false,
-    },
-  },
-  type: "object",
-  required: ["name"],
-  title: "UpdateFileRequest",
-} as const;
-
-export const UpdateFolderRequestSchema = {
-  properties: {
-    name: {
+    collection_id: {
       type: "string",
-      title: "Name",
-    },
-    parent_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Parent Id",
+      format: "uuid",
+      title: "Collection Id",
     },
   },
   type: "object",
-  required: ["name"],
-  title: "UpdateFolderRequest",
+  required: ["name", "collection_id"],
+  title: "UpdateFileRequest",
 } as const;
 
 export const UpdateTagRequestSchema = {
   properties: {
-    name: {
-      type: "string",
-      title: "Name",
-    },
     color: {
       type: "string",
       title: "Color",
     },
   },
   type: "object",
-  required: ["name", "color"],
+  required: ["color"],
   title: "UpdateTagRequest",
 } as const;
 
@@ -1102,6 +1189,27 @@ export const UserSessionResponseSchema = {
   title: "UserSessionResponse",
   description:
     "Provides relevant information about the logged-in user. Should not include authentication data.",
+} as const;
+
+export const UserSummaryResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    email: {
+      type: "string",
+      title: "Email",
+    },
+  },
+  type: "object",
+  required: ["id", "name", "email"],
+  title: "UserSummaryResponse",
 } as const;
 
 export const UserUpdateRequestSchema = {
@@ -1225,13 +1333,13 @@ export const AuthProviderOidcUpdateRequestWritableSchema = {
     },
     additional_scopes: {
       type: "string",
+      minLength: 0,
       title: "Additional Scopes",
       default: "",
     },
     group_claim_name: {
       type: "string",
       title: "Group Claim Name",
-      description: "Claim name providing group names",
       default: "groups",
     },
     group_claim_rules: {
@@ -1252,77 +1360,7 @@ export const AuthProviderOidcUpdateRequestWritableSchema = {
   title: "AuthProviderOidcUpdateRequest",
 } as const;
 
-export const FileResponseWritableSchema = {
-  properties: {
-    id: {
-      type: "string",
-      format: "uuid",
-      title: "Id",
-    },
-    name: {
-      type: "string",
-      title: "Name",
-    },
-    folder_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Folder Id",
-    },
-    description: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Description",
-    },
-    tags: {
-      items: {
-        $ref: "#/components/schemas/TagResponse",
-      },
-      type: "array",
-      title: "Tags",
-    },
-    is_favorite: {
-      type: "boolean",
-      title: "Is Favorite",
-    },
-    page_count: {
-      type: "integer",
-      title: "Page Count",
-    },
-    current_page: {
-      type: "integer",
-      title: "Current Page",
-    },
-    scale: {
-      type: "string",
-      title: "Scale",
-    },
-  },
-  type: "object",
-  required: [
-    "id",
-    "name",
-    "is_favorite",
-    "page_count",
-    "current_page",
-    "scale",
-  ],
-  title: "FileResponse",
-} as const;
-
-export const FolderResponseWritableSchema = {
+export const CollectionWithDetailsResponseWritableSchema = {
   properties: {
     id: {
       type: "string",
@@ -1345,6 +1383,11 @@ export const FolderResponseWritableSchema = {
       ],
       title: "Parent Id",
     },
+    entity_type: {
+      type: "string",
+      enum: ["folder", "group"],
+      title: "Entity Type",
+    },
     files: {
       items: {
         $ref: "#/components/schemas/FileResponseWritable",
@@ -1354,8 +1397,91 @@ export const FolderResponseWritableSchema = {
     },
   },
   type: "object",
-  required: ["id", "name"],
-  title: "FolderResponse",
+  required: ["id", "name", "entity_type"],
+  title: "CollectionWithDetailsResponse",
+} as const;
+
+export const FileResponseWritableSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    collection_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Collection Id",
+    },
+    description: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Description",
+    },
+    page_count: {
+      type: "integer",
+      title: "Page Count",
+    },
+    thumbnail: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Thumbnail",
+    },
+    tags: {
+      items: {
+        $ref: "#/components/schemas/TagResponse",
+      },
+      type: "array",
+      title: "Tags",
+    },
+    state: {
+      $ref: "#/components/schemas/FileStateResponse",
+    },
+  },
+  type: "object",
+  required: ["id", "name", "page_count", "state"],
+  title: "FileResponse",
+} as const;
+
+export const FileSearchResponseWritableSchema = {
+  properties: {
+    file: {
+      $ref: "#/components/schemas/FileResponseWritable",
+    },
+    hits: {
+      items: {
+        $ref: "#/components/schemas/SearchHitResponse",
+      },
+      type: "array",
+      title: "Hits",
+    },
+  },
+  type: "object",
+  required: ["file", "hits"],
+  title: "FileSearchResponse",
 } as const;
 
 export const RoleResponseWritableSchema = {

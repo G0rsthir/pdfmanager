@@ -20,9 +20,6 @@ import type {
   CreateCollectionData,
   CreateCollectionErrors,
   CreateCollectionResponses,
-  CreateFolderData,
-  CreateFolderErrors,
-  CreateFolderResponses,
   CreateOidcAuthProviderData,
   CreateOidcAuthProviderErrors,
   CreateOidcAuthProviderResponses,
@@ -38,15 +35,9 @@ import type {
   DeleteFileData,
   DeleteFileErrors,
   DeleteFileResponses,
-  DeleteFolderData,
-  DeleteFolderErrors,
-  DeleteFolderResponses,
   DeleteOidcAuthProviderData,
   DeleteOidcAuthProviderErrors,
   DeleteOidcAuthProviderResponses,
-  DeleteTagData,
-  DeleteTagErrors,
-  DeleteTagResponses,
   DeleteUserData,
   DeleteUserErrors,
   DeleteUserResponses,
@@ -54,6 +45,12 @@ import type {
   GetAppStateResponses,
   GetAppStatusData,
   GetAppStatusResponses,
+  GetCollectionData,
+  GetCollectionErrors,
+  GetCollectionPermissionsData,
+  GetCollectionPermissionsErrors,
+  GetCollectionPermissionsResponses,
+  GetCollectionResponses,
   GetCurrentSessionData,
   GetCurrentSessionResponses,
   GetFileData,
@@ -62,9 +59,12 @@ import type {
   GetFileDetailsResponses,
   GetFileErrors,
   GetFileResponses,
-  GetFolderData,
-  GetFolderErrors,
-  GetFolderResponses,
+  GetFileStateData,
+  GetFileStateErrors,
+  GetFileStateResponses,
+  GetFileThumbnailData,
+  GetFileThumbnailErrors,
+  GetFileThumbnailResponses,
   GetLibraryTreeData,
   GetLibraryTreeResponses,
   GetOidcAuthProviderData,
@@ -77,8 +77,6 @@ import type {
   ListFilesData,
   ListFilesErrors,
   ListFilesResponses,
-  ListFoldersData,
-  ListFoldersResponses,
   ListOidcAuthProvidersData,
   ListOidcAuthProvidersResponses,
   ListRolesData,
@@ -104,15 +102,15 @@ import type {
   ResetUserPasswordResponses,
   RevokeTokenData,
   RevokeTokenResponses,
+  SearchFilesData,
+  SearchFilesErrors,
+  SearchFilesResponses,
   UpdateCollectionData,
   UpdateCollectionErrors,
   UpdateCollectionResponses,
   UpdateFileData,
   UpdateFileErrors,
   UpdateFileResponses,
-  UpdateFolderData,
-  UpdateFolderErrors,
-  UpdateFolderResponses,
   UpdateOidcAuthProviderData,
   UpdateOidcAuthProviderErrors,
   UpdateOidcAuthProviderResponses,
@@ -304,6 +302,22 @@ export const deleteCollection = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Get Collection
+ */
+export const getCollection = <ThrowOnError extends boolean = false>(
+  options: Options<GetCollectionData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetCollectionResponses,
+    GetCollectionErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/collections/{id}",
+    ...options,
+  });
+
+/**
  * Update Collection
  */
 export const updateCollection = <ThrowOnError extends boolean = false>(
@@ -324,87 +338,19 @@ export const updateCollection = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Delete Folder
+ * Get Collection Permissions
  */
-export const deleteFolder = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteFolderData, ThrowOnError>,
-) =>
-  (options.client ?? client).delete<
-    DeleteFolderResponses,
-    DeleteFolderErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/folders/{id}",
-    ...options,
-  });
-
-/**
- * Get Folder
- */
-export const getFolder = <ThrowOnError extends boolean = false>(
-  options: Options<GetFolderData, ThrowOnError>,
+export const getCollectionPermissions = <ThrowOnError extends boolean = false>(
+  options: Options<GetCollectionPermissionsData, ThrowOnError>,
 ) =>
   (options.client ?? client).get<
-    GetFolderResponses,
-    GetFolderErrors,
+    GetCollectionPermissionsResponses,
+    GetCollectionPermissionsErrors,
     ThrowOnError
   >({
     security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/folders/{id}",
+    url: "/api/v1/library/collections/{id}/permissions",
     ...options,
-  });
-
-/**
- * Update Folder
- */
-export const updateFolder = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateFolderData, ThrowOnError>,
-) =>
-  (options.client ?? client).put<
-    UpdateFolderResponses,
-    UpdateFolderErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/folders/{id}",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * List Folders
- */
-export const listFolders = <ThrowOnError extends boolean = false>(
-  options?: Options<ListFoldersData, ThrowOnError>,
-) =>
-  (options?.client ?? client).get<ListFoldersResponses, unknown, ThrowOnError>({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/folders",
-    ...options,
-  });
-
-/**
- * Create Folder
- */
-export const createFolder = <ThrowOnError extends boolean = false>(
-  options: Options<CreateFolderData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    CreateFolderResponses,
-    CreateFolderErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/folders",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
   });
 
 /**
@@ -460,6 +406,22 @@ export const updateFile = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Get File State
+ */
+export const getFileState = <ThrowOnError extends boolean = false>(
+  options: Options<GetFileStateData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetFileStateResponses,
+    GetFileStateErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/state",
+    ...options,
+  });
+
+/**
  * Patch File State
  */
 export const patchFileState = <ThrowOnError extends boolean = false>(
@@ -494,54 +456,6 @@ export const getLibraryTree = <ThrowOnError extends boolean = false>(
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/tree",
     ...options,
-  });
-
-/**
- * List Tags
- */
-export const listTags = <ThrowOnError extends boolean = false>(
-  options?: Options<ListTagsData, ThrowOnError>,
-) =>
-  (options?.client ?? client).get<ListTagsResponses, unknown, ThrowOnError>({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/tags",
-    ...options,
-  });
-
-/**
- * Delete Tag
- */
-export const deleteTag = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteTagData, ThrowOnError>,
-) =>
-  (options.client ?? client).delete<
-    DeleteTagResponses,
-    DeleteTagErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/tags/{id}",
-    ...options,
-  });
-
-/**
- * Update Tag
- */
-export const updateTag = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateTagData, ThrowOnError>,
-) =>
-  (options.client ?? client).put<
-    UpdateTagResponses,
-    UpdateTagErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/tags/{id}",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
   });
 
 /**
@@ -598,7 +512,7 @@ export const uploadFile = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Get File
+ * Download File
  */
 export const getFile = <ThrowOnError extends boolean = false>(
   options: Options<GetFileData, ThrowOnError>,
@@ -610,6 +524,70 @@ export const getFile = <ThrowOnError extends boolean = false>(
       ...options,
     },
   );
+
+/**
+ * Get File Thumbnail
+ */
+export const getFileThumbnail = <ThrowOnError extends boolean = false>(
+  options: Options<GetFileThumbnailData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetFileThumbnailResponses,
+    GetFileThumbnailErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/thumbnail",
+    ...options,
+  });
+
+/**
+ * List Tags
+ */
+export const listTags = <ThrowOnError extends boolean = false>(
+  options?: Options<ListTagsData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<ListTagsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/tags",
+    ...options,
+  });
+
+/**
+ * Update Tag
+ */
+export const updateTag = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateTagData, ThrowOnError>,
+) =>
+  (options.client ?? client).put<
+    UpdateTagResponses,
+    UpdateTagErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/tags/{id}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Search Files
+ */
+export const searchFiles = <ThrowOnError extends boolean = false>(
+  options?: Options<SearchFilesData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    SearchFilesResponses,
+    SearchFilesErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/search/files",
+    ...options,
+  });
 
 /**
  * State

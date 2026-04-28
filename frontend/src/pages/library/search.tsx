@@ -1,20 +1,32 @@
 import {
-  listFilesOptions,
   listTagsOptions,
+  searchFilesOptions,
 } from "@/api/@tanstack/react-query.gen";
-import type { FileResponse, TagResponse } from "@/api/types.gen";
+import type {
+  FileSearchResponse,
+  SearchHitResponse,
+  TagResponse,
+} from "@/api/types.gen";
 import { QueryView } from "@/components/ui/feedback";
-import { SearchBar, type SearchTokenData } from "@/components/ui/searchBar";
+import {
+  SearchBar,
+  type SearchKeyDef,
+  type SearchTokenData,
+} from "@/components/ui/searchBar";
+import { showErrorNotification } from "@/components/ui/toaster";
 import { useAPIQuery } from "@/hooks/query";
 import { useSearchParamMulti, type ParamState } from "@/hooks/url";
 import {
   Badge,
+  Box,
   Card,
   Grid,
   GridItem,
   Group,
   Heading,
-  Highlight,
+  Mark,
+  ScrollArea,
+  Separator,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -79,10 +91,16 @@ export function SearchPage() {
   );
 }
 
-function SearchView({ tags }: { tags: TagResponse[] }) {
-  const { tokens, setTokens, searchParams } = useLibrarySearchParams();
+type SearchFilterKeyDef = SearchKeyDef & { isSingleUse?: boolean };
 
-  const searchkeys = useMemo(
+function SearchView({ tags }: { tags: TagResponse[] }) {
+  const {
+    tokens,
+    setTokens: setTokensRaw,
+    searchParams,
+  } = useLibrarySearchParams();
+
+  const allKeys: Record<string, SearchFilterKeyDef> = useMemo(
     () => ({
       tag: {
         label: "Tag",
@@ -91,13 +109,53 @@ function SearchView({ tags }: { tags: TagResponse[] }) {
       name: {
         label: "Name",
         values: [],
+        isSingleUse: true,
       },
       description: {
         label: "Description",
         values: [],
+        isSingleUse: true,
+      },
+      text: {
+        label: "This little action gonna cost you 51 years. Full text search",
+        values: [],
+        isSingleUse: true,
       },
     }),
     [tags],
+  );
+
+  const activeKeys = useMemo(() => {
+    const usedKeys = new Set(tokens.map((t) => t.key ?? t.type));
+    return Object.fromEntries(
+      Object.entries(allKeys).filter(
+        ([key, def]) => !def.isSingleUse || !usedKeys.has(key),
+      ),
+    );
+  }, [allKeys, tokens]);
+
+  const setSafeTokens = useCallback(
+    (next: SearchTokenData[]) => {
+      const seen = new Set<string>();
+      let blocked = false;
+      const filtered = next.filter((t) => {
+        const key = t.key ?? t.type;
+        const def = allKeys[key];
+        if (def?.isSingleUse) {
+          if (seen.has(key)) {
+            blocked = true;
+            return false;
+          }
+          seen.add(key);
+        }
+        return true;
+      });
+      if (blocked) {
+        showErrorNotification("This filter can only be used once");
+      }
+      setTokensRaw(filtered);
+    },
+    [allKeys, setTokensRaw],
   );
 
   return (
@@ -106,7 +164,7 @@ function SearchView({ tags }: { tags: TagResponse[] }) {
         Search
       </Heading>
 
-      <SearchBar keys={searchkeys} value={tokens} onSearch={setTokens} />
+      <SearchBar keys={activeKeys} value={tokens} onSearch={setSafeTokens} />
 
       {tokens.length == 0 && (
         <Empty
@@ -128,32 +186,32 @@ function SearchQuery(props: SearchQueryProps) {
   const { searchParams } = props;
 
   const query = useAPIQuery({
-    ...listFilesOptions({
+    ...searchFilesOptions({
       query: {
         tags: searchParams.tag,
-        text: searchParams.text,
-        names: searchParams.name,
-        descriptions: searchParams.description,
+        text: searchParams.text?.[0],
+        name: searchParams.name?.[0],
+        description: searchParams.description?.[0],
       },
     }),
   });
 
   return (
     <QueryView query={query}>
-      {(data) => <SearchResults files={data} textQuery={searchParams.text} />}
+      {(data) => <SearchResults results={data} textQuery={searchParams.text} />}
     </QueryView>
   );
 }
 
 interface SearchResultsProps {
-  files: FileResponse[];
+  results: FileSearchResponse[];
   textQuery: string[];
 }
 
 function SearchResults(props: SearchResultsProps) {
-  const { files, textQuery } = props;
+  const { results, textQuery } = props;
 
-  if (files.length === 0) {
+  if (results.length === 0) {
     return (
       <Empty
         icon={<LuSearch />}
@@ -164,26 +222,36 @@ function SearchResults(props: SearchResultsProps) {
 
   return (
     <Stack gap={6}>
-      {files.map((file) => (
-        <SearchFileCard file={file} textQuery={textQuery} key={file.id} />
+      {results.map((result) => (
+        <SearchFileHitsCard
+          result={result}
+          textQuery={textQuery}
+          key={result.file.id}
+        />
       ))}
     </Stack>
   );
 }
 
-const highlightStyles = { bg: "yellow.subtle", px: "0.5" };
+export function SearchFileHitsCard(props: {
+  result: FileSearchResponse;
+  textQuery: string[];
+}) {
+  const {
+    result: { file, hits, score },
+    textQuery,
+  } = props;
 
-function SearchFileCard(props: { file: FileResponse; textQuery: string[] }) {
-  const { file, textQuery } = props;
+  const relevance = {
+    strong: { label: "Strong relevance", color: "green.solid" },
+    good: { label: "Good relevance", color: "yellow.solid" },
+    weak: { label: "Weak relevance", color: "gray.solid" },
+  }[score];
 
   return (
-    <Card.Root
-      variant="outline"
-      _hover={{ borderColor: "border.emphasized" }}
-      transition="border-color 0.2s"
-    >
+    <Card.Root variant="outline" size="sm">
       <Card.Body>
-        <Grid templateColumns="auto 1fr auto" templateRows="1fr auto" gap={4}>
+        <Grid templateColumns="auto 1fr auto" templateRows="1fr auto" gap={2}>
           <GridItem>
             <Stack
               align="center"
@@ -191,8 +259,8 @@ function SearchFileCard(props: { file: FileResponse; textQuery: string[] }) {
               bg="colorPalette.700"
               color="colorPalette.200"
               rounded="md"
-              w="12"
-              minH="12"
+              w="10"
+              h="10"
             >
               <LuFileText />
             </Stack>
@@ -200,38 +268,21 @@ function SearchFileCard(props: { file: FileResponse; textQuery: string[] }) {
           <GridItem>
             <Stack gap={1}>
               <NavLink
-                to={toFileUrl({ folderId: file.folder_id, fileId: file.id })}
+                to={toFileUrl({
+                  folderId: file.collection_id,
+                  fileId: file.id,
+                })}
               >
                 <Card.Title
                   _hover={{ color: "colorPalette.fg" }}
                   transition="color 0.2s"
                 >
-                  {textQuery.length > 0 ? (
-                    <Highlight
-                      query={textQuery}
-                      ignoreCase
-                      styles={highlightStyles}
-                    >
-                      {file.name}
-                    </Highlight>
-                  ) : (
-                    file.name
-                  )}
+                  {file.name}
                 </Card.Title>
               </NavLink>
               {file.description && (
                 <Text textStyle="xs" color="fg.muted" truncate>
-                  {textQuery.length > 0 ? (
-                    <Highlight
-                      query={textQuery}
-                      ignoreCase
-                      styles={highlightStyles}
-                    >
-                      {file.description}
-                    </Highlight>
-                  ) : (
-                    file.description
-                  )}
+                  {file.description}
                 </Text>
               )}
             </Stack>
@@ -246,23 +297,116 @@ function SearchFileCard(props: { file: FileResponse; textQuery: string[] }) {
           <GridItem />
           <GridItem colSpan={2} justifyContent="space-between">
             <Group justifyContent="space-between" grow>
-              <Group gap={2}>
+              <Group gap={2} wrap="wrap" mt={1}>
                 {file.tags?.map((tag) => (
                   <FilterTag key={tag.id} tag={tag} />
                 ))}
               </Group>
-              <Group gap={3} justifyContent="end">
-                {file.page_count != null && (
-                  <Text textStyle="xs">
-                    {file.current_page} / {file.page_count} pages
-                  </Text>
+              <Group gap={3} justifyContent="end" wrap="wrap" mt={1}>
+                {textQuery.length && (
+                  <Badge colorPalette="blue" variant="subtle" size="xs">
+                    {hits.length} {hits.length === 1 ? "match" : "matches"}
+                  </Badge>
                 )}
+                <Group gap={1.5}>
+                  <Box boxSize={1.5} rounded="full" bg={relevance.color} />
+                  <Text textStyle="xs" color="fg.muted">
+                    {relevance.label}
+                  </Text>
+                </Group>
+                <Text textStyle="xs" color="fg.muted">
+                  {file.page_count} pages
+                </Text>
               </Group>
             </Group>
           </GridItem>
         </Grid>
+        {hits.length > 0 && (
+          <ScrollArea.Root maxHeight="10rem" variant="hover" size="sm" mt="4">
+            <ScrollArea.Viewport>
+              <ScrollArea.Content paddingEnd="3" textStyle="sm">
+                <Stack gap={1.5}>
+                  {hits.map((hit, i) => (
+                    <SearchHitItem
+                      key={`${hit.fragment_type}-${hit.page_number ?? "meta"}-${i}`}
+                      hit={hit}
+                      fileId={file.id}
+                      folderId={file.collection_id}
+                    />
+                  ))}
+                </Stack>
+              </ScrollArea.Content>
+            </ScrollArea.Viewport>
+            <ScrollArea.Scrollbar />
+          </ScrollArea.Root>
+        )}
       </Card.Body>
     </Card.Root>
+  );
+}
+
+function SearchHitItem(props: {
+  hit: SearchHitResponse;
+  fileId: string;
+  folderId: string | null | undefined;
+}) {
+  const { hit, fileId, folderId } = props;
+  const parts = hit.snippet.split(/(<mark>.*?<\/mark>)/g);
+
+  const fragment_name =
+    {
+      name: "Title",
+      description: "Description",
+      content: "Content",
+    }[hit.fragment_type] ?? hit.fragment_type;
+
+  return (
+    <NavLink
+      to={toFileUrl({
+        folderId,
+        fileId,
+        page: hit.page_number ?? undefined,
+      })}
+    >
+      <Stack
+        direction="row"
+        gap={3}
+        p={2.5}
+        align="center"
+        rounded="md"
+        bg="bg.subtle"
+        transition="background 0.15s"
+        _hover={{ bg: "bg.muted" }}
+      >
+        <Stack align="center" justify="center" minW="14" gap={0} flexShrink={0}>
+          <Text
+            textStyle="xs"
+            color="fg.muted"
+            letterSpacing="wider"
+            lineHeight={1}
+          >
+            {hit.page_number != null ? "PAGE" : "MATCH"}
+          </Text>
+          <Text textStyle="sm" fontWeight="semibold" lineHeight={1} mt="1">
+            {hit.page_number != null ? hit.page_number : fragment_name}
+          </Text>
+        </Stack>
+
+        <Separator orientation="vertical" height="6" />
+
+        <Text textStyle="sm" color="fg.muted" lineClamp={2} flex={1}>
+          {parts.map((part, i) =>
+            part.startsWith("<mark>") ? (
+              <Mark variant="subtle" colorPalette="yellow" key={i}>
+                {part.slice(6, -7)}
+              </Mark>
+            ) : (
+              part
+            ),
+          )}
+        </Text>
+      </Stack>
+    </NavLink>
   );
 }
 

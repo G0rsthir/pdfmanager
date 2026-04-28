@@ -1,8 +1,8 @@
 import {
-  getFolderOptions,
+  getCollectionOptions,
   uploadFileMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { FolderResponse } from "@/api/types.gen";
+import type { CollectionWithDetailsResponse } from "@/api/types.gen";
 import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
 import { FormModal } from "@/components/ui/form/modal";
@@ -30,35 +30,39 @@ import { FileCard, FileTagsInput } from "./shared/file";
 export function FolderPage() {
   const { folderid } = useParams();
   const query = useAPIQuery({
-    ...getFolderOptions({ path: { id: folderid! } }),
+    ...getCollectionOptions({ path: { id: folderid! } }),
   });
 
   return (
     <QueryView query={query}>
-      {(data) => <FolderView folder={data} />}
+      {(data) => <FolderView collection={data} />}
     </QueryView>
   );
 }
 
-function FolderView({ folder }: { folder: FolderResponse }) {
+function FolderView({
+  collection,
+}: {
+  collection: CollectionWithDetailsResponse;
+}) {
   return (
     <Stack gap={6}>
       <Group justify="space-between" align="center">
         <Heading size="3xl" fontWeight="normal">
-          {folder.name}
+          {collection.name}
         </Heading>
 
-        <UploadFileAction folder_id={folder.id} />
+        <UploadFileAction folder_id={collection.id} />
       </Group>
 
-      {folder.files?.length == 0 && (
+      {collection.files?.length == 0 && (
         <Empty
           icon={<LuFileText />}
           title="No files yet. Upload a PDF to get started."
         />
       )}
 
-      {folder.files?.map((file) => (
+      {collection.files?.map((file) => (
         <FileCard file={file} key={file.id} />
       ))}
     </Stack>
@@ -73,14 +77,18 @@ function UploadFileAction({ folder_id }: { folder_id: string }) {
       <Button size="sm" onClick={onOpen}>
         <LuHardDriveUpload /> Upload file
       </Button>
-      <UploadFileDialog open={open} onClose={onClose} folder_id={folder_id} />
+      <UploadFileDialog
+        open={open}
+        onClose={onClose}
+        collection_id={folder_id}
+      />
     </Flex>
   );
 }
 
 interface UploadFormValues {
   name: string;
-  folder_id: string;
+  collection_id: string;
   description: string;
   tags: string[];
   file?: File;
@@ -89,13 +97,13 @@ interface UploadFormValues {
 function UploadFileDialog(props: {
   open: boolean;
   onClose: () => void;
-  folder_id: string;
+  collection_id: string;
 }) {
-  const { open, onClose, folder_id } = props;
+  const { open, onClose, collection_id } = props;
 
   const defaultValues: UploadFormValues = {
     name: "",
-    folder_id: folder_id,
+    collection_id: collection_id,
     description: "",
     tags: [],
     file: undefined,

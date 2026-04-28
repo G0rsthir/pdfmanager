@@ -12,7 +12,6 @@ export function Overview() {
       </Text>
       <ReactNavLink label="Favorites" to="/favorites" />
       <ReactNavLink label="Tags" to="/tags" />
-      <ReactNavLink label="Uncategorized" to="/uncategorized" />
     </Box>
   );
 }

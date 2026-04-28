@@ -29,6 +29,7 @@ class TagEnum(StrEnum):
     LOGS = "logs"
     ACCOUNT = "account"
     GENERAL = "general"
+    SEARCH = "search"
 
 
 class ScopesEnum(StrEnum):

@@ -18,7 +18,6 @@ import { FilePage } from "@/pages/library/file";
 import { FolderPage } from "@/pages/library/folder";
 import { SearchPage } from "@/pages/library/search";
 import { TagsPage } from "@/pages/library/tags";
-import { UncategorizedPage } from "@/pages/library/uncategorized";
 import SetupPage from "@/pages/setup";
 import {
   createBrowserRouter,
@@ -77,10 +76,6 @@ const router = createBrowserRouter([
               {
                 path: "tags",
                 element: <TagsPage />,
-              },
-              {
-                path: "uncategorized",
-                element: <UncategorizedPage />,
               },
               {
                 path: "favorites",

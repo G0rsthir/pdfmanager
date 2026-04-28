@@ -285,6 +285,7 @@ function OidcProviderView(props: {
         group_claim_name: provider.group_claim_name,
         auto_login: provider.auto_login,
         is_enabled: provider.is_enabled,
+        additional_scopes: provider.additional_scopes,
         group_claim_rules: provider.group_claim_rules,
       },
     },
@@ -408,6 +409,27 @@ function OidcProviderView(props: {
                     onChange={(e) => handleChange(e.target.value)}
                     onBlur={handleBlur}
                     type="password"
+                  />
+                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+                </Field.Root>
+              )}
+            />
+          </SettingsOption>
+          <SettingsOption
+            title="Additional Scopes"
+            description="Additional scopes to request during authentication. This should be a space separated list of scopes"
+            labelSpan={4}
+            fieldSpan={8}
+            fontWeight="normal"
+          >
+            <FormField
+              name="additional_scopes"
+              children={({ state: fieldState, handleChange, handleBlur }) => (
+                <Field.Root invalid={!fieldState.meta.isValid}>
+                  <Input
+                    value={fieldState.value}
+                    onChange={(e) => handleChange(e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
                 </Field.Root>

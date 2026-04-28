@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, Request, Security
@@ -8,12 +8,13 @@ from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.const import ScopesEnum
+from server.infrastructure.search import Fts5SearchBackend, SearchBackend
 from server.infrastructure.storage import LocalStorageBackend
 from server.repositories import (
     AuthProviderRepository,
     CollectionRepository,
     FileRepository,
-    FolderRepository,
+    PermissionRepository,
     RoleRepository,
     SessionRepository,
     TagRepository,
@@ -23,8 +24,8 @@ from server.runtime import RuntimeContainer
 from server.security.loader import AUTH_TOKEN_URL
 from server.services.auth import AuthService
 from server.services.identity import IdentityService
+from server.services.indexing import IndexingService
 from server.services.library import LibraryService
-from server.services.storage import StorageService
 from server.services.token import TokenResponseService
 
 from .schemas.security import AccessSessionContext, RefreshSessionContext
@@ -100,20 +101,42 @@ def get_identity_service(
 
 
 def get_library_service(
+    request: Request,
     collection_repo: CollectionRepositoryDependency,
-    folder_repo: FolderRepositoryDependency,
     file_repo: FileRepositoryDependency,
     tags_repo: TagRepositoryDependency,
+    search_engine: SearchEngineDependency,
+    permission_repo: PermissionDependency,
 ) -> LibraryService:
+    env: AppEnvSettings = request.app.state.env
+    backend = LocalStorageBackend(env.STORAGE_DIR)
+
     return LibraryService(
-        collection_repo=collection_repo, folder_repo=folder_repo, file_repo=file_repo, tags_repo=tags_repo
+        collection_repo=collection_repo,
+        file_repo=file_repo,
+        tags_repo=tags_repo,
+        search_engine=search_engine,
+        permission_repo=permission_repo,
+        storage_backend=backend,
     )
 
 
-def get_storage_service(request: Request) -> StorageService:
-    env: AppEnvSettings = request.app.state.env
-    backend = LocalStorageBackend(env.STORAGE_DIR)
-    return StorageService(backend=backend)
+def get_search_engine(
+    db: DBSessionDependency,
+) -> SearchBackend:
+    return Fts5SearchBackend(session=db)
+
+
+async def run_with_indexing_service(context: RuntimeContainer, callback: Callable[[IndexingService], Awaitable[None]]):
+    """
+    Stand-alone service
+    """
+    async with context.db.get_session_context() as session:
+        service = IndexingService(
+            storage_backend=LocalStorageBackend(context.env.STORAGE_DIR),
+            search_engine=get_search_engine(session),
+        )
+        await callback(service)
 
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
@@ -130,6 +153,12 @@ def get_user_repository(
     db: DBSessionDependency,
 ) -> UserRepository:
     return UserRepository(db)
+
+
+def get_permission_repository(
+    db: DBSessionDependency,
+) -> PermissionRepository:
+    return PermissionRepository(db)
 
 
 def get_tag_repository(
@@ -168,25 +197,19 @@ def get_collection_repository(
     return CollectionRepository(db)
 
 
-def get_folder_repository(
-    db: DBSessionDependency,
-) -> FolderRepository:
-    return FolderRepository(db)
-
-
 DBSessionDependency = Annotated[AsyncSession, Depends(get_db_session)]
 EnvSettingsDependency = Annotated[AppEnvSettings, Depends(get_env_settings)]
-
 TokenServiceDependency = Annotated[TokenResponseService, Depends(get_token_service)]
-
 TagRepositoryDependency = Annotated[TagRepository, Depends(get_tag_repository)]
 RoleRepositoryDependency = Annotated[RoleRepository, Depends(get_role_repository)]
 FileRepositoryDependency = Annotated[FileRepository, Depends(get_file_repository)]
 CollectionRepositoryDependency = Annotated[CollectionRepository, Depends(get_collection_repository)]
-FolderRepositoryDependency = Annotated[FolderRepository, Depends(get_folder_repository)]
 UserRepositoryDependency = Annotated[UserRepository, Depends(get_user_repository)]
 SessionRepositoryDependency = Annotated[SessionRepository, Depends(get_session_repository)]
 AuthProviderRepositoryDependency = Annotated[AuthProviderRepository, Depends(get_auth_provider_repository)]
+PermissionDependency = Annotated[PermissionRepository, Depends(get_permission_repository)]
+
+
 AuthServiceDependency = Annotated[
     AuthService,
     Depends(get_auth_service),
@@ -202,7 +225,7 @@ LibraryServiceDependency = Annotated[
 ]
 
 
-StorageServiceDependency = Annotated[
-    StorageService,
-    Depends(get_storage_service),
+SearchEngineDependency = Annotated[
+    SearchBackend,
+    Depends(get_search_engine),
 ]

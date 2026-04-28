@@ -3,6 +3,7 @@ import os
 import shutil
 from collections.abc import Callable, Coroutine
 from contextlib import contextmanager
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -52,3 +53,9 @@ def file_backup(file_path: str | Path, delete_on_success: bool = True, suffix: s
     else:
         if delete_on_success:
             os.remove(backup_path)
+
+
+@dataclass(kw_only=True)
+class Entity:
+    def to_dict(self):
+        return {k: v for k, v in asdict(self).items() if not k.startswith("_")}

@@ -1,22 +1,15 @@
 import {
-  deleteTagMutation,
   listTagsOptions,
   updateTagMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { TagDetailResponse } from "@/api/types.gen";
-import { parseAPIError } from "@/common/error";
+import type { TagWithDetailsResponse } from "@/api/types.gen";
 import { GenericIconButton } from "@/components/ui/button";
 import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
 import { FormModal } from "@/components/ui/form/modal";
-import { ConfirmModal } from "@/components/ui/modal";
-import {
-  showErrorNotification,
-  showSuccessNotification,
-} from "@/components/ui/toaster";
 import { PaletteColors } from "@/config/theme";
 import { useFormMutation } from "@/hooks/form";
-import { useAPIMutation, useAPIQuery } from "@/hooks/query";
+import { useAPIQuery } from "@/hooks/query";
 import {
   Badge,
   Box,
@@ -49,7 +42,7 @@ export function TagsPage() {
   );
 }
 
-function TagsView({ tags }: { tags: TagDetailResponse[] }) {
+function TagsView({ tags }: { tags: TagWithDetailsResponse[] }) {
   return (
     <Stack gap={6}>
       <Heading size="3xl" fontWeight="normal">
@@ -72,7 +65,7 @@ function TagsView({ tags }: { tags: TagDetailResponse[] }) {
   );
 }
 
-function TagCard({ tag }: { tag: TagDetailResponse }) {
+function TagCard({ tag }: { tag: TagWithDetailsResponse }) {
   return (
     <Card.Root
       variant="outline"
@@ -103,9 +96,9 @@ function TagCard({ tag }: { tag: TagDetailResponse }) {
   );
 }
 
-type TagDialog = "edit" | "delete" | null;
+type TagDialog = "edit" | null;
 
-function TagActions({ tag }: { tag: TagDetailResponse }) {
+function TagActions({ tag }: { tag: TagWithDetailsResponse }) {
   const [dialog, setDialog] = useState<TagDialog>(null);
 
   return (
@@ -126,14 +119,6 @@ function TagActions({ tag }: { tag: TagDetailResponse }) {
               <Menu.Item value="edit" onClick={() => setDialog("edit")}>
                 Edit
               </Menu.Item>
-              <Menu.Item
-                value="delete"
-                color="fg.error"
-                _hover={{ bg: "bg.error", color: "fg.error" }}
-                onClick={() => setDialog("delete")}
-              >
-                Delete
-              </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
         </Portal>
@@ -144,12 +129,6 @@ function TagActions({ tag }: { tag: TagDetailResponse }) {
         onClose={() => setDialog(null)}
         tag={tag}
       />
-
-      <DeleteTagDialog
-        open={dialog === "delete"}
-        onClose={() => setDialog(null)}
-        id={tag.id}
-      />
     </>
   );
 }
@@ -157,7 +136,7 @@ function TagActions({ tag }: { tag: TagDetailResponse }) {
 const tagColors = PaletteColors.map((color) => color.value);
 
 function EditTagDialog(props: {
-  tag: TagDetailResponse;
+  tag: TagWithDetailsResponse;
   open: boolean;
   onClose: () => void;
 }) {
@@ -215,7 +194,7 @@ function EditTagDialog(props: {
         <FormField
           name="name"
           children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} required>
+            <Field.Root invalid={!fieldState.meta.isValid} required disabled>
               <Field.Label>
                 Name <Field.RequiredIndicator />
               </Field.Label>
@@ -224,6 +203,10 @@ function EditTagDialog(props: {
                 onChange={(e) => handleChange(e.target.value)}
                 onBlur={handleBlur}
               />
+              <Field.HelperText>
+                To rename a tag, remove it from your files and add it again with
+                the new name.
+              </Field.HelperText>
               <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
             </Field.Root>
           )}
@@ -287,40 +270,5 @@ function EditTagDialog(props: {
         </Group>
       </Stack>
     </FormModal>
-  );
-}
-
-function DeleteTagDialog(props: {
-  open: boolean;
-  onClose: () => void;
-  id: string;
-}) {
-  const { open, onClose, id: fileId } = props;
-
-  const { mutate: deleteRequest } = useAPIMutation({
-    ...deleteTagMutation(),
-    onSuccess() {
-      showSuccessNotification(`Tag deleted successfully`);
-      onClose();
-    },
-    onError(error) {
-      showErrorNotification(
-        "Tag deletion failed",
-        parseAPIError(error).message,
-      );
-    },
-  });
-
-  return (
-    <ConfirmModal
-      open={open}
-      onClose={onClose}
-      title="Are you sure?"
-      onConfirm={() => deleteRequest({ path: { id: fileId } })}
-      confirmBtnText="Delete"
-      confirmBtnPalette="red"
-    >
-      This action cannot be undone. This will permanently delete this tag.
-    </ConfirmModal>
   );
 }

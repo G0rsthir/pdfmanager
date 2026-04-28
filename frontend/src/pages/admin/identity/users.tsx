@@ -70,6 +70,7 @@ function UsersView({ users }: { users: UserResponse[] }) {
           <Table.ColumnHeader>Email</Table.ColumnHeader>
           <Table.ColumnHeader>Role</Table.ColumnHeader>
           <Table.ColumnHeader>Status</Table.ColumnHeader>
+          <Table.ColumnHeader>Type</Table.ColumnHeader>
           <Table.ColumnHeader textAlign="end">Actions</Table.ColumnHeader>
         </Table.Row>
       </Table.Header>
@@ -94,6 +95,14 @@ function UsersView({ users }: { users: UserResponse[] }) {
                 colorPalette={user.is_enabled ? "green" : "red"}
               >
                 {user.is_enabled ? "Active" : "Inactive"}
+              </Badge>
+            </Table.Cell>
+            <Table.Cell>
+              <Badge
+                variant="subtle"
+                colorPalette={user.is_external ? "cyan" : "orange"}
+              >
+                {user.is_external ? "External" : "Local"}
               </Badge>
             </Table.Cell>
             <Table.Cell textAlign="end">
@@ -123,17 +132,25 @@ function TableRowActions({ user }: { user: UserResponse }) {
         <Portal>
           <Menu.Positioner>
             <Menu.Content>
-              <Menu.Item value="edit" onClick={() => setDialog("edit")}>
+              <Menu.Item
+                value="edit"
+                onSelect={() => setDialog("edit")}
+                disabled={user.is_external}
+              >
                 Edit
               </Menu.Item>
-              <Menu.Item value="password" onClick={() => setDialog("password")}>
+              <Menu.Item
+                value="password"
+                onSelect={() => setDialog("password")}
+                disabled={user.is_external}
+              >
                 Reset password
               </Menu.Item>
               <Menu.Item
                 value="delete"
                 color="fg.error"
                 _hover={{ bg: "bg.error", color: "fg.error" }}
-                onClick={() => setDialog("delete")}
+                onSelect={() => setDialog("delete")}
               >
                 Delete
               </Menu.Item>

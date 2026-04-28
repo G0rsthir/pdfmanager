@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Form, Path, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Path, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse as FastAPIFileResponse
 
 from server.const import ScopesEnum
@@ -9,22 +9,25 @@ from server.dependencies import (
     AccessSecurity,
     FileRepositoryDependency,
     LibraryServiceDependency,
-    StorageServiceDependency,
+    run_with_indexing_service,
 )
-from server.exceptions import FieldError, InvalidActionError
+from server.exceptions import DuplicateResourceError, FieldError, InvalidActionError
+from server.routes._assemblers import build_file_response
+from server.schemas.identity import UserSummaryResponse
 from server.schemas.library import (
+    AssignmentResponse,
     CollectionResponse,
+    CollectionWithDetailsResponse,
     CreateCollectionRequest,
-    CreateFolderRequest,
     FileResponse,
-    FolderResponse,
+    FileStateResponse,
     LibraryTreeNode,
     ListFilesQueryParams,
     PatchFileStateRequest,
-    TagDetailResponse,
+    ResourcePermissionResponse,
+    TagWithDetailsResponse,
     UpdateCollectionRequest,
     UpdateFileRequest,
-    UpdateFolderRequest,
     UpdateTagRequest,
 )
 from server.schemas.security import AccessSessionContext
@@ -48,7 +51,56 @@ async def create_collection(
     library_service: LibraryServiceDependency,
 ):
 
-    await library_service.create_collection(user_id=access_session.user_id, name=data.name, parent_id=data.parent_id)
+    await library_service.create_collection(user_id=access_session.user_id, data=data)
+
+
+@router.get(path="/collections/{id}", operation_id="GetCollection", response_model=CollectionWithDetailsResponse)
+async def get_collection(
+    collection_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    collection = await library_service.get_collection(user_id=access_session.user_id, collection_id=collection_id)
+    files = await library_service.list_files(user_id=access_session.user_id, collection_id=collection_id)
+
+    return CollectionWithDetailsResponse(
+        id=collection.id,
+        name=collection.name,
+        parent_id=collection.parent_id,
+        entity_type=collection.entity_type,
+        files=[build_file_response(file) for file in files],
+    )
+
+
+@router.get(
+    path="/collections/{id}/permissions",
+    operation_id="GetCollectionPermissions",
+    response_model=ResourcePermissionResponse,
+)
+async def get_collection_permissions(
+    collection_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    collection = await library_service.get_collection(user_id=access_session.user_id, collection_id=collection_id)
+    assignments = await library_service.list_collection_permissions(
+        user_id=access_session.user_id, collection_id=collection_id
+    )
+
+    return ResourcePermissionResponse(
+        entity_type=collection.entity_type,
+        name=collection.name,
+        assignments=[
+            AssignmentResponse(
+                user=UserSummaryResponse.model_validate(assign.user),
+                permission=assign.permission.permission,
+                inherited_from=assign.inherited_from,
+            )
+            for assign in assignments
+        ],
+    )
 
 
 @router.put(path="/collections/{id}", operation_id="UpdateCollection")
@@ -78,82 +130,14 @@ async def delete_collection(
     await library_service.delete_collection(user_id=access_session.user_id, collection_id=collection_id)
 
 
-@router.get(path="/folders/{id}", operation_id="GetFolder", response_model=FolderResponse)
-async def get_folder(
-    folder_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
-    library_service: LibraryServiceDependency,
-):
-
-    folder = await library_service.get_folder(user_id=access_session.user_id, folder_id=folder_id)
-    files = await library_service.list_files(user_id=access_session.user_id, folder_id=folder_id)
-
-    return FolderResponse(
-        id=folder.id,
-        name=folder.name,
-        parent_id=folder.collection_id,
-        files=[FileResponse.model_validate(file) for file in files],
-    )
-
-
-@router.post(path="/folders", operation_id="CreateFolder")
-async def create_folder(
-    data: CreateFolderRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
-    library_service: LibraryServiceDependency,
-):
-
-    await library_service.create_folder(user_id=access_session.user_id, name=data.name, parent_id=data.parent_id)
-
-
-@router.get(path="/folders", operation_id="ListFolders", response_model=list[FolderResponse])
-async def list_folders(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
-    library_service: LibraryServiceDependency,
-):
-
-    return await library_service.list_folders(user_id=access_session.user_id)
-
-
-@router.put(path="/folders/{id}", operation_id="UpdateFolder")
-async def update_folder(
-    folder_id: Annotated[UUID, Path(alias="id")],
-    data: UpdateFolderRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
-    library_service: LibraryServiceDependency,
-):
-
-    await library_service.update_folder(
-        user_id=access_session.user_id, folder_id=folder_id, name=data.name, parent_id=data.parent_id
-    )
-
-
-@router.delete(path="/folders/{id}", operation_id="DeleteFolder")
-async def delete_folder(
-    folder_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
-    library_service: LibraryServiceDependency,
-):
-
-    await library_service.delete_folder(user_id=access_session.user_id, folder_id=folder_id)
-
-
 @router.delete(path="/files/{id}", operation_id="DeleteFile")
 async def delete_file(
     file_id: Annotated[UUID, Path(alias="id")],
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
-    storage_service: StorageServiceDependency,
-    file_repo: FileRepositoryDependency,
 ):
 
-    file = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
-
-    file_count = await file_repo.count_by_storage(file.file_storage)
     await library_service.delete_file(user_id=access_session.user_id, file_id=file_id)
-
-    if file_count <= 1:
-        await storage_service.delete_file(file.file_storage)
 
 
 @router.put(path="/files/{id}", operation_id="UpdateFile")
@@ -169,9 +153,23 @@ async def update_file(
         name=data.name,
         description=data.description,
         tags=data.tags,
-        is_favorite=data.is_favorite,
-        folder_id=data.folder_id,
+        collection_id=data.collection_id,
     )
+
+
+@router.get(path="/files/{id}/state", response_model=list[FileStateResponse], operation_id="GetFileState")
+async def get_file_state(
+    file_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    file_repo: FileRepositoryDependency,
+):
+
+    state = await file_repo.get_state_or_none(user_id=access_session.user_id, file_id=file_id)
+
+    if not state:
+        return FileStateResponse.with_defaults()
+
+    return state
 
 
 @router.patch(path="/files/{id}/state", operation_id="PatchFileState")
@@ -183,7 +181,11 @@ async def patch_file_state(
 ):
 
     await library_service.update_file_state(
-        user_id=access_session.user_id, file_id=file_id, scale=data.scale, current_page=data.current_page
+        user_id=access_session.user_id,
+        file_id=file_id,
+        scale=data.scale,
+        current_page=data.current_page,
+        is_favorite=data.is_favorite,
     )
 
 
@@ -196,33 +198,15 @@ async def get_library_tree(
     return await library_service.get_library_tree(user_id=access_session.user_id)
 
 
-@router.get(path="/tags", operation_id="ListTags", response_model=list[TagDetailResponse])
-async def list_tags(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
-    library_service: LibraryServiceDependency,
-):
-
-    tags = await library_service.list_tags_with_details(user_id=access_session.user_id)
-
-    return [TagDetailResponse(id=tag.id, name=tag.name, color=tag.color, file_count=tag.file_count) for tag in tags]
-
-
-@router.delete(path="/tags/{id}", operation_id="DeleteTag")
-async def delete_tag(
-    tag_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
-    library_service: LibraryServiceDependency,
-):
-
-    await library_service.delete_tag(user_id=access_session.user_id, tag_id=tag_id)
-
-
 @router.get(path="/files/uncategorized", operation_id="ListUncategorizedFiles", response_model=list[FileResponse])
 async def list_uncategorized_files(
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
-    return await library_service.list_files(user_id=access_session.user_id, folder_id=None)
+
+    files = await library_service.list_files(user_id=access_session.user_id, collection_id=None)
+
+    return [build_file_response(file) for file in files]
 
 
 @router.get(path="/files", operation_id="ListFiles", response_model=list[FileResponse])
@@ -231,15 +215,103 @@ async def list_files(
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
-
-    return await library_service.list_files(
+    files = await library_service.list_files(
         user_id=access_session.user_id,
         is_favorite=query.is_favorite,
         tags=query.tags,
-        text=query.text,
-        names=query.names,
-        descriptions=query.descriptions,
+        name=query.name,
+        description=query.description,
     )
+
+    return [build_file_response(file) for file in files]
+
+
+@router.post(path="/files/upload", operation_id="UploadFile")
+async def upload_file(
+    file: UploadFile,
+    name: Annotated[str, Form()],
+    description: Annotated[str | None, Form(default_factory=lambda: None)],
+    collection_id: Annotated[UUID, Form()],
+    tags: Annotated[list[str], Form(default_factory=list)],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+    background_tasks: BackgroundTasks,
+    request: Request,
+):
+
+    try:
+        file_record = await library_service.upload_pdf_file(
+            user_id=access_session.user_id,
+            file=file,
+            name=name,
+            collection_id=collection_id,
+            tags=tags,
+            description=description,
+        )
+    except DuplicateResourceError as e:
+        raise FieldError(
+            field="file",
+            msg="File already exists. This can happen if you try to upload the same file multiple times.",
+        ) from e
+
+    async def index_file_pages(service):
+        await service.index_file(file_id=file_record.id, storage_key=file_record.storage_key)
+
+    if file_record.is_pdf:
+        background_tasks.add_task(
+            run_with_indexing_service, context=request.app.state.app_context, callback=index_file_pages
+        )
+
+
+@router.get(path="/files/{id}", operation_id="GetFileDetails", response_model=FileResponse)
+async def get_file_details(
+    file_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    file = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
+    return build_file_response(file)
+
+
+@router.get(path="/files/{id}/download", operation_id="GetFile")
+async def download_file(
+    file_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+    view = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
+
+    async with library_service.open_file(view.file.storage_key) as path:
+        return FastAPIFileResponse(path, media_type=view.file.content_type)
+
+
+@router.get(path="/files/{id}/thumbnail", operation_id="GetFileThumbnail")
+async def get_file_thumbnail(
+    file_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+    view = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
+
+    if not view.file.thumbnail:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thumbnail not available")
+
+    async with library_service.open_file(view.file.thumbnail) as path:
+        return FastAPIFileResponse(path, media_type="image/webp")
+
+
+@router.get(path="/tags", operation_id="ListTags", response_model=list[TagWithDetailsResponse])
+async def list_tags(
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    tags = await library_service.list_tags_with_details(user_id=access_session.user_id)
+
+    return [
+        TagWithDetailsResponse(id=tag.id, name=tag.name, color=tag.color, file_count=tag.file_count) for tag in tags
+    ]
 
 
 @router.put(path="/tags/{id}", operation_id="UpdateTag")
@@ -251,59 +323,8 @@ async def update_tag(
 ):
 
     try:
-        await library_service.update_tag(
-            user_id=access_session.user_id, tag_id=tag_id, name=data.name, color=data.color
-        )
+        await library_service.update_tag(user_id=access_session.user_id, tag_id=tag_id, color=data.color)
     except InvalidActionError as e:
         if e.rule != "tag_name_exists":
             raise
         raise FieldError(field="name", msg="Tag already exists") from e
-
-
-@router.post(path="/files/upload", operation_id="UploadFile")
-async def upload_file(
-    file: UploadFile,
-    name: Annotated[str, Form()],
-    description: Annotated[str | None, Form(default_factory=lambda: "")],
-    folder_id: Annotated[UUID, Form()],
-    tags: Annotated[list[str], Form(default_factory=list)],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
-    library_service: LibraryServiceDependency,
-    storage_service: StorageServiceDependency,
-):
-    storage_file = await storage_service.save_pdf_upload(user_id=access_session.user_id, file=file)
-
-    await library_service.create_file(
-        name=name,
-        description=description,
-        file_storage=storage_file.location,
-        user_id=access_session.user_id,
-        file_size=storage_file.size,
-        file_hash=storage_file.hash,
-        folder_id=folder_id,
-        tags=tags,
-        page_count=storage_file.page_count,
-    )
-
-
-@router.get(path="/files/{id}", operation_id="GetFileDetails", response_model=FileResponse)
-async def get_file_details(
-    file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
-    library_service: LibraryServiceDependency,
-):
-
-    return await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
-
-
-@router.get(path="/files/{id}/download", operation_id="GetFile")
-async def get_file(
-    file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
-    library_service: LibraryServiceDependency,
-    storage_service: StorageServiceDependency,
-):
-    file = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
-    path = await storage_service.get_path(location=file.file_storage)
-
-    return FastAPIFileResponse(path, media_type="application/pdf")

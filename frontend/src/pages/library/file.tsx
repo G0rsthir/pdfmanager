@@ -72,17 +72,17 @@ export function FilePage() {
 
   return (
     <QueryView query={query}>
-      {(data) => (
+      {(file) => (
         <ReactPDFViewer
           file={{
-            url: `/api/v1/library/files/${data.id}/download`,
+            url: `/api/v1/library/files/${file.id}/download`,
             httpHeaders: {
               authorization: `Bearer ${client.getConfig().auth}`,
             },
           }}
-          fileName={data.name}
-          initialScaleValue={data.scale}
-          intialPage={data.current_page}
+          fileName={file.name}
+          initialScaleValue={file.state.scale}
+          intialPage={file.state.current_page}
           onPageChange={handlePageChange}
           onScaleChange={handleScaleChange}
         />

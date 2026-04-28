@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import HTTPException, status
 
 InvalidCredentialsException = HTTPException(
@@ -53,6 +55,10 @@ class ConfigurationError(InfrastructureError):
     code = "configuration_error"
 
 
+class DuplicateResourceError(InfrastructureError):
+    code = "duplicate_resource"
+
+
 class ResourceNotFoundError(DomainError):
     code = "resource_not_found"
 
@@ -61,6 +67,18 @@ class ResourceNotFoundError(DomainError):
         self.identifier = str(identifier)
         if not msg:
             msg = f"{resource} not found: {self.identifier}"
+        super().__init__(msg)
+
+
+class InsufficientPermissionError(ForbiddenActionError):
+    code = "insufficient_permission"
+
+    def __init__(self, action: str, resource: str, identifier, user: UUID | None = None):
+        self.action = action
+        self.resource = resource
+        self.identifier = str(identifier)
+        self.user = user
+        msg = f"Insufficient permissions to {action} {resource} with identifier {identifier}"
         super().__init__(msg)
 
 

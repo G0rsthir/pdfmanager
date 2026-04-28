@@ -23,6 +23,15 @@ target_metadata = db_interface.sa_metadata
 import server.models  # noqa: E402, F401
 
 
+def include_object(object, name, type_, reflected, compare_to):
+
+    # Exclude FTS tables
+    if type_ == "table":
+        if "_fts" in name:
+            return False
+    return True
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -46,6 +55,7 @@ def run_migrations_offline() -> None:
         # use batch mode on sqlite
         # https://alembic.sqlalchemy.org/en/latest/batch.html#batch-migrations
         render_as_batch=dialect.name == "sqlite",
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -77,6 +87,7 @@ def do_run_migrations(connection: Connection) -> None:
         # https://alembic.sqlalchemy.org/en/latest/batch.html#batch-migrations
         render_as_batch=dialect.name == "sqlite",
         compare_type=True,
+        include_object=include_object,
     )
     with disable_sqlite_foreign_keys(context):
         with context.begin_transaction():

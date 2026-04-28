@@ -171,14 +171,19 @@ async def oidc_authorize(
     provider_repo: AuthProviderRepositoryDependency,
 ):
 
-    provider = await provider_repo.get_oidc_by_id(provider_id)
-
-    oidc_client = OidcClient(config=provider)
-
-    redirect_url = str(request.url_for("oidc_callback", id=provider_id))
-
     try:
+        provider = await provider_repo.get_oidc_by_id(provider_id)
+
+        if not provider.can_authenticate():
+            raise AuthenticationError("Auth provider is disabled or does not support authentication")
+
+        oidc_client = OidcClient(config=provider)
+
+        redirect_url = str(request.url_for("oidc_callback", id=provider_id))
+
         return await oidc_client.authorize_redirect(request, redirect_url=redirect_url)
+    except AuthenticationError as e:
+        return SSOErrorRedirectResponse(description=str(e), error_code=400)
     except Exception:
         return SSOErrorRedirectResponse()
 
@@ -193,6 +198,9 @@ async def oidc_callback(
 ):
     try:
         provider = await provider_repo.get_oidc_by_id(provider_id)
+
+        if not provider.can_authenticate():
+            raise AuthenticationError("Auth provider is disabled or does not support authentication")
 
         oidc_client = OidcClient(config=provider)
 

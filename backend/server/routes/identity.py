@@ -8,8 +8,8 @@ from server.dependencies import (
     AccessSecurity,
     AuthProviderRepositoryDependency,
     IdentityServiceDependency,
+    LibraryServiceDependency,
     RoleRepositoryDependency,
-    StorageServiceDependency,
     UserRepositoryDependency,
 )
 from server.exceptions import FieldError, InvalidActionError
@@ -68,7 +68,7 @@ async def update_user(
     identity_service: IdentityServiceDependency,
 ):
     try:
-        await identity_service.update_local_user(user_id=user_id, data=data)
+        await identity_service.update_user(user_id=user_id, data=data)
     except InvalidActionError as e:
         if e.rule == "email_already_in_use":
             raise FieldError(field="email", msg="Email is already in use") from e
@@ -97,11 +97,11 @@ async def delete_user(
     user_id: Annotated[UUID, Path(alias="id")],
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
     identity_service: IdentityServiceDependency,
-    storage_service: StorageServiceDependency,
+    library_service: LibraryServiceDependency,
 ):
 
     await identity_service.delete_user(request_user_id=access_session.user_id, user_id=user_id)
-    await storage_service.delete_user_files(user_id=user_id)
+    await library_service.delete_library(user_id)
 
 
 # Currently, openapi-ts does not support discriminators
@@ -119,8 +119,10 @@ async def list_providers(
 async def list_oidc_providers(
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_READ])],
     provider_repo: AuthProviderRepositoryDependency,
+    request: Request,
 ):
-    return await provider_repo.get_oidc_list()
+    providers = await provider_repo.get_oidc_list()
+    return [build_oidc_provider_response(provider=provider, request=request) for provider in providers]
 
 
 @router.get(

@@ -10,28 +10,27 @@ import { client } from "../client.gen";
 import {
   createAuthToken,
   createCollection,
-  createFolder,
   createOidcAuthProvider,
   createSetupUser,
   createUser,
   deleteCollection,
   deleteFile,
-  deleteFolder,
   deleteOidcAuthProvider,
-  deleteTag,
   deleteUser,
   getAppState,
   getAppStatus,
+  getCollection,
+  getCollectionPermissions,
   getCurrentSession,
   getFile,
   getFileDetails,
-  getFolder,
+  getFileState,
+  getFileThumbnail,
   getLibraryTree,
   getOidcAuthProvider,
   listAuthProviders,
   listCollections,
   listFiles,
-  listFolders,
   listOidcAuthProviders,
   listRoles,
   listTags,
@@ -44,9 +43,9 @@ import {
   refreshAuthToken,
   resetUserPassword,
   revokeToken,
+  searchFiles,
   updateCollection,
   updateFile,
-  updateFolder,
   updateOidcAuthProvider,
   updateTag,
   updateUser,
@@ -60,8 +59,6 @@ import type {
   CreateAuthTokenResponse,
   CreateCollectionData,
   CreateCollectionError,
-  CreateFolderData,
-  CreateFolderError,
   CreateOidcAuthProviderData,
   CreateOidcAuthProviderError,
   CreateSetupUserData,
@@ -73,17 +70,19 @@ import type {
   DeleteCollectionError,
   DeleteFileData,
   DeleteFileError,
-  DeleteFolderData,
-  DeleteFolderError,
   DeleteOidcAuthProviderData,
   DeleteOidcAuthProviderError,
-  DeleteTagData,
-  DeleteTagError,
   DeleteUserData,
   DeleteUserError,
   GetAppStateData,
   GetAppStateResponse,
   GetAppStatusData,
+  GetCollectionData,
+  GetCollectionError,
+  GetCollectionPermissionsData,
+  GetCollectionPermissionsError,
+  GetCollectionPermissionsResponse,
+  GetCollectionResponse,
   GetCurrentSessionData,
   GetCurrentSessionResponse,
   GetFileData,
@@ -91,9 +90,11 @@ import type {
   GetFileDetailsError,
   GetFileDetailsResponse,
   GetFileError,
-  GetFolderData,
-  GetFolderError,
-  GetFolderResponse,
+  GetFileStateData,
+  GetFileStateError,
+  GetFileStateResponse,
+  GetFileThumbnailData,
+  GetFileThumbnailError,
   GetLibraryTreeData,
   GetLibraryTreeResponse,
   GetOidcAuthProviderData,
@@ -106,8 +107,6 @@ import type {
   ListFilesData,
   ListFilesError,
   ListFilesResponse,
-  ListFoldersData,
-  ListFoldersResponse,
   ListOidcAuthProvidersData,
   ListOidcAuthProvidersResponse,
   ListRolesData,
@@ -130,12 +129,13 @@ import type {
   ResetUserPasswordError,
   RevokeTokenData,
   RevokeTokenResponse,
+  SearchFilesData,
+  SearchFilesError,
+  SearchFilesResponse,
   UpdateCollectionData,
   UpdateCollectionError,
   UpdateFileData,
   UpdateFileError,
-  UpdateFolderData,
-  UpdateFolderError,
   UpdateOidcAuthProviderData,
   UpdateOidcAuthProviderError,
   UpdateTagData,
@@ -439,6 +439,31 @@ export const deleteCollectionMutation = (
   return mutationOptions;
 };
 
+export const getCollectionQueryKey = (options: Options<GetCollectionData>) =>
+  createQueryKey("getCollection", options);
+
+/**
+ * Get Collection
+ */
+export const getCollectionOptions = (options: Options<GetCollectionData>) =>
+  queryOptions<
+    GetCollectionResponse,
+    GetCollectionError,
+    GetCollectionResponse,
+    ReturnType<typeof getCollectionQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getCollection({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getCollectionQueryKey(options),
+  });
+
 /**
  * Update Collection
  */
@@ -466,48 +491,24 @@ export const updateCollectionMutation = (
   return mutationOptions;
 };
 
-/**
- * Delete Folder
- */
-export const deleteFolderMutation = (
-  options?: Partial<Options<DeleteFolderData>>,
-): UseMutationOptions<
-  unknown,
-  DeleteFolderError,
-  Options<DeleteFolderData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    DeleteFolderError,
-    Options<DeleteFolderData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await deleteFolder({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const getFolderQueryKey = (options: Options<GetFolderData>) =>
-  createQueryKey("getFolder", options);
+export const getCollectionPermissionsQueryKey = (
+  options: Options<GetCollectionPermissionsData>,
+) => createQueryKey("getCollectionPermissions", options);
 
 /**
- * Get Folder
+ * Get Collection Permissions
  */
-export const getFolderOptions = (options: Options<GetFolderData>) =>
+export const getCollectionPermissionsOptions = (
+  options: Options<GetCollectionPermissionsData>,
+) =>
   queryOptions<
-    GetFolderResponse,
-    GetFolderError,
-    GetFolderResponse,
-    ReturnType<typeof getFolderQueryKey>
+    GetCollectionPermissionsResponse,
+    GetCollectionPermissionsError,
+    GetCollectionPermissionsResponse,
+    ReturnType<typeof getCollectionPermissionsQueryKey>
   >({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await getFolder({
+      const { data } = await getCollectionPermissions({
         ...options,
         ...queryKey[0],
         signal,
@@ -515,87 +516,8 @@ export const getFolderOptions = (options: Options<GetFolderData>) =>
       });
       return data;
     },
-    queryKey: getFolderQueryKey(options),
+    queryKey: getCollectionPermissionsQueryKey(options),
   });
-
-/**
- * Update Folder
- */
-export const updateFolderMutation = (
-  options?: Partial<Options<UpdateFolderData>>,
-): UseMutationOptions<
-  unknown,
-  UpdateFolderError,
-  Options<UpdateFolderData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    UpdateFolderError,
-    Options<UpdateFolderData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await updateFolder({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const listFoldersQueryKey = (options?: Options<ListFoldersData>) =>
-  createQueryKey("listFolders", options);
-
-/**
- * List Folders
- */
-export const listFoldersOptions = (options?: Options<ListFoldersData>) =>
-  queryOptions<
-    ListFoldersResponse,
-    DefaultError,
-    ListFoldersResponse,
-    ReturnType<typeof listFoldersQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await listFolders({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true,
-      });
-      return data;
-    },
-    queryKey: listFoldersQueryKey(options),
-  });
-
-/**
- * Create Folder
- */
-export const createFolderMutation = (
-  options?: Partial<Options<CreateFolderData>>,
-): UseMutationOptions<
-  unknown,
-  CreateFolderError,
-  Options<CreateFolderData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    CreateFolderError,
-    Options<CreateFolderData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await createFolder({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
 
 /**
  * Delete File
@@ -668,6 +590,31 @@ export const updateFileMutation = (
   return mutationOptions;
 };
 
+export const getFileStateQueryKey = (options: Options<GetFileStateData>) =>
+  createQueryKey("getFileState", options);
+
+/**
+ * Get File State
+ */
+export const getFileStateOptions = (options: Options<GetFileStateData>) =>
+  queryOptions<
+    GetFileStateResponse,
+    GetFileStateError,
+    GetFileStateResponse,
+    ReturnType<typeof getFileStateQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getFileState({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getFileStateQueryKey(options),
+  });
+
 /**
  * Patch File State
  */
@@ -719,77 +666,6 @@ export const getLibraryTreeOptions = (options?: Options<GetLibraryTreeData>) =>
     },
     queryKey: getLibraryTreeQueryKey(options),
   });
-
-export const listTagsQueryKey = (options?: Options<ListTagsData>) =>
-  createQueryKey("listTags", options);
-
-/**
- * List Tags
- */
-export const listTagsOptions = (options?: Options<ListTagsData>) =>
-  queryOptions<
-    ListTagsResponse,
-    DefaultError,
-    ListTagsResponse,
-    ReturnType<typeof listTagsQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await listTags({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true,
-      });
-      return data;
-    },
-    queryKey: listTagsQueryKey(options),
-  });
-
-/**
- * Delete Tag
- */
-export const deleteTagMutation = (
-  options?: Partial<Options<DeleteTagData>>,
-): UseMutationOptions<unknown, DeleteTagError, Options<DeleteTagData>> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    DeleteTagError,
-    Options<DeleteTagData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await deleteTag({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * Update Tag
- */
-export const updateTagMutation = (
-  options?: Partial<Options<UpdateTagData>>,
-): UseMutationOptions<unknown, UpdateTagError, Options<UpdateTagData>> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    UpdateTagError,
-    Options<UpdateTagData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await updateTag({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
 
 export const listUncategorizedFilesQueryKey = (
   options?: Options<ListUncategorizedFilesData>,
@@ -871,7 +747,7 @@ export const getFileQueryKey = (options: Options<GetFileData>) =>
   createQueryKey("getFile", options);
 
 /**
- * Get File
+ * Download File
  */
 export const getFileOptions = (options: Options<GetFileData>) =>
   queryOptions<
@@ -890,6 +766,107 @@ export const getFileOptions = (options: Options<GetFileData>) =>
       return data;
     },
     queryKey: getFileQueryKey(options),
+  });
+
+export const getFileThumbnailQueryKey = (
+  options: Options<GetFileThumbnailData>,
+) => createQueryKey("getFileThumbnail", options);
+
+/**
+ * Get File Thumbnail
+ */
+export const getFileThumbnailOptions = (
+  options: Options<GetFileThumbnailData>,
+) =>
+  queryOptions<
+    unknown,
+    GetFileThumbnailError,
+    unknown,
+    ReturnType<typeof getFileThumbnailQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getFileThumbnail({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getFileThumbnailQueryKey(options),
+  });
+
+export const listTagsQueryKey = (options?: Options<ListTagsData>) =>
+  createQueryKey("listTags", options);
+
+/**
+ * List Tags
+ */
+export const listTagsOptions = (options?: Options<ListTagsData>) =>
+  queryOptions<
+    ListTagsResponse,
+    DefaultError,
+    ListTagsResponse,
+    ReturnType<typeof listTagsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listTags({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listTagsQueryKey(options),
+  });
+
+/**
+ * Update Tag
+ */
+export const updateTagMutation = (
+  options?: Partial<Options<UpdateTagData>>,
+): UseMutationOptions<unknown, UpdateTagError, Options<UpdateTagData>> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    UpdateTagError,
+    Options<UpdateTagData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await updateTag({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const searchFilesQueryKey = (options?: Options<SearchFilesData>) =>
+  createQueryKey("searchFiles", options);
+
+/**
+ * Search Files
+ */
+export const searchFilesOptions = (options?: Options<SearchFilesData>) =>
+  queryOptions<
+    SearchFilesResponse,
+    SearchFilesError,
+    SearchFilesResponse,
+    ReturnType<typeof searchFilesQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await searchFiles({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: searchFilesQueryKey(options),
   });
 
 export const getAppStateQueryKey = (options?: Options<GetAppStateData>) =>

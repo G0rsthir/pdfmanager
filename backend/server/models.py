@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import JSON, Column, ForeignKey, Table, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from server.infrastructure.database.base import Base, DateTimeUTC
@@ -160,29 +161,15 @@ class ORMCollection(Base):
 
     name: Mapped[str]
     parent_id: Mapped[UUID | None] = mapped_column(ForeignKey("collections.id", ondelete="CASCADE"))
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
     parent: Mapped["ORMCollection | None"] = relationship(back_populates="children", remote_side="ORMCollection.id")
     children: Mapped[list["ORMCollection"]] = relationship(back_populates="parent", cascade="all, delete-orphan")
-    folders: Mapped[list["ORMFolder"]] = relationship(back_populates="collection", cascade="all, delete-orphan")
 
+    # Classification
+    entity_type: Mapped[Literal["folder", "group"]]
 
-class ORMFolder(Base):
-    __tablename__ = "folders"
-
-    name: Mapped[str]
-    collection_id: Mapped[UUID | None] = mapped_column(ForeignKey("collections.id", ondelete="CASCADE"))
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-
-    collection: Mapped["ORMCollection | None"] = relationship(back_populates="folders")
-
-
-file_tags = Table(
-    "file_tags",
-    Base.metadata,
-    Column("file_id", ForeignKey("files.id", ondelete="CASCADE"), primary_key=True),
-    Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
-)
+    def __repr__(self):
+        return f"ORMCollection(id={self.id}, name='{self.name}' parent_id='{self.parent_id}')"
 
 
 class ORMFile(Base):
@@ -190,26 +177,78 @@ class ORMFile(Base):
 
     name: Mapped[str]
     description: Mapped[str | None]
-    folder_id: Mapped[UUID | None] = mapped_column(ForeignKey("folders.id", ondelete="SET NULL"))
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    tags: Mapped[list["ORMTag"]] = relationship(secondary=file_tags, lazy="selectin")
-    current_page: Mapped[int] = mapped_column(default=1)
-    scale: Mapped[str] = mapped_column(default="1.0")
-    file_storage: Mapped[str]
-    is_favorite: Mapped[bool] = mapped_column(default=False)
+    storage_key: Mapped[str]
+    thumbnail: Mapped[str | None] = mapped_column(default=None)
+    content_type: Mapped[str]
     file_size: Mapped[int]
     file_hash: Mapped[str | None]
     page_count: Mapped[int] = mapped_column(default=1)
 
+    # # Relationships
+    collection_id: Mapped[UUID] = mapped_column(ForeignKey("collections.id", ondelete="CASCADE"))
+    # TODO
+    # created_by:
+
+    @property
+    def is_pdf(self) -> bool:
+        return self.content_type == "application/pdf"
+
+
+class ORMFileState(Base):
+    __tablename__ = "file_states"
+
+    current_page: Mapped[int] = mapped_column(default=1)
+    scale: Mapped[str] = mapped_column(default="1.0")
+    is_favorite: Mapped[bool] = mapped_column(default=False)
+
+    # Relationships
+    file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    def __repr__(self):
+        return f"ORMFileState(id={self.id}, user_id={self.user_id}, is_favorite={self.is_favorite} )"
+
+
+class ORMResourcePermission(Base):
+    __tablename__ = "resource_permissions"
+    __table_args__ = (UniqueConstraint("resource_id", "user_id", name="unique_permission"),)
+
+    resource_id: Mapped[UUID]
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    permission: Mapped[Literal["owner", "read", "modify"]]
+
+    @property
+    def can_modify(self):
+        return self.permission in ("owner", "modify")
+
+    @property
+    def can_read(self):
+        return True
+
+    @property
+    def is_owner(self) -> bool:
+        return self.permission == "owner"
+
 
 class ORMTag(Base):
     __tablename__ = "tags"
-    __table_args__ = (UniqueConstraint("user_id", "name", name="unique_tag"),)
 
-    name: Mapped[str]
+    name: Mapped[str] = mapped_column(unique=True)
+
+
+class ORMFileTag(Base):
+    __tablename__ = "file_tags"
+
+    file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"), primary_key=True)
+    tag_id: Mapped[UUID] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
+
+
+class ORMUserTagPreference(Base):
+    __tablename__ = "user_tag_preferences"
+
+    tag_id: Mapped[UUID] = mapped_column(ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     color: Mapped[str]
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    files: Mapped[list["ORMFile"]] = relationship(secondary=file_tags, back_populates="tags", lazy="noload")
 
 
 class ORMSession(Base):

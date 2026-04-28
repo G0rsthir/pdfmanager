@@ -1,7 +1,8 @@
 import {
   deleteFileMutation,
-  listFoldersOptions,
+  listCollectionsOptions,
   listTagsOptions,
+  patchFileStateMutation,
   updateFileMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { FileResponse, TagResponse } from "@/api/types.gen";
@@ -166,16 +167,18 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
   });
 
   const query = useAPIQuery({
-    ...listFoldersOptions(),
+    ...listCollectionsOptions(),
   });
 
   useEffect(() => {
     if (query.isSuccess) {
       set(
-        query.data.map((item) => ({
-          label: item.name,
-          value: item.id,
-        })),
+        query.data
+          .filter((item) => item.entity_type == "folder")
+          .map((item) => ({
+            label: item.name,
+            value: item.id,
+          })),
       );
     }
   }, [query.data, query.isSuccess, set]);
@@ -240,7 +243,10 @@ export function FileCard({ file }: { file: FileResponse }) {
           <GridItem>
             <Stack gap={1}>
               <NavLink
-                to={toFileUrl({ folderId: file.folder_id, fileId: file.id })}
+                to={toFileUrl({
+                  folderId: file.collection_id,
+                  fileId: file.id,
+                })}
               >
                 <Card.Title
                   _hover={{ color: "colorPalette.fg" }}
@@ -274,7 +280,7 @@ export function FileCard({ file }: { file: FileResponse }) {
               <Group gap={3} justifyContent="end">
                 {file.page_count != null && (
                   <Text textStyle="xs">
-                    {file.current_page} / {file.page_count} pages
+                    {file.state.current_page} / {file.page_count} pages
                   </Text>
                 )}
               </Group>
@@ -307,7 +313,7 @@ export function SearchTag({ tag }: { tag: TagResponse }) {
 
 export function FavoriteButton({ file }: { file: FileResponse }) {
   const { mutate } = useAPIMutation({
-    ...updateFileMutation(),
+    ...patchFileStateMutation(),
     onError(error) {
       showErrorNotification(
         "Favorite update failed",
@@ -320,19 +326,17 @@ export function FavoriteButton({ file }: { file: FileResponse }) {
     <GenericIconButton
       variant="ghost"
       size="sm"
-      color={file.is_favorite ? "yellow.400" : "fg.muted"}
+      color={file.state.is_favorite ? "yellow.400" : "fg.muted"}
       transition="color 0.2s"
       css={{
-        "& svg": { fill: file.is_favorite ? "currentColor" : "none" },
+        "& svg": { fill: file.state.is_favorite ? "currentColor" : "none" },
         "&:hover": { color: "yellow.400" },
         "&:hover svg": { fill: "currentColor" },
       }}
       onClick={() =>
         mutate({
           body: {
-            ...file,
-            is_favorite: !file.is_favorite,
-            tags: file.tags_name_list,
+            is_favorite: !file.state.is_favorite,
           },
           path: { id: file.id },
         })
@@ -416,7 +420,7 @@ function EditFileDialog(props: {
     formOptions: {
       defaultValues: {
         name: file.name,
-        folder_id: file.folder_id,
+        collection_id: file.collection_id ?? "",
         description: file.description ?? "",
         tags: file.tags?.map((item) => item.name),
       },
@@ -471,7 +475,7 @@ function EditFileDialog(props: {
         )}
       />
       <FormField
-        name="folder_id"
+        name="collection_id"
         validators={{
           onChange: ({ value }) => (!value ? "Folder is required" : undefined),
         }}

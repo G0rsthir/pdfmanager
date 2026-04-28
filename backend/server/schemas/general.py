@@ -2,14 +2,13 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel
 
+from server.infrastructure.storage import StorageFile
 
-@dataclass
-class StorageFile:
-    location: str
-    size: int
-    hash: str
-    original_name: str
+
+@dataclass(kw_only=True)
+class PdfStorageFile(StorageFile):
     page_count: int
+    thumbnail: str | None = None
 
 
 class RevokeResponse(BaseModel):
