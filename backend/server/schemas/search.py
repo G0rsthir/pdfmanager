@@ -6,6 +6,7 @@ from server.schemas.library import FileResponse
 from server.schemas.query import PaginationQueryParams
 
 
+# TODO add comments and highlights to search results
 class SearchFilesQueryParams(PaginationQueryParams):
     tags: list[str] | None = None
     name: str | None = None

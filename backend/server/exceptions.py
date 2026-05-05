@@ -117,6 +117,13 @@ class CollectionNotFoundError(ResourceNotFoundError):
         super().__init__(resource="Collection", identifier=identifier, msg=msg)
 
 
+class AnnotationNotFoundError(ResourceNotFoundError):
+    code = "annotation_not_found"
+
+    def __init__(self, identifier, msg: str | None = None):
+        super().__init__(resource="Annotation", identifier=identifier, msg=msg)
+
+
 class FolderNotFoundError(ResourceNotFoundError):
     code = "folder_not_found"
 

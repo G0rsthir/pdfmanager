@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from server.infrastructure.database.base import Base, DateTimeUTC
+from server.infrastructure.database.base import AuditMixin, Base, DateTimeUTC
 
 
 class ORMUserRole(Base):
@@ -194,7 +194,7 @@ class ORMFile(Base):
         return self.content_type == "application/pdf"
 
 
-class ORMFileState(Base):
+class ORMFileState(Base, AuditMixin):
     __tablename__ = "file_states"
 
     current_page: Mapped[int] = mapped_column(default=1)
@@ -207,6 +207,44 @@ class ORMFileState(Base):
 
     def __repr__(self):
         return f"ORMFileState(id={self.id}, user_id={self.user_id}, is_favorite={self.is_favorite} )"
+
+
+class ORMFileHighlight(Base, AuditMixin):
+    __tablename__ = "file_highlights"
+
+    page: Mapped[int]
+    color: Mapped[str]
+    excerpt: Mapped[str]
+    rects: Mapped[list] = mapped_column(JSON)
+
+    # User-set identifier, used to cross-reference.
+    label: Mapped[str | None] = mapped_column(default=None)
+
+    # Relationships
+    file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
+    author_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    def __repr__(self):
+        return f"ORMFileHighlight(id={self.id}, page={self.page}, excerpt='{self.excerpt}' )"
+
+
+class ORMFileComment(Base, AuditMixin):
+    __tablename__ = "file_comments"
+
+    page: Mapped[int]
+    body: Mapped[str]
+    excerpt: Mapped[str]
+    rects: Mapped[list] = mapped_column(JSON)
+
+    # User-set identifier, used to cross-reference.
+    label: Mapped[str | None] = mapped_column(default=None)
+
+    # Relationships
+    file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
+    author_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    def __repr__(self):
+        return f"ORMFileComment(id={self.id}, page={self.page}, excerpt='{self.excerpt}' )"
 
 
 class ORMResourcePermission(Base):

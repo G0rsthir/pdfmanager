@@ -2,8 +2,14 @@
 
 import type {
   CreateAuthTokenResponse,
+  GetCollectionResponse,
+  GetFileDetailsResponse,
+  GetFileStateResponse,
   GetLibraryTreeResponse,
+  ListFileCommentsResponse,
+  ListFilesResponse,
   RefreshAuthTokenResponse,
+  SearchFilesResponse,
 } from "./types.gen";
 
 const accessTokenSchemaResponseTransformer = (data: any) => {
@@ -25,6 +31,50 @@ export const refreshAuthTokenResponseTransformer = async (
   return data;
 };
 
+const fileStateResponseSchemaResponseTransformer = (data: any) => {
+  if (data.updated_at) {
+    data.updated_at = new Date(data.updated_at);
+  }
+  return data;
+};
+
+const fileResponseSchemaResponseTransformer = (data: any) => {
+  data.state = fileStateResponseSchemaResponseTransformer(data.state);
+  return data;
+};
+
+const collectionWithDetailsResponseSchemaResponseTransformer = (data: any) => {
+  if (data.files) {
+    data.files = data.files.map((item: any) =>
+      fileResponseSchemaResponseTransformer(item),
+    );
+  }
+  return data;
+};
+
+export const getCollectionResponseTransformer = async (
+  data: any,
+): Promise<GetCollectionResponse> => {
+  data = collectionWithDetailsResponseSchemaResponseTransformer(data);
+  return data;
+};
+
+export const getFileDetailsResponseTransformer = async (
+  data: any,
+): Promise<GetFileDetailsResponse> => {
+  data = fileResponseSchemaResponseTransformer(data);
+  return data;
+};
+
+export const getFileStateResponseTransformer = async (
+  data: any,
+): Promise<GetFileStateResponse> => {
+  data = data.map((item: any) =>
+    fileStateResponseSchemaResponseTransformer(item),
+  );
+  return data;
+};
+
 const libraryTreeNodeSchemaResponseTransformer = (data: any) => {
   if (data.children) {
     data.children = data.children.map((item: any) =>
@@ -39,6 +89,41 @@ export const getLibraryTreeResponseTransformer = async (
 ): Promise<GetLibraryTreeResponse> => {
   data = data.map((item: any) =>
     libraryTreeNodeSchemaResponseTransformer(item),
+  );
+  return data;
+};
+
+export const listFilesResponseTransformer = async (
+  data: any,
+): Promise<ListFilesResponse> => {
+  data = data.map((item: any) => fileResponseSchemaResponseTransformer(item));
+  return data;
+};
+
+const commentResponseSchemaResponseTransformer = (data: any) => {
+  data.created_at = new Date(data.created_at);
+  return data;
+};
+
+export const listFileCommentsResponseTransformer = async (
+  data: any,
+): Promise<ListFileCommentsResponse> => {
+  data = data.map((item: any) =>
+    commentResponseSchemaResponseTransformer(item),
+  );
+  return data;
+};
+
+const fileSearchResponseSchemaResponseTransformer = (data: any) => {
+  data.file = fileResponseSchemaResponseTransformer(data.file);
+  return data;
+};
+
+export const searchFilesResponseTransformer = async (
+  data: any,
+): Promise<SearchFilesResponse> => {
+  data = data.map((item: any) =>
+    fileSearchResponseSchemaResponseTransformer(item),
   );
   return data;
 };

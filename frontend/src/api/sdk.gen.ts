@@ -10,8 +10,14 @@ import {
 import { client } from "./client.gen";
 import {
   createAuthTokenResponseTransformer,
+  getCollectionResponseTransformer,
+  getFileDetailsResponseTransformer,
+  getFileStateResponseTransformer,
   getLibraryTreeResponseTransformer,
+  listFileCommentsResponseTransformer,
+  listFilesResponseTransformer,
   refreshAuthTokenResponseTransformer,
+  searchFilesResponseTransformer,
 } from "./transformers.gen";
 import type {
   CreateAuthTokenData,
@@ -20,6 +26,12 @@ import type {
   CreateCollectionData,
   CreateCollectionErrors,
   CreateCollectionResponses,
+  CreateCommentData,
+  CreateCommentErrors,
+  CreateCommentResponses,
+  CreateHighlightData,
+  CreateHighlightErrors,
+  CreateHighlightResponses,
   CreateOidcAuthProviderData,
   CreateOidcAuthProviderErrors,
   CreateOidcAuthProviderResponses,
@@ -32,9 +44,15 @@ import type {
   DeleteCollectionData,
   DeleteCollectionErrors,
   DeleteCollectionResponses,
+  DeleteCommentData,
+  DeleteCommentErrors,
+  DeleteCommentResponses,
   DeleteFileData,
   DeleteFileErrors,
   DeleteFileResponses,
+  DeleteHighlightData,
+  DeleteHighlightErrors,
+  DeleteHighlightResponses,
   DeleteOidcAuthProviderData,
   DeleteOidcAuthProviderErrors,
   DeleteOidcAuthProviderResponses,
@@ -74,6 +92,12 @@ import type {
   ListAuthProvidersResponses,
   ListCollectionsData,
   ListCollectionsResponses,
+  ListFileCommentsData,
+  ListFileCommentsErrors,
+  ListFileCommentsResponses,
+  ListFileHighlightsData,
+  ListFileHighlightsErrors,
+  ListFileHighlightsResponses,
   ListFilesData,
   ListFilesErrors,
   ListFilesResponses,
@@ -83,8 +107,6 @@ import type {
   ListRolesResponses,
   ListTagsData,
   ListTagsResponses,
-  ListUncategorizedFilesData,
-  ListUncategorizedFilesResponses,
   ListUsersData,
   ListUsersResponses,
   OidcCallbackData,
@@ -92,9 +114,15 @@ import type {
   OidcLoginData,
   OidcLoginErrors,
   OidcLoginResponses,
+  PatchCommentData,
+  PatchCommentErrors,
+  PatchCommentResponses,
   PatchFileStateData,
   PatchFileStateErrors,
   PatchFileStateResponses,
+  PatchHighlightData,
+  PatchHighlightErrors,
+  PatchHighlightResponses,
   RefreshAuthTokenData,
   RefreshAuthTokenResponses,
   ResetUserPasswordData,
@@ -312,6 +340,7 @@ export const getCollection = <ThrowOnError extends boolean = false>(
     GetCollectionErrors,
     ThrowOnError
   >({
+    responseTransformer: getCollectionResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/collections/{id}",
     ...options,
@@ -380,6 +409,7 @@ export const getFileDetails = <ThrowOnError extends boolean = false>(
     GetFileDetailsErrors,
     ThrowOnError
   >({
+    responseTransformer: getFileDetailsResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/{id}",
     ...options,
@@ -416,6 +446,7 @@ export const getFileState = <ThrowOnError extends boolean = false>(
     GetFileStateErrors,
     ThrowOnError
   >({
+    responseTransformer: getFileStateResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files/{id}/state",
     ...options,
@@ -459,22 +490,6 @@ export const getLibraryTree = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * List Uncategorized Files
- */
-export const listUncategorizedFiles = <ThrowOnError extends boolean = false>(
-  options?: Options<ListUncategorizedFilesData, ThrowOnError>,
-) =>
-  (options?.client ?? client).get<
-    ListUncategorizedFilesResponses,
-    unknown,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/uncategorized",
-    ...options,
-  });
-
-/**
  * List Files
  */
 export const listFiles = <ThrowOnError extends boolean = false>(
@@ -485,6 +500,7 @@ export const listFiles = <ThrowOnError extends boolean = false>(
     ListFilesErrors,
     ThrowOnError
   >({
+    responseTransformer: listFilesResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/files",
     ...options,
@@ -524,6 +540,151 @@ export const getFile = <ThrowOnError extends boolean = false>(
       ...options,
     },
   );
+
+/**
+ * List File Highlights
+ */
+export const listFileHighlights = <ThrowOnError extends boolean = false>(
+  options: Options<ListFileHighlightsData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    ListFileHighlightsResponses,
+    ListFileHighlightsErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/annotations/highlights",
+    ...options,
+  });
+
+/**
+ * Create File Highlight
+ */
+export const createHighlight = <ThrowOnError extends boolean = false>(
+  options: Options<CreateHighlightData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    CreateHighlightResponses,
+    CreateHighlightErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/annotations/highlights",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete File Highlight
+ */
+export const deleteHighlight = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteHighlightData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    DeleteHighlightResponses,
+    DeleteHighlightErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{file_id}/annotations/highlights/{id}",
+    ...options,
+  });
+
+/**
+ * Patch File Highlight
+ */
+export const patchHighlight = <ThrowOnError extends boolean = false>(
+  options: Options<PatchHighlightData, ThrowOnError>,
+) =>
+  (options.client ?? client).patch<
+    PatchHighlightResponses,
+    PatchHighlightErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{file_id}/annotations/highlights/{id}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * List File Comments
+ */
+export const listFileComments = <ThrowOnError extends boolean = false>(
+  options: Options<ListFileCommentsData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    ListFileCommentsResponses,
+    ListFileCommentsErrors,
+    ThrowOnError
+  >({
+    responseTransformer: listFileCommentsResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/annotations/comments",
+    ...options,
+  });
+
+/**
+ * Create File Comment
+ */
+export const createComment = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCommentData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    CreateCommentResponses,
+    CreateCommentErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/annotations/comments",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete File Comment
+ */
+export const deleteComment = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteCommentData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    DeleteCommentResponses,
+    DeleteCommentErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{file_id}/annotations/comments/{id}",
+    ...options,
+  });
+
+/**
+ * Patch File Comment
+ */
+export const patchComment = <ThrowOnError extends boolean = false>(
+  options: Options<PatchCommentData, ThrowOnError>,
+) =>
+  (options.client ?? client).patch<
+    PatchCommentResponses,
+    PatchCommentErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{file_id}/annotations/comments/{id}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
 
 /**
  * Get File Thumbnail
@@ -584,6 +745,7 @@ export const searchFiles = <ThrowOnError extends boolean = false>(
     SearchFilesErrors,
     ThrowOnError
   >({
+    responseTransformer: searchFilesResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/search/files",
     ...options,

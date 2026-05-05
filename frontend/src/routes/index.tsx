@@ -2,6 +2,7 @@ import { StateLoader } from "@/common/state/loader";
 import { Block } from "@/components/ui/display";
 import { ScopesEnum } from "@/config/const";
 import { CurrentUserAccountPage } from "@/pages/account";
+import { DashboardPage } from "@/pages/dashboard";
 import { AuthProvidersPage } from "@/pages/admin/identity/providers";
 import { RolesPage } from "@/pages/admin/identity/roles";
 import { UsersPage } from "@/pages/admin/identity/users";
@@ -73,6 +74,10 @@ const router = createBrowserRouter([
               </Block>
             ),
             children: [
+              {
+                index: true,
+                element: <DashboardPage />,
+              },
               {
                 path: "tags",
                 element: <TagsPage />,

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import type { AppStateResponse, UserSessionResponse } from "@/api/types.gen";
+import type { LibraryLayout } from "@/pages/library/shared/layout";
 import { persist } from "zustand/middleware";
 
 export interface State {
@@ -8,6 +9,8 @@ export interface State {
   appState?: AppStateResponse;
   expandedLibraryNodes: string[];
   primaryColor: string;
+  defaultLibraryLayout: LibraryLayout;
+  libraryLayouts: Record<string, LibraryLayout>;
 }
 
 export interface Actions {
@@ -15,6 +18,8 @@ export interface Actions {
   updateAppState: (appState: State["appState"]) => void;
   setExpandedLibraryNodes: (value: State["expandedLibraryNodes"]) => void;
   updatePrimaryColor: (color: string) => void;
+  setDefaultLibraryLayout: (layout: LibraryLayout) => void;
+  setLibraryLayout: (key: string, layout: LibraryLayout) => void;
 }
 
 /**
@@ -27,6 +32,8 @@ export const useGlobalStore = create<State & Actions>()(
       appState: undefined,
       expandedLibraryNodes: [],
       primaryColor: "blue",
+      defaultLibraryLayout: "list",
+      libraryLayouts: {},
 
       setExpandedLibraryNodes: (value) => set({ expandedLibraryNodes: value }),
 
@@ -36,12 +43,22 @@ export const useGlobalStore = create<State & Actions>()(
         set({ appState: appState }),
 
       updatePrimaryColor: (color: string) => set({ primaryColor: color }),
+
+      setDefaultLibraryLayout: (layout) =>
+        set({ defaultLibraryLayout: layout }),
+
+      setLibraryLayout: (key, layout) =>
+        set((state) => ({
+          libraryLayouts: { ...state.libraryLayouts, [key]: layout },
+        })),
     }),
     {
       name: "global",
       partialize: (state) => ({
         expandedLibraryNodes: state.expandedLibraryNodes,
         primaryColor: state.primaryColor,
+        defaultLibraryLayout: state.defaultLibraryLayout,
+        libraryLayouts: state.libraryLayouts,
       }),
     },
   ),

@@ -5,14 +5,27 @@ import "pdfjs-dist/web/pdf_viewer.css";
 import {
   EventBus,
   PDFFindController,
+  PDFHistory,
   PDFLinkService,
   PDFViewer,
 } from "pdfjs-dist/web/pdf_viewer.mjs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoadingError } from "../error";
 import { ContentLoadingOverlay } from "../feedback";
-import { SearchBar, Toolbar } from "./actions";
+import { PagePeekBar, SearchBar, SelectionPopover, Toolbar } from "./actions";
+import { renderPageComments, renderPageHighlights } from "./overlay";
+import { AnnotationsPanel } from "./panel";
 import "./style.css";
+import type {
+  AnnotationTab,
+  Bookmark,
+  CommentDraft,
+  CommentsApi,
+  HighlightsApi,
+  NormalizedRect,
+  PopoverAction,
+  SelectionPopoverState,
+} from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -40,8 +53,11 @@ interface ReactPDFViewerProps {
   intialPage: number;
   initialScaleValue: string;
   fileName?: string;
+  startInPreviewMode?: boolean;
   onPageChange?: (value: number) => void;
   onScaleChange?: (value: string) => void;
+  highlights: HighlightsApi;
+  comments: CommentsApi;
 }
 
 export function ReactPDFViewer(props: ReactPDFViewerProps) {
@@ -49,20 +65,27 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     file,
     intialPage,
     initialScaleValue = "1",
-    fileName = "dokument.pdf",
+    fileName = "document.pdf",
+    startInPreviewMode = false,
+    comments,
+    highlights,
     onPageChange,
     onScaleChange,
   } = props;
 
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [bookmark, setBookmark] = useState<Bookmark | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(intialPage);
   const [pageInputValue, setPageInputValue] = useState(String(intialPage));
   const [scaleValue, setScaleValue] = useState(initialScaleValue);
   const [showSearch, setShowSearch] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [matchCount, setMatchCount] = useState({ current: 0, total: 0 });
+  const [annotationTab, setAnnotationTab] = useState<AnnotationTab>("comments");
+  const [draftComment, setDraftComment] = useState<CommentDraft | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,6 +94,9 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const pdfViewerRef = useRef<PDFViewer | null>(null);
   const eventBusRef = useRef<EventBus | null>(null);
   const findControllerRef = useRef<PDFFindController | null>(null);
+  const isPeekingRef = useRef(startInPreviewMode);
+  const pdfHistoryRef = useRef<PDFHistory | null>(null);
+  const lastLocationRef = useRef<Bookmark | null>(null);
 
   // Initialize PDFViewer
   useEffect(() => {
@@ -81,7 +107,10 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     const eventBus = new EventBus();
     eventBusRef.current = eventBus;
 
-    const linkService = new PDFLinkService({ eventBus });
+    const linkService = new PDFLinkService({
+      eventBus,
+      ignoreDestinationZoom: true,
+    });
 
     const findController = new PDFFindController({ eventBus, linkService });
     findControllerRef.current = findController;
@@ -100,6 +129,10 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
 
     linkService.setViewer(pdfViewer);
 
+    const pdfHistory = new PDFHistory({ eventBus, linkService });
+    pdfHistoryRef.current = pdfHistory;
+    linkService.setHistory(pdfHistory);
+
     eventBus.on("pagesinit", () => {
       pdfViewer.currentScaleValue = initialScaleValue;
       if (intialPage > 1) {
@@ -109,7 +142,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
 
     eventBus.on("pagechanging", (e: { pageNumber: number }) => {
       setCurrentPage(e.pageNumber);
-      onPageChange?.(e.pageNumber);
+      if (isPeekingRef.current !== true) onPageChange?.(e.pageNumber);
       setPageInputValue(String(e.pageNumber));
     });
 
@@ -137,6 +170,16 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
       },
     );
 
+    eventBus.on(
+      "updateviewarea",
+      (e: { location: { pageNumber: number; top: number; left: number } }) => {
+        lastLocationRef.current = {
+          page: e.location.pageNumber,
+          anchor: { x: e.location.left, y: e.location.top },
+        };
+      },
+    );
+
     // Load the PDF
     let aborted = false;
     const loadingTask = pdfjsLib.getDocument(file);
@@ -148,6 +191,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
         }
         pdfViewer.setDocument(pdfDoc);
         linkService.setDocument(pdfDoc, null);
+        pdfHistory.initialize({ fingerprint: pdfDoc.fingerprints[0] ?? "" });
         setNumPages(pdfDoc.numPages);
         setLoading(false);
       })
@@ -246,6 +290,35 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     [dispatchFind],
   );
 
+  const beginPeek = useCallback(() => {
+    if (isPeekingRef.current) return;
+    if (lastLocationRef.current) setBookmark(lastLocationRef.current);
+    isPeekingRef.current = true;
+  }, []);
+
+  const returnFromPeek = useCallback(() => {
+    if (bookmark == null) return;
+    isPeekingRef.current = false;
+    setBookmark(null);
+
+    pdfViewerRef.current?.scrollPageIntoView({
+      pageNumber: bookmark.page,
+      destArray: [
+        null,
+        { name: "XYZ" },
+        bookmark.anchor.x,
+        bookmark.anchor.y,
+        null,
+      ],
+    });
+  }, [bookmark]);
+
+  const continueFromPeek = useCallback(() => {
+    isPeekingRef.current = false;
+    setBookmark(null);
+    onPageChange?.(currentPage);
+  }, [onPageChange, currentPage]);
+
   const handleDownload = useCallback(async () => {
     const pdfDoc = pdfViewerRef.current?.pdfDocument;
     if (!pdfDoc) return;
@@ -300,6 +373,10 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
 
   const toggleShowSearch = useCallback(() => {
     setShowSearch((v) => !v);
+  }, []);
+
+  const toggleAnnotations = useCallback(() => {
+    setShowAnnotations((v) => !v);
   }, []);
 
   // Keyboard shortcuts
@@ -361,6 +438,136 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     }
   }, [showSearch]);
 
+  // Peek on PDFHistory navigation
+  useEffect(() => {
+    const onPop = () => {
+      if (isPeekingRef.current) return;
+      beginPeek();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [beginPeek]);
+
+  const { create: createHighlight } = highlights;
+
+  const handleSelectionAction = useCallback(
+    (action: PopoverAction, popover: SelectionPopoverState) => {
+      if (action === "highlight") {
+        createHighlight({
+          page: popover.page,
+          excerpt: popover.text,
+          color: "yellow",
+          rects: popover.rects,
+        });
+      } else {
+        setDraftComment({
+          page: popover.page,
+          excerpt: popover.text,
+          rects: popover.rects,
+        });
+      }
+      setAnnotationTab(action === "comment" ? "comments" : "highlights");
+      setShowAnnotations(true);
+      window.getSelection()?.removeAllRanges();
+    },
+    [createHighlight],
+  );
+
+  const { create: onCreateComment } = comments;
+
+  const handleCreateComment: CommentsApi["create"] = useCallback(
+    (input) => {
+      onCreateComment(input);
+      setDraftComment(null);
+    },
+    [onCreateComment],
+  );
+
+  const commentsApi = useMemo(
+    () => ({ ...comments, create: handleCreateComment }),
+    [handleCreateComment, comments],
+  );
+
+  // Sync highlight indicators with PDF.js text-layer renders.
+  useEffect(() => {
+    const eventBus = eventBusRef.current;
+    const viewerDiv = viewerDivRef.current;
+    if (!eventBus || !viewerDiv) return;
+
+    const handler = (e: { pageNumber: number }) =>
+      renderPageHighlights(viewerDiv, highlights.items, e.pageNumber);
+    eventBus.on("textlayerrendered", handler);
+
+    viewerDiv
+      .querySelectorAll<HTMLElement>(".page[data-page-number]")
+      .forEach((el) => {
+        const num = parseInt(el.dataset.pageNumber!, 10);
+        renderPageHighlights(viewerDiv, highlights.items, num);
+      });
+
+    return () => {
+      eventBus.off("textlayerrendered", handler);
+    };
+  }, [highlights]);
+
+  // Sync comment indicators with PDF.js text-layer renders.
+  useEffect(() => {
+    const eventBus = eventBusRef.current;
+    const viewerDiv = viewerDivRef.current;
+    if (!eventBus || !viewerDiv) return;
+
+    const handler = (e: { pageNumber: number }) =>
+      renderPageComments(viewerDiv, comments.items, e.pageNumber, () => {
+        setAnnotationTab("comments");
+        setShowAnnotations(true);
+      });
+
+    eventBus.on("textlayerrendered", handler);
+
+    viewerDiv
+      .querySelectorAll<HTMLElement>(".page[data-page-number]")
+      .forEach((el) => {
+        const num = parseInt(el.dataset.pageNumber!, 10);
+        renderPageComments(viewerDiv, comments.items, num, () => {
+          setAnnotationTab("comments");
+          setShowAnnotations(true);
+        });
+      });
+
+    return () => {
+      eventBus.off("textlayerrendered", handler);
+    };
+  }, [comments]);
+
+  const jumpToAnchor = useCallback(
+    async (anchor: { page: number; rects: NormalizedRect[] }) => {
+      const viewer = pdfViewerRef.current;
+      const pdfDoc = viewer?.pdfDocument;
+      if (!viewer || !pdfDoc || anchor.rects.length === 0) return;
+
+      const page = await pdfDoc.getPage(anchor.page);
+      const viewport = page.getViewport({ scale: 1 });
+      const r = anchor.rects[0];
+
+      // Land the anchor ~25% down the visible viewport so it isn't
+      // pinned to the very top edge.
+      const containerH = containerRef.current?.clientHeight ?? 800;
+      const offsetCssPx = containerH * 0.25;
+      const offsetPdfUnits = offsetCssPx / viewer.currentScale;
+
+      const pdfX = r.left * viewport.width;
+      const pdfY = viewport.height - r.top * viewport.height + offsetPdfUnits;
+
+      beginPeek();
+      viewer.scrollPageIntoView({
+        pageNumber: anchor.page,
+        destArray: [null, { name: "XYZ" }, pdfX, pdfY, null],
+      });
+    },
+    [beginPeek],
+  );
+
+  // TODO Outline Panel
   return (
     <Stack ref={wrapperRef} gap="0" h="full" bg="bg">
       <Toolbar
@@ -378,6 +585,8 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
         zoomPresets={ZOOM_PRESETS}
         scaleValue={scaleValue}
         toggleShowSearch={toggleShowSearch}
+        toggleAnnotations={toggleAnnotations}
+        showAnnotations={showAnnotations}
         handleDownload={handleDownload}
       />
 
@@ -393,21 +602,48 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
         />
       )}
 
-      {/* PDFViewer requires absolute positioning */}
-      <Box flex="1" position="relative">
-        {loading && (
-          <Center position="absolute" inset="0">
-            <ContentLoadingOverlay />
-          </Center>
-        )}
-        {error && (
-          <Box position="absolute" inset="0" p="4">
-            <LoadingError>{error}</LoadingError>
+      <Box flex="1" display="flex" minH={0}>
+        {/* PDFViewer requires absolute positioning */}
+        <Box flex="1" position="relative" minW={0}>
+          {loading && (
+            <Center position="absolute" inset="0">
+              <ContentLoadingOverlay />
+            </Center>
+          )}
+          {error && (
+            <Box position="absolute" inset="0" p="4">
+              <LoadingError>{error}</LoadingError>
+            </Box>
+          )}
+          <Box ref={containerRef} position="absolute" inset="0" overflow="auto">
+            <div ref={viewerDivRef} className="pdfViewer" />
+            <SelectionPopover
+              containerRef={containerRef}
+              onSelect={handleSelectionAction}
+            />
           </Box>
-        )}
-        <Box ref={containerRef} position="absolute" inset="0" overflow="auto">
-          <div ref={viewerDivRef} className="pdfViewer" />
+          <PagePeekBar
+            open={isPeekingRef.current}
+            currentPage={currentPage}
+            bookmark={bookmark}
+            onReturn={returnFromPeek}
+            onContinue={continueFromPeek}
+          />
         </Box>
+        {showAnnotations && (
+          <AnnotationsPanel
+            comments={commentsApi}
+            highlights={highlights}
+            draftComment={draftComment}
+            currentPage={currentPage}
+            tab={annotationTab}
+            onTabChange={setAnnotationTab}
+            onClose={toggleAnnotations}
+            onJumpToHighlight={jumpToAnchor}
+            onJumpToComment={jumpToAnchor}
+            onCancelDraftComment={() => setDraftComment(null)}
+          />
+        )}
       </Box>
     </Stack>
   );

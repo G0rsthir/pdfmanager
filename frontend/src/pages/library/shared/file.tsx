@@ -6,6 +6,7 @@ import {
   updateFileMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { FileResponse, TagResponse } from "@/api/types.gen";
+import { formatRelativeTime } from "@/common/date";
 import { parseAPIError } from "@/common/error";
 import { GenericIconButton } from "@/components/ui/button";
 import { FormError } from "@/components/ui/error";
@@ -15,19 +16,23 @@ import {
   showErrorNotification,
   showSuccessNotification,
 } from "@/components/ui/toaster";
+import { useFileThumbnail } from "@/hooks/asset";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import {
   Badge,
+  Box,
   Card,
   Combobox,
   Field,
   Grid,
   GridItem,
   Group,
+  Image,
   Input,
   Menu,
   Portal,
+  Skeleton,
   Span,
   Stack,
   TagsInput,
@@ -116,12 +121,14 @@ export function FileTagsInput(props: FileTagsInputProps) {
         </Span>
         <Combobox.Positioner>
           <Combobox.Content maxH="300px" overflowY="auto">
-            {collection.items.map((item) => (
-              <Combobox.Item item={item} key={item}>
-                <Combobox.ItemText>{item}</Combobox.ItemText>
-                <Combobox.ItemIndicator />
-              </Combobox.Item>
-            ))}
+            {collection.items
+              .filter((item) => !tags.value.includes(item))
+              .map((item) => (
+                <Combobox.Item item={item} key={item}>
+                  <Combobox.ItemText>{item}</Combobox.ItemText>
+                  <Combobox.ItemIndicator />
+                </Combobox.Item>
+              ))}
           </Combobox.Content>
         </Combobox.Positioner>
       </TagsInput.RootProvider>
@@ -218,7 +225,7 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
   );
 }
 
-export function FileCard({ file }: { file: FileResponse }) {
+export function FileRow({ file }: { file: FileResponse }) {
   return (
     <Card.Root
       variant="outline"
@@ -280,11 +287,106 @@ export function FileCard({ file }: { file: FileResponse }) {
               <Group gap={3} justifyContent="end">
                 {file.page_count != null && (
                   <Text textStyle="xs">
-                    {file.state.current_page} / {file.page_count} pages
+                    Page {file.state.current_page} of {file.page_count}
                   </Text>
                 )}
               </Group>
             </Group>
+          </GridItem>
+        </Grid>
+      </Card.Body>
+    </Card.Root>
+  );
+}
+
+export function FileCard(props: {
+  file: FileResponse;
+  includeReadDate?: boolean;
+}) {
+  const { file, includeReadDate = true } = props;
+
+  const fileUrl = toFileUrl({
+    folderId: file.collection_id,
+    fileId: file.id,
+  });
+
+  const thumbSrc = useFileThumbnail(file.id);
+
+  return (
+    <Card.Root
+      variant="outline"
+      _hover={{ borderColor: "border.emphasized" }}
+      transition="border-color 0.2s"
+      overflow="hidden"
+      size="sm"
+    >
+      <Card.Body>
+        <Grid templateColumns="auto 1fr" gap={5}>
+          <GridItem>
+            <NavLink to={fileUrl}>
+              <Box width="120px" height="160px">
+                {thumbSrc ? (
+                  <Image
+                    src={thumbSrc}
+                    rounded="md"
+                    width="full"
+                    height="full"
+                    objectFit="cover"
+                  />
+                ) : (
+                  <Skeleton height="160px" />
+                )}
+              </Box>
+            </NavLink>
+          </GridItem>
+
+          <GridItem minW={0}>
+            <Stack gap={2} h="full">
+              <Group>
+                {includeReadDate && file.state.updated_at && (
+                  <Text
+                    textStyle="xs"
+                    color="fg.muted"
+                    title={new Date(file.state.updated_at).toLocaleString()}
+                  >
+                    Read {formatRelativeTime(file.state.updated_at)}
+                  </Text>
+                )}
+                <Group gap={0} ms="auto">
+                  <FavoriteButton file={file} />
+                  <FileCardActions file={file} />
+                </Group>
+              </Group>
+
+              <NavLink to={fileUrl}>
+                <Card.Title
+                  lineClamp={1}
+                  _hover={{ color: "colorPalette.fg" }}
+                  transition="color 0.2s"
+                >
+                  {file.name}
+                </Card.Title>
+              </NavLink>
+
+              <Text textStyle="sm" color="fg.muted" lineClamp={1}>
+                {file.description}
+              </Text>
+
+              {file.tags && file.tags.length > 0 && (
+                <Group gap={2} overflow="auto" h="2.0rem" align="start">
+                  {file.tags.map((tag) => (
+                    <SearchTag key={tag.id} tag={tag} />
+                  ))}
+                </Group>
+              )}
+              <Group gap={3} justify="end" mt="auto">
+                {file.page_count != null && (
+                  <Text textStyle="xs" ms="auto">
+                    Page {file.state.current_page} of {file.page_count}
+                  </Text>
+                )}
+              </Group>
+            </Stack>
           </GridItem>
         </Grid>
       </Card.Body>

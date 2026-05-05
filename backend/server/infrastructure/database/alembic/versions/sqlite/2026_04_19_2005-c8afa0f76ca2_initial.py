@@ -125,7 +125,10 @@ def upgrade() -> None:
             ["user_id"], ["users.id"], name=op.f("fk_file_states_user_id_users"), ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_file_states")),
+        sa.Column("created_at", DateTimeUTC(timezone=True), nullable=False),
+        sa.Column("updated_at", DateTimeUTC(timezone=True), nullable=False),
     )
+
     op.create_table(
         "file_tags",
         sa.Column("file_id", sa.Uuid(), nullable=False),
@@ -178,6 +181,48 @@ def upgrade() -> None:
             ["user_id"], ["users.id"], name=op.f("fk_user_tag_preferences_user_id_users"), ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("tag_id", "user_id", "id", name=op.f("pk_user_tag_preferences")),
+    )
+
+    op.create_table(
+        "file_highlights",
+        sa.Column("page", sa.Integer(), nullable=False),
+        sa.Column("color", sa.String(), nullable=False),
+        sa.Column("excerpt", sa.String(), nullable=False),
+        sa.Column("rects", sa.JSON(), nullable=False),
+        sa.Column("label", sa.String(), nullable=True),
+        sa.Column("file_id", sa.Uuid(), nullable=False),
+        sa.Column("author_id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("created_at", DateTimeUTC(timezone=True), nullable=False),
+        sa.Column("updated_at", DateTimeUTC(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["author_id"], ["users.id"], name=op.f("fk_file_highlights_author_id_users"), ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["file_id"], ["files.id"], name=op.f("fk_file_highlights_file_id_files"), ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_file_highlights")),
+    )
+
+    op.create_table(
+        "file_comments",
+        sa.Column("page", sa.Integer(), nullable=False),
+        sa.Column("body", sa.String(), nullable=False),
+        sa.Column("excerpt", sa.String(), nullable=False),
+        sa.Column("rects", sa.JSON(), nullable=False),
+        sa.Column("label", sa.String(), nullable=True),
+        sa.Column("file_id", sa.Uuid(), nullable=False),
+        sa.Column("author_id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("created_at", DateTimeUTC(timezone=True), nullable=False),
+        sa.Column("updated_at", DateTimeUTC(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["author_id"], ["users.id"], name=op.f("fk_file_comments_author_id_users"), ondelete="SET NULL"
+        ),
+        sa.ForeignKeyConstraint(
+            ["file_id"], ["files.id"], name=op.f("fk_file_comments_file_id_files"), ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_file_comments")),
     )
 
     op.execute(
@@ -279,4 +324,6 @@ def downgrade() -> None:
     op.drop_table("content_fts_idx")
     op.drop_table("content_fts")
     op.drop_table("content_fts_docsize")
+    op.drop_table("file_highlights")
+    op.drop_table("file_comments")
     # ### end Alembic commands ###

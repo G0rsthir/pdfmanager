@@ -43,10 +43,10 @@ export interface PasswordInputProps
   rootProps?: GroupProps;
 }
 
-export const PasswordInput = React.forwardRef<
-  HTMLInputElement,
-  PasswordInputProps
->(function PasswordInput(props, ref) {
+export const PasswordInput = function PasswordInput({
+  ref,
+  ...props
+}: PasswordInputProps & { ref?: React.RefObject<HTMLInputElement | null> }) {
   const {
     rootProps,
     defaultVisible,
@@ -88,35 +88,38 @@ export const PasswordInput = React.forwardRef<
       />
     </InputGroup>
   );
-});
+};
 
-const VisibilityTrigger = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  function VisibilityTrigger(props, ref) {
-    return (
-      <GenericIconButton
-        tabIndex={-1}
-        ref={ref}
-        me="-2"
-        aspectRatio="square"
-        size="sm"
-        variant="ghost"
-        height="calc(100% - {spacing.2})"
-        aria-label="Toggle password visibility"
-        {...props}
-      />
-    );
-  },
-);
+const VisibilityTrigger = function VisibilityTrigger({
+  ref,
+  ...props
+}: ButtonProps & { ref?: React.RefObject<HTMLButtonElement | null> }) {
+  return (
+    <GenericIconButton
+      tabIndex={-1}
+      ref={ref}
+      me="-2"
+      aspectRatio="square"
+      size="sm"
+      variant="ghost"
+      height="calc(100% - {spacing.2})"
+      aria-label="Toggle password visibility"
+      {...props}
+    />
+  );
+};
 
 interface PasswordStrengthMeterProps extends StackProps {
   max?: number;
   value: number;
 }
 
-export const PasswordStrengthMeter = React.forwardRef<
-  HTMLDivElement,
-  PasswordStrengthMeterProps
->(function PasswordStrengthMeter(props, ref) {
+export const PasswordStrengthMeter = function PasswordStrengthMeter({
+  ref,
+  ...props
+}: PasswordStrengthMeterProps & {
+  ref?: React.RefObject<HTMLDivElement | null>;
+}) {
   const { max = 4, value, ...rest } = props;
 
   const percent = (value / max) * 100;
@@ -144,7 +147,7 @@ export const PasswordStrengthMeter = React.forwardRef<
       {label && <HStack textStyle="xs">{label}</HStack>}
     </Stack>
   );
-});
+};
 
 function getColorPalette(percent: number) {
   switch (true) {

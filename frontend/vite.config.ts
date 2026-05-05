@@ -19,7 +19,7 @@ export default defineConfig({
       "X-Content-Type-Options": "nosniff",
       "X-XSS-Protection": "1; mode=block",
       "Content-Security-Policy":
-        "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data:; script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:;",
     },
   },
 });

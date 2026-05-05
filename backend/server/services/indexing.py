@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 
 from server.infrastructure.pdf import PdfFile
@@ -16,7 +17,7 @@ class IndexingService:
         """
         async with self._storage_backend.open_path(storage_key) as path:
             pfg_file = PdfFile(path)
-            pages = pfg_file.extract_page_text()
+            pages = await asyncio.to_thread(pfg_file.extract_page_text)
             fragments = [
                 ContentFragment(
                     content=page.text,

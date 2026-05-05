@@ -30,10 +30,10 @@ export function ColorModeProvider(props: ColorModeProviderProps) {
 
 type ColorModeButtonProps = Omit<IconButtonProps, "aria-label">;
 
-export const ColorModeButton = React.forwardRef<
-  HTMLButtonElement,
-  ColorModeButtonProps
->(function ColorModeButton(props, ref) {
+export const ColorModeButton = function ColorModeButton({
+  ref,
+  ...props
+}: ColorModeButtonProps & { ref?: React.RefObject<HTMLButtonElement | null> }) {
   const { toggleColorMode, colorMode } = useColorMode();
   return (
     <ClientOnly fallback={<Skeleton boxSize="9" />}>
@@ -55,39 +55,41 @@ export const ColorModeButton = React.forwardRef<
       </GenericIconButton>
     </ClientOnly>
   );
-});
+};
 
-export const LightMode = React.forwardRef<HTMLSpanElement, SpanProps>(
-  function LightMode(props, ref) {
-    return (
-      <Span
-        color="fg"
-        display="contents"
-        className="chakra-theme light"
-        colorPalette="gray"
-        colorScheme="light"
-        ref={ref}
-        {...props}
-      />
-    );
-  },
-);
+export const LightMode = function LightMode({
+  ref,
+  ...props
+}: SpanProps & { ref?: React.RefObject<HTMLSpanElement | null> }) {
+  return (
+    <Span
+      color="fg"
+      display="contents"
+      className="chakra-theme light"
+      colorPalette="gray"
+      colorScheme="light"
+      ref={ref}
+      {...props}
+    />
+  );
+};
 
-export const DarkMode = React.forwardRef<HTMLSpanElement, SpanProps>(
-  function DarkMode(props, ref) {
-    return (
-      <Span
-        color="fg"
-        display="contents"
-        className="chakra-theme dark"
-        colorPalette="gray"
-        colorScheme="dark"
-        ref={ref}
-        {...props}
-      />
-    );
-  },
-);
+export const DarkMode = function DarkMode({
+  ref,
+  ...props
+}: SpanProps & { ref?: React.RefObject<HTMLSpanElement | null> }) {
+  return (
+    <Span
+      color="fg"
+      display="contents"
+      className="chakra-theme dark"
+      colorPalette="gray"
+      colorScheme="dark"
+      ref={ref}
+      {...props}
+    />
+  );
+};
 
 const SelectTrigger = () => {
   const select = useSelectContext();

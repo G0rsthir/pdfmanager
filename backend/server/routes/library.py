@@ -4,26 +4,33 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Path, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse as FastAPIFileResponse
 
-from server.const import ScopesEnum
+from server.const import UNSET, ScopesEnum
 from server.dependencies import (
     AccessSecurity,
     FileRepositoryDependency,
     LibraryServiceDependency,
+    UserRepositoryDependency,
     run_with_indexing_service,
 )
 from server.exceptions import DuplicateResourceError, FieldError, InvalidActionError
-from server.routes._assemblers import build_file_response
+from server.routes._assemblers import build_comment_response, build_file_response, build_highlight_response
 from server.schemas.identity import UserSummaryResponse
 from server.schemas.library import (
     AssignmentResponse,
     CollectionResponse,
     CollectionWithDetailsResponse,
+    CommentResponse,
     CreateCollectionRequest,
+    CreateCommentRequest,
+    CreateHighlightRequest,
     FileResponse,
     FileStateResponse,
+    HighlightResponse,
     LibraryTreeNode,
     ListFilesQueryParams,
+    PatchCommentRequest,
     PatchFileStateRequest,
+    PatchHighlightRequest,
     ResourcePermissionResponse,
     TagWithDetailsResponse,
     UpdateCollectionRequest,
@@ -198,17 +205,6 @@ async def get_library_tree(
     return await library_service.get_library_tree(user_id=access_session.user_id)
 
 
-@router.get(path="/files/uncategorized", operation_id="ListUncategorizedFiles", response_model=list[FileResponse])
-async def list_uncategorized_files(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
-    library_service: LibraryServiceDependency,
-):
-
-    files = await library_service.list_files(user_id=access_session.user_id, collection_id=None)
-
-    return [build_file_response(file) for file in files]
-
-
 @router.get(path="/files", operation_id="ListFiles", response_model=list[FileResponse])
 async def list_files(
     query: Annotated[ListFilesQueryParams, Query()],
@@ -274,7 +270,7 @@ async def get_file_details(
     return build_file_response(file)
 
 
-@router.get(path="/files/{id}/download", operation_id="GetFile")
+@router.get(path="/files/{id}/download", response_class=FastAPIFileResponse, operation_id="GetFile")
 async def download_file(
     file_id: Annotated[UUID, Path(alias="id")],
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
@@ -286,7 +282,140 @@ async def download_file(
         return FastAPIFileResponse(path, media_type=view.file.content_type)
 
 
-@router.get(path="/files/{id}/thumbnail", operation_id="GetFileThumbnail")
+@router.get(
+    path="/files/{id}/annotations/highlights", response_model=list[HighlightResponse], operation_id="ListFileHighlights"
+)
+async def list_file_highlights(
+    file_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+    user_repo: UserRepositoryDependency,
+):
+
+    highlights = await library_service.list_file_highlights(user_id=access_session.user_id, file_id=file_id)
+    author_ids = [highlight.author_id for highlight in highlights if highlight.author_id]
+    authors = await user_repo.list_by_ids(author_ids)
+
+    response = []
+    for highlight in highlights:
+        result = build_highlight_response(highlight, authors, access_session.user_id)
+        response.append(result)
+    return response
+
+
+@router.post(path="/files/{id}/annotations/highlights", operation_id="CreateHighlight")
+async def create_file_highlight(
+    file_id: Annotated[UUID, Path(alias="id")],
+    data: CreateHighlightRequest,
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+    return await library_service.create_highlight(
+        user_id=access_session.user_id,
+        file_id=file_id,
+        rects=data.rects,
+        excerpt=data.excerpt,
+        label=data.label,
+        page=data.page,
+        color=data.color,
+    )
+
+
+@router.patch(path="/files/{file_id}/annotations/highlights/{id}", operation_id="PatchHighlight")
+async def patch_file_highlight(
+    file_id: Annotated[UUID, Path()],
+    highlight_id: Annotated[UUID, Path(alias="id")],
+    data: PatchHighlightRequest,
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    label = data.label if "label" in data.model_fields_set else UNSET
+
+    await library_service.patch_highlight(
+        user_id=access_session.user_id, file_id=file_id, highlight_id=highlight_id, color=data.color, label=label
+    )
+
+
+@router.delete(path="/files/{file_id}/annotations/highlights/{id}", operation_id="DeleteHighlight")
+async def delete_file_highlight(
+    file_id: Annotated[UUID, Path()],
+    highlight_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    await library_service.delete_highlight(user_id=access_session.user_id, file_id=file_id, highlight_id=highlight_id)
+
+
+@router.get(
+    path="/files/{id}/annotations/comments", response_model=list[CommentResponse], operation_id="ListFileComments"
+)
+async def list_file_comments(
+    file_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+    user_repo: UserRepositoryDependency,
+):
+
+    comments = await library_service.list_file_comments(user_id=access_session.user_id, file_id=file_id)
+    author_ids = [comment.author_id for comment in comments if comment.author_id]
+    authors = await user_repo.list_by_ids(author_ids)
+
+    response = []
+    for comment in comments:
+        result = build_comment_response(comment, authors, access_session.user_id)
+        response.append(result)
+    return response
+
+
+@router.post(path="/files/{id}/annotations/comments", operation_id="CreateComment")
+async def create_file_comment(
+    file_id: Annotated[UUID, Path(alias="id")],
+    data: CreateCommentRequest,
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    return await library_service.create_comment(
+        user_id=access_session.user_id,
+        file_id=file_id,
+        rects=data.rects,
+        excerpt=data.excerpt,
+        label=data.label,
+        page=data.page,
+        body=data.body,
+    )
+
+
+@router.patch(path="/files/{file_id}/annotations/comments/{id}", operation_id="PatchComment")
+async def patch_file_comment(
+    file_id: Annotated[UUID, Path()],
+    comment_id: Annotated[UUID, Path(alias="id")],
+    data: PatchCommentRequest,
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    label = data.label if "label" in data.model_fields_set else UNSET
+
+    await library_service.patch_comment(
+        user_id=access_session.user_id, file_id=file_id, comment_id=comment_id, label=label, body=data.body
+    )
+
+
+@router.delete(path="/files/{file_id}/annotations/comments/{id}", operation_id="DeleteComment")
+async def delete_file_comment(
+    file_id: Annotated[UUID, Path()],
+    comment_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    await library_service.delete_comment(user_id=access_session.user_id, file_id=file_id, comment_id=comment_id)
+
+
+@router.get(path="/files/{id}/thumbnail", response_class=FastAPIFileResponse, operation_id="GetFileThumbnail")
 async def get_file_thumbnail(
     file_id: Annotated[UUID, Path(alias="id")],
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],

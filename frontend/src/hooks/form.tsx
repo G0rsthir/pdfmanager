@@ -34,7 +34,7 @@ export function useFormMutation<
     },
   });
 
-  const { mutate } = useAPIMutation({
+  const { mutate, isPending } = useAPIMutation({
     ...mutationOptions(),
     onSuccess() {
       if (successMessage) showSuccessNotification(successMessage);
@@ -44,5 +44,5 @@ export function useFormMutation<
     setErrorMap: form.setErrorMap,
   });
 
-  return form;
+  return Object.assign(form, { isPending });
 }

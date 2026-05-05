@@ -366,6 +366,7 @@ function SearchHitItem(props: {
         folderId,
         fileId,
         page: hit.page_number ?? undefined,
+        preview: hit.page_number ? true : undefined,
       })}
     >
       <Stack

@@ -317,6 +317,50 @@ export type CollectionWithDetailsResponse = {
 };
 
 /**
+ * CommentResponse
+ */
+export type CommentResponse = {
+  /**
+   * Page
+   */
+  page: number;
+  /**
+   * Body
+   */
+  body: string;
+  /**
+   * Excerpt
+   */
+  excerpt: string;
+  /**
+   * Rects
+   */
+  rects: Array<NormalizedRect>;
+  /**
+   * Label
+   *
+   * User-set identifier, used to cross-reference.
+   */
+  label?: string | null;
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Author Id
+   */
+  author_id?: string | null;
+  /**
+   * Created At
+   */
+  created_at: Date;
+  /**
+   * Author Name
+   */
+  author_name?: string | null;
+};
+
+/**
  * CreateCollectionRequest
  */
 export type CreateCollectionRequest = {
@@ -332,6 +376,62 @@ export type CreateCollectionRequest = {
    * Entity Type
    */
   entity_type: "folder" | "group";
+};
+
+/**
+ * CreateCommentRequest
+ */
+export type CreateCommentRequest = {
+  /**
+   * Page
+   */
+  page: number;
+  /**
+   * Body
+   */
+  body: string;
+  /**
+   * Excerpt
+   */
+  excerpt: string;
+  /**
+   * Rects
+   */
+  rects: Array<NormalizedRect>;
+  /**
+   * Label
+   *
+   * User-set identifier, used to cross-reference.
+   */
+  label?: string | null;
+};
+
+/**
+ * CreateHighlightRequest
+ */
+export type CreateHighlightRequest = {
+  /**
+   * Page
+   */
+  page: number;
+  /**
+   * Color
+   */
+  color: string;
+  /**
+   * Excerpt
+   */
+  excerpt: string;
+  /**
+   * Rects
+   */
+  rects: Array<NormalizedRect>;
+  /**
+   * Label
+   *
+   * User-set identifier, used to cross-reference.
+   */
+  label?: string | null;
 };
 
 /**
@@ -409,10 +509,6 @@ export type FileResponse = {
    */
   page_count: number;
   /**
-   * Thumbnail
-   */
-  thumbnail?: string | null;
-  /**
    * Tags
    */
   tags?: Array<TagResponse>;
@@ -454,6 +550,10 @@ export type FileStateResponse = {
    * Scale
    */
   scale: string;
+  /**
+   * Updated At
+   */
+  updated_at?: Date | null;
 };
 
 /**
@@ -464,6 +564,46 @@ export type HttpValidationError = {
    * Detail
    */
   detail?: Array<ValidationError>;
+};
+
+/**
+ * HighlightResponse
+ */
+export type HighlightResponse = {
+  /**
+   * Page
+   */
+  page: number;
+  /**
+   * Color
+   */
+  color: string;
+  /**
+   * Excerpt
+   */
+  excerpt: string;
+  /**
+   * Rects
+   */
+  rects: Array<NormalizedRect>;
+  /**
+   * Label
+   *
+   * User-set identifier, used to cross-reference.
+   */
+  label?: string | null;
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Author Id
+   */
+  author_id?: string | null;
+  /**
+   * Author Name
+   */
+  author_name?: string | null;
 };
 
 /**
@@ -494,6 +634,31 @@ export type LibraryTreeNode = {
    * Is Shared
    */
   is_shared?: boolean;
+};
+
+/**
+ * NormalizedRect
+ *
+ * All values are fractions (0..1) of the .page element's box,
+ * so they survive zoom / rotate without recomputation.
+ */
+export type NormalizedRect = {
+  /**
+   * Top
+   */
+  top: number;
+  /**
+   * Left
+   */
+  left: number;
+  /**
+   * Width
+   */
+  width: number;
+  /**
+   * Height
+   */
+  height: number;
 };
 
 /**
@@ -533,6 +698,22 @@ export type OidcGroupRuleOutput = {
 };
 
 /**
+ * PatchCommentRequest
+ */
+export type PatchCommentRequest = {
+  /**
+   * Label
+   *
+   * User-set identifier, used to cross-reference.
+   */
+  label?: string | null;
+  /**
+   * Body
+   */
+  body?: string | null;
+};
+
+/**
  * PatchFileStateRequest
  */
 export type PatchFileStateRequest = {
@@ -548,6 +729,22 @@ export type PatchFileStateRequest = {
    * Is Favorite
    */
   is_favorite?: boolean | null;
+};
+
+/**
+ * PatchHighlightRequest
+ */
+export type PatchHighlightRequest = {
+  /**
+   * Label
+   *
+   * User-set identifier, used to cross-reference.
+   */
+  label?: string | null;
+  /**
+   * Color
+   */
+  color?: string | null;
 };
 
 /**
@@ -1004,10 +1201,6 @@ export type FileResponseWritable = {
    * Page Count
    */
   page_count: number;
-  /**
-   * Thumbnail
-   */
-  thumbnail?: string | null;
   /**
    * Tags
    */
@@ -1623,25 +1816,6 @@ export type GetLibraryTreeResponses = {
 export type GetLibraryTreeResponse =
   GetLibraryTreeResponses[keyof GetLibraryTreeResponses];
 
-export type ListUncategorizedFilesData = {
-  body?: never;
-  path?: never;
-  query?: never;
-  url: "/api/v1/library/files/uncategorized";
-};
-
-export type ListUncategorizedFilesResponses = {
-  /**
-   * Response Listuncategorizedfiles
-   *
-   * Successful Response
-   */
-  200: Array<FileResponse>;
-};
-
-export type ListUncategorizedFilesResponse =
-  ListUncategorizedFilesResponses[keyof ListUncategorizedFilesResponses];
-
 export type ListFilesData = {
   body?: never;
   path?: never;
@@ -1731,6 +1905,261 @@ export type GetFileErrors = {
 export type GetFileError = GetFileErrors[keyof GetFileErrors];
 
 export type GetFileResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ListFileHighlightsData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{id}/annotations/highlights";
+};
+
+export type ListFileHighlightsErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ListFileHighlightsError =
+  ListFileHighlightsErrors[keyof ListFileHighlightsErrors];
+
+export type ListFileHighlightsResponses = {
+  /**
+   * Response Listfilehighlights
+   *
+   * Successful Response
+   */
+  200: Array<HighlightResponse>;
+};
+
+export type ListFileHighlightsResponse =
+  ListFileHighlightsResponses[keyof ListFileHighlightsResponses];
+
+export type CreateHighlightData = {
+  body: CreateHighlightRequest;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{id}/annotations/highlights";
+};
+
+export type CreateHighlightErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type CreateHighlightError =
+  CreateHighlightErrors[keyof CreateHighlightErrors];
+
+export type CreateHighlightResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type DeleteHighlightData = {
+  body?: never;
+  path: {
+    /**
+     * File Id
+     */
+    file_id: string;
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{file_id}/annotations/highlights/{id}";
+};
+
+export type DeleteHighlightErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type DeleteHighlightError =
+  DeleteHighlightErrors[keyof DeleteHighlightErrors];
+
+export type DeleteHighlightResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type PatchHighlightData = {
+  body: PatchHighlightRequest;
+  path: {
+    /**
+     * File Id
+     */
+    file_id: string;
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{file_id}/annotations/highlights/{id}";
+};
+
+export type PatchHighlightErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type PatchHighlightError =
+  PatchHighlightErrors[keyof PatchHighlightErrors];
+
+export type PatchHighlightResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ListFileCommentsData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{id}/annotations/comments";
+};
+
+export type ListFileCommentsErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ListFileCommentsError =
+  ListFileCommentsErrors[keyof ListFileCommentsErrors];
+
+export type ListFileCommentsResponses = {
+  /**
+   * Response Listfilecomments
+   *
+   * Successful Response
+   */
+  200: Array<CommentResponse>;
+};
+
+export type ListFileCommentsResponse =
+  ListFileCommentsResponses[keyof ListFileCommentsResponses];
+
+export type CreateCommentData = {
+  body: CreateCommentRequest;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{id}/annotations/comments";
+};
+
+export type CreateCommentErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type CreateCommentError = CreateCommentErrors[keyof CreateCommentErrors];
+
+export type CreateCommentResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type DeleteCommentData = {
+  body?: never;
+  path: {
+    /**
+     * File Id
+     */
+    file_id: string;
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{file_id}/annotations/comments/{id}";
+};
+
+export type DeleteCommentErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type DeleteCommentError = DeleteCommentErrors[keyof DeleteCommentErrors];
+
+export type DeleteCommentResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type PatchCommentData = {
+  body: PatchCommentRequest;
+  path: {
+    /**
+     * File Id
+     */
+    file_id: string;
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{file_id}/annotations/comments/{id}";
+};
+
+export type PatchCommentErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type PatchCommentError = PatchCommentErrors[keyof PatchCommentErrors];
+
+export type PatchCommentResponses = {
   /**
    * Successful Response
    */

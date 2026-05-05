@@ -2,10 +2,10 @@ import { listFilesOptions } from "@/api/@tanstack/react-query.gen";
 import type { FileResponse } from "@/api/types.gen";
 import { QueryView } from "@/components/ui/feedback";
 import { useAPIQuery } from "@/hooks/query";
-import { Heading, Stack } from "@chakra-ui/react";
+import { Group, Heading, Stack } from "@chakra-ui/react";
 import { LuStar } from "react-icons/lu";
 import { Empty } from "./shared/common";
-import { FileCard } from "./shared/file";
+import { FileList, LayoutSwitch } from "./shared/layout";
 
 export function FavoritesPage() {
   const query = useAPIQuery({
@@ -26,9 +26,13 @@ export function FavoritesPage() {
 function FavoriteFileView({ files }: { files: FileResponse[] }) {
   return (
     <Stack gap={6}>
-      <Heading size="3xl" fontWeight="normal">
-        Favorites
-      </Heading>
+      <Group justify="space-between" align="center">
+        <Heading size="3xl" fontWeight="normal">
+          Favorites
+        </Heading>
+
+        <LayoutSwitch layoutKey="favorites" />
+      </Group>
 
       {files.length == 0 && (
         <Empty
@@ -37,9 +41,7 @@ function FavoriteFileView({ files }: { files: FileResponse[] }) {
         />
       )}
 
-      {files.map((file) => (
-        <FileCard file={file} key={file.id} />
-      ))}
+      {files && <FileList files={files} layoutKey="favorites" />}
     </Stack>
   );
 }

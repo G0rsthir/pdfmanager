@@ -1,6 +1,9 @@
 import {
+  ActionBar,
   Box,
+  Button,
   Group,
+  Icon,
   Input,
   Menu,
   Portal,
@@ -8,9 +11,13 @@ import {
   Text,
 } from "@chakra-ui/react";
 import {
+  LuArrowLeft,
+  LuBookmark,
   LuChevronDown,
   LuChevronUp,
   LuDownload,
+  LuHighlighter,
+  LuMessageSquare,
   LuMinus,
   LuPlus,
   LuRotateCcw,
@@ -19,14 +26,16 @@ import {
   LuX,
 } from "react-icons/lu";
 import { GenericIconButton } from "../button";
+import { useSelectionPopover } from "./hooks";
+import type {
+  Bookmark,
+  PopoverAction,
+  SelectionPopoverState,
+  ZoomPreset,
+} from "./types";
 
 function isSpecialScale(value: string): boolean {
   return ["auto", "page-fit", "page-width", "page-actual"].includes(value);
-}
-
-interface ZoomPreset {
-  label: string;
-  value: string;
 }
 
 interface ToolbarProps {
@@ -43,6 +52,8 @@ interface ToolbarProps {
   rotateCCW: () => void;
   rotateCW: () => void;
   toggleShowSearch: () => void;
+  toggleAnnotations: () => void;
+  showAnnotations: boolean;
   zoomIn: () => void;
   zoomOut: () => void;
 }
@@ -62,6 +73,8 @@ export function Toolbar(props: ToolbarProps) {
     rotateCCW,
     rotateCW,
     toggleShowSearch,
+    toggleAnnotations,
+    showAnnotations,
     zoomIn,
     zoomOut,
   } = props;
@@ -204,6 +217,16 @@ export function Toolbar(props: ToolbarProps) {
       >
         <LuSearch />
       </GenericIconButton>
+      <GenericIconButton
+        size="xs"
+        variant={showAnnotations ? "subtle" : "ghost"}
+        aria-label="Toggle annotations"
+        colorPalette={showAnnotations ? "colorPalette.600" : undefined}
+        aria-pressed={showAnnotations}
+        onClick={toggleAnnotations}
+      >
+        <LuMessageSquare />
+      </GenericIconButton>
       <Separator orientation="vertical" h="5" />
       <Group gap="0" ms="4">
         <GenericIconButton
@@ -307,5 +330,102 @@ export function SearchBar(props: SearchBarProps) {
         <LuX />
       </GenericIconButton>
     </Group>
+  );
+}
+
+interface PagePeekBarProps {
+  open: boolean;
+  bookmark: Bookmark | null;
+  currentPage: number;
+  onReturn: () => void;
+  onContinue: () => void;
+}
+
+export function PagePeekBar(props: PagePeekBarProps) {
+  const { open, bookmark, currentPage, onReturn, onContinue } = props;
+
+  return (
+    <ActionBar.Root
+      open={open}
+      closeOnInteractOutside={false}
+      placement="bottom"
+    >
+      <ActionBar.Positioner position="absolute">
+        <ActionBar.Content>
+          <ActionBar.SelectionTrigger>
+            Peeking page {currentPage}
+          </ActionBar.SelectionTrigger>
+          <ActionBar.Separator />
+          <Button
+            colorPalette="gray"
+            variant="outline"
+            size="sm"
+            onClick={onReturn}
+            disabled={currentPage == bookmark?.page}
+          >
+            <LuArrowLeft />
+            Back to page {bookmark?.page ?? 1}
+          </Button>
+          <Button variant="surface" size="sm" onClick={onContinue}>
+            <LuBookmark />
+            Continue from here
+          </Button>
+        </ActionBar.Content>
+      </ActionBar.Positioner>
+    </ActionBar.Root>
+  );
+}
+
+export function SelectionPopover(props: {
+  containerRef: React.RefObject<HTMLElement | null>;
+  onSelect: (action: PopoverAction, popover: SelectionPopoverState) => void;
+}) {
+  const { containerRef, onSelect } = props;
+
+  const [popover] = useSelectionPopover(containerRef);
+
+  if (!popover) return null;
+
+  return (
+    <Box
+      position="absolute"
+      top={`${popover.anchor.y + 4}px`}
+      left={`${popover.anchor.x - 50}px`}
+      zIndex={50}
+      bg="bg.panel"
+      rounded="md"
+      shadow="md"
+      borderWidth="1px"
+      px={2}
+      py={1}
+      // Block native focus loss.
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      <Group gap="2">
+        <Icon
+          size="xs"
+          cursor="pointer"
+          onClick={() => onSelect("comment", popover)}
+          _hover={{
+            color: "colorPalette.400",
+          }}
+        >
+          <LuMessageSquare />
+        </Icon>
+        <Icon
+          size="xs"
+          cursor="pointer"
+          onClick={() => onSelect("highlight", popover)}
+          _hover={{
+            color: "colorPalette.400",
+          }}
+        >
+          <LuHighlighter />
+        </Icon>
+      </Group>
+    </Box>
   );
 }

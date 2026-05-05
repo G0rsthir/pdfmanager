@@ -47,6 +47,19 @@ class DateTimeUTC(TypeDecorator[datetime]):
         return value
 
 
+class AuditMixin:
+    created_at: Mapped[datetime] = mapped_column(
+        DateTimeUTC(timezone=True),
+        default=lambda: datetime.now(UTC),
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTimeUTC(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+
 metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 

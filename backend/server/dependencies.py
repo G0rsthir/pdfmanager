@@ -13,6 +13,8 @@ from server.infrastructure.storage import LocalStorageBackend
 from server.repositories import (
     AuthProviderRepository,
     CollectionRepository,
+    FileCommentRepository,
+    FileHighlightRepository,
     FileRepository,
     PermissionRepository,
     RoleRepository,
@@ -107,6 +109,8 @@ def get_library_service(
     tags_repo: TagRepositoryDependency,
     search_engine: SearchEngineDependency,
     permission_repo: PermissionDependency,
+    highlight_repo: HighlightRepositoryDependency,
+    comment_repo: CommentRepositoryDependency,
 ) -> LibraryService:
     env: AppEnvSettings = request.app.state.env
     backend = LocalStorageBackend(env.STORAGE_DIR)
@@ -118,6 +122,8 @@ def get_library_service(
         search_engine=search_engine,
         permission_repo=permission_repo,
         storage_backend=backend,
+        highlight_repo=highlight_repo,
+        comment_repo=comment_repo,
     )
 
 
@@ -167,6 +173,18 @@ def get_tag_repository(
     return TagRepository(db)
 
 
+def get_highlight_repository(
+    db: DBSessionDependency,
+) -> FileHighlightRepository:
+    return FileHighlightRepository(db)
+
+
+def get_comment_repository(
+    db: DBSessionDependency,
+) -> FileCommentRepository:
+    return FileCommentRepository(db)
+
+
 def get_file_repository(
     db: DBSessionDependency,
 ) -> FileRepository:
@@ -208,7 +226,8 @@ UserRepositoryDependency = Annotated[UserRepository, Depends(get_user_repository
 SessionRepositoryDependency = Annotated[SessionRepository, Depends(get_session_repository)]
 AuthProviderRepositoryDependency = Annotated[AuthProviderRepository, Depends(get_auth_provider_repository)]
 PermissionDependency = Annotated[PermissionRepository, Depends(get_permission_repository)]
-
+HighlightRepositoryDependency = Annotated[FileHighlightRepository, Depends(get_highlight_repository)]
+CommentRepositoryDependency = Annotated[FileCommentRepository, Depends(get_comment_repository)]
 
 AuthServiceDependency = Annotated[
     AuthService,

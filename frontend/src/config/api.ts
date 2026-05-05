@@ -42,6 +42,22 @@ export async function refreshAccess(): Promise<AccessToken | undefined> {
   return token;
 }
 
+export async function getAccessToken(): Promise<string | undefined> {
+  const expired =
+    !refreshState.tokenExpires || refreshState.tokenExpires <= new Date();
+
+  if (expired) {
+    if (refreshState.refreshRequest) {
+      const accessToken = await refreshState.refreshRequest;
+      return accessToken?.access_token;
+    }
+
+    const token = await refreshAccess();
+    return token?.access_token;
+  }
+  return client.getConfig().auth as string | undefined;
+}
+
 // Get a new auth JWT when the current one expires
 client.interceptors.request.use(async (request, options: Options) => {
   const meta = options.meta;

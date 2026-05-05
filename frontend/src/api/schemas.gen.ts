@@ -462,6 +462,78 @@ export const CollectionWithDetailsResponseSchema = {
   title: "CollectionWithDetailsResponse",
 } as const;
 
+export const CommentResponseSchema = {
+  properties: {
+    page: {
+      type: "integer",
+      title: "Page",
+    },
+    body: {
+      type: "string",
+      title: "Body",
+    },
+    excerpt: {
+      type: "string",
+      title: "Excerpt",
+    },
+    rects: {
+      items: {
+        $ref: "#/components/schemas/NormalizedRect",
+      },
+      type: "array",
+      title: "Rects",
+    },
+    label: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Label",
+      description: "User-set identifier, used to cross-reference.",
+    },
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    author_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Author Id",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    author_name: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Author Name",
+    },
+  },
+  type: "object",
+  required: ["page", "body", "excerpt", "rects", "id", "created_at"],
+  title: "CommentResponse",
+} as const;
+
 export const CreateCollectionRequestSchema = {
   properties: {
     name: {
@@ -489,6 +561,84 @@ export const CreateCollectionRequestSchema = {
   type: "object",
   required: ["name", "entity_type"],
   title: "CreateCollectionRequest",
+} as const;
+
+export const CreateCommentRequestSchema = {
+  properties: {
+    page: {
+      type: "integer",
+      title: "Page",
+    },
+    body: {
+      type: "string",
+      title: "Body",
+    },
+    excerpt: {
+      type: "string",
+      title: "Excerpt",
+    },
+    rects: {
+      items: {
+        $ref: "#/components/schemas/NormalizedRect",
+      },
+      type: "array",
+      title: "Rects",
+    },
+    label: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Label",
+      description: "User-set identifier, used to cross-reference.",
+    },
+  },
+  type: "object",
+  required: ["page", "body", "excerpt", "rects"],
+  title: "CreateCommentRequest",
+} as const;
+
+export const CreateHighlightRequestSchema = {
+  properties: {
+    page: {
+      type: "integer",
+      title: "Page",
+    },
+    color: {
+      type: "string",
+      title: "Color",
+    },
+    excerpt: {
+      type: "string",
+      title: "Excerpt",
+    },
+    rects: {
+      items: {
+        $ref: "#/components/schemas/NormalizedRect",
+      },
+      type: "array",
+      title: "Rects",
+    },
+    label: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Label",
+      description: "User-set identifier, used to cross-reference.",
+    },
+  },
+  type: "object",
+  required: ["page", "color", "excerpt", "rects"],
+  title: "CreateHighlightRequest",
 } as const;
 
 export const CredentialsResetSchema = {
@@ -593,17 +743,6 @@ export const FileResponseSchema = {
       type: "integer",
       title: "Page Count",
     },
-    thumbnail: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Thumbnail",
-    },
     tags: {
       items: {
         $ref: "#/components/schemas/TagResponse",
@@ -666,6 +805,18 @@ export const FileStateResponseSchema = {
       type: "string",
       title: "Scale",
     },
+    updated_at: {
+      anyOf: [
+        {
+          type: "string",
+          format: "date-time",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Updated At",
+    },
   },
   type: "object",
   required: ["is_favorite", "current_page", "scale"],
@@ -684,6 +835,73 @@ export const HTTPValidationErrorSchema = {
   },
   type: "object",
   title: "HTTPValidationError",
+} as const;
+
+export const HighlightResponseSchema = {
+  properties: {
+    page: {
+      type: "integer",
+      title: "Page",
+    },
+    color: {
+      type: "string",
+      title: "Color",
+    },
+    excerpt: {
+      type: "string",
+      title: "Excerpt",
+    },
+    rects: {
+      items: {
+        $ref: "#/components/schemas/NormalizedRect",
+      },
+      type: "array",
+      title: "Rects",
+    },
+    label: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Label",
+      description: "User-set identifier, used to cross-reference.",
+    },
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    author_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Author Id",
+    },
+    author_name: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Author Name",
+    },
+  },
+  type: "object",
+  required: ["page", "color", "excerpt", "rects", "id"],
+  title: "HighlightResponse",
 } as const;
 
 export const LibraryTreeNodeSchema = {
@@ -732,6 +950,40 @@ export const LibraryTreeNodeSchema = {
   title: "LibraryTreeNode",
 } as const;
 
+export const NormalizedRectSchema = {
+  properties: {
+    top: {
+      type: "number",
+      maximum: 1,
+      minimum: 0,
+      title: "Top",
+    },
+    left: {
+      type: "number",
+      maximum: 1,
+      minimum: 0,
+      title: "Left",
+    },
+    width: {
+      type: "number",
+      maximum: 1,
+      minimum: 0,
+      title: "Width",
+    },
+    height: {
+      type: "number",
+      maximum: 1,
+      minimum: 0,
+      title: "Height",
+    },
+  },
+  type: "object",
+  required: ["top", "left", "width", "height"],
+  title: "NormalizedRect",
+  description:
+    "All values are fractions (0..1) of the .page element's box,\nso they survive zoom / rotate without recomputation.",
+} as const;
+
 export const OidcGroupRule_InputSchema = {
   properties: {
     group: {
@@ -767,6 +1019,36 @@ export const OidcGroupRule_OutputSchema = {
   type: "object",
   required: ["group", "role_id"],
   title: "OidcGroupRule",
+} as const;
+
+export const PatchCommentRequestSchema = {
+  properties: {
+    label: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Label",
+      description: "User-set identifier, used to cross-reference.",
+    },
+    body: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Body",
+    },
+  },
+  type: "object",
+  title: "PatchCommentRequest",
 } as const;
 
 export const PatchFileStateRequestSchema = {
@@ -808,6 +1090,36 @@ export const PatchFileStateRequestSchema = {
   },
   type: "object",
   title: "PatchFileStateRequest",
+} as const;
+
+export const PatchHighlightRequestSchema = {
+  properties: {
+    label: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Label",
+      description: "User-set identifier, used to cross-reference.",
+    },
+    color: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Color",
+    },
+  },
+  type: "object",
+  title: "PatchHighlightRequest",
 } as const;
 
 export const ResourcePermissionResponseSchema = {
@@ -1438,17 +1750,6 @@ export const FileResponseWritableSchema = {
     page_count: {
       type: "integer",
       title: "Page Count",
-    },
-    thumbnail: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Thumbnail",
     },
     tags: {
       items: {

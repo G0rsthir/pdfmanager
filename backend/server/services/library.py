@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
+from server.const import UNSET, UnsetEnum
 from server.exceptions import (
     InsufficientPermissionError,
     InvalidActionError,
@@ -13,9 +14,19 @@ from server.exceptions import (
 from server.infrastructure.pdf import PdfFile
 from server.infrastructure.search import ContentFragment, SearchBackend
 from server.infrastructure.storage import StorageBackend
-from server.models import ORMCollection, ORMFile, ORMFileState, ORMTag, ORMUserTagPreference
+from server.models import (
+    ORMCollection,
+    ORMFile,
+    ORMFileComment,
+    ORMFileHighlight,
+    ORMFileState,
+    ORMTag,
+    ORMUserTagPreference,
+)
 from server.repositories import (
     CollectionRepository,
+    FileCommentRepository,
+    FileHighlightRepository,
     FileRepository,
     FileWithDetails,
     PermissionAssignment,
@@ -23,7 +34,7 @@ from server.repositories import (
     TagRepository,
 )
 from server.schemas.general import PdfStorageFile
-from server.schemas.library import CreateCollectionRequest, LibraryTreeNode
+from server.schemas.library import CreateCollectionRequest, LibraryTreeNode, NormalizedRect
 
 
 class LibraryService:
@@ -35,6 +46,8 @@ class LibraryService:
         search_engine: SearchBackend,
         permission_repo: PermissionRepository,
         storage_backend: StorageBackend,
+        highlight_repo: FileHighlightRepository,
+        comment_repo: FileCommentRepository,
     ):
         self._collection_repo = collection_repo
         self._file_repo = file_repo
@@ -42,6 +55,8 @@ class LibraryService:
         self._search_engine = search_engine
         self._permission_repo = permission_repo
         self._storage_backend = storage_backend
+        self._highlight_repo = highlight_repo
+        self._comment_repo = comment_repo
         self._logger = getLogger(__name__)
 
     async def get_collection(self, user_id: UUID, collection_id: UUID):
@@ -362,6 +377,166 @@ class LibraryService:
     async def open_file(self, storage_key: str):
         async with self._storage_backend.open_path(storage_key) as path:
             yield path
+
+    async def list_file_highlights(self, user_id: UUID, file_id: UUID):
+
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_read:
+            raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
+
+        return await self._highlight_repo.list_by_file(file_id)
+
+    async def create_highlight(
+        self,
+        user_id: UUID,
+        file_id: UUID,
+        page: int,
+        color: str,
+        excerpt: str,
+        rects: list[NormalizedRect],
+        label: str | None,
+    ):
+
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
+
+        highlight = ORMFileHighlight(
+            page=page,
+            color=color,
+            excerpt=excerpt,
+            rects=[rect.model_dump() for rect in rects],
+            label=label,
+            file_id=file_id,
+            author_id=user_id,
+        )
+
+        self._highlight_repo.save(highlight)
+        await self._highlight_repo.commit()
+
+    async def patch_highlight(
+        self,
+        user_id: UUID,
+        file_id: UUID,
+        highlight_id: UUID,
+        color: str | None = None,
+        label: str | None | UnsetEnum = UNSET,
+    ):
+
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
+
+        highlight = await self._highlight_repo.get_by_id(highlight_id)
+        if highlight.file_id != file_id:
+            raise InvalidActionError(
+                rule="file_highlight_mismatch", msg="Highlight does not belong to the specified file."
+            )
+        highlight.color = color or highlight.color
+        if label is not UNSET:
+            highlight.label = label
+
+        await self._highlight_repo.commit()
+
+    async def delete_highlight(self, user_id: UUID, file_id: UUID, highlight_id: UUID):
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="modify", resource="File", identifier=file_id)
+
+        highlight = await self._highlight_repo.get_by_id(highlight_id)
+
+        if highlight.file_id != file_id:
+            raise InvalidActionError(
+                rule="file_highlight_mismatch", msg="Highlight does not belong to the specified file."
+            )
+        await self._highlight_repo.delete(highlight)
+        await self._highlight_repo.commit()
+
+    async def list_file_comments(self, user_id: UUID, file_id: UUID):
+
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_read:
+            raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
+
+        return await self._comment_repo.list_by_file(file_id)
+
+    async def create_comment(
+        self,
+        user_id: UUID,
+        file_id: UUID,
+        page: int,
+        body: str,
+        excerpt: str,
+        rects: list[NormalizedRect],
+        label: str | None,
+    ):
+
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
+
+        comment = ORMFileComment(
+            page=page,
+            body=body,
+            excerpt=excerpt,
+            rects=[rect.model_dump() for rect in rects],
+            label=label,
+            file_id=file_id,
+            author_id=user_id,
+        )
+
+        self._comment_repo.save(comment)
+        await self._comment_repo.commit()
+
+    async def patch_comment(
+        self,
+        user_id: UUID,
+        file_id: UUID,
+        comment_id: UUID,
+        body: str | None = None,
+        label: str | None | UnsetEnum = UNSET,
+    ):
+
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
+
+        comment = await self._comment_repo.get_by_id(comment_id)
+        if comment.file_id != file_id:
+            raise InvalidActionError(rule="file_comment_mismatch", msg="Comment does not belong to the specified file.")
+        comment.body = body or comment.body
+        if label is not UNSET:
+            comment.label = label
+
+        await self._comment_repo.commit()
+
+    async def delete_comment(self, user_id: UUID, file_id: UUID, comment_id: UUID):
+        file = await self._file_repo.get_by_id(file_id)
+
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="modify", resource="File", identifier=file_id)
+
+        comment = await self._comment_repo.get_by_id(comment_id)
+
+        if comment.file_id != file_id:
+            raise InvalidActionError(rule="file_comment_mismatch", msg="Comment does not belong to the specified file.")
+        await self._comment_repo.delete(comment)
+        await self._comment_repo.commit()
 
     async def get_file(self, user_id: UUID, file_id: UUID) -> FileWithDetails:
 

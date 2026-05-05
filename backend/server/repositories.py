@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server import models
 from server.exceptions import (
+    AnnotationNotFoundError,
     AuthProviderNotFoundError,
     CollectionNotFoundError,
     LibraryFileNotFoundError,
@@ -67,6 +68,13 @@ class UserRepository(Repository):
         if only_enabled:
             stmt = stmt.where(models.ORMUser.is_enabled)
         return await self.session.scalar(stmt) or 0
+
+    async def list_by_ids(self, user_ids: list[UUID]) -> dict[UUID, models.ORMUser]:
+        if not user_ids:
+            return {}
+        stmt = select(models.ORMUser).where(models.ORMUser.id.in_(set(user_ids)))
+        records = await self.session.scalars(stmt)
+        return {record.id: record for record in records.all()}
 
 
 class RoleRepository(Repository):
@@ -195,6 +203,42 @@ class CollectionRepository(Repository):
 
     async def delete(self, collection: models.ORMCollection) -> None:
         await self.session.delete(collection)
+
+
+class FileHighlightRepository(Repository):
+    async def get_by_id(self, highlight_id: UUID):
+        record = await self.session.get(models.ORMFileHighlight, highlight_id)
+        if not record:
+            raise AnnotationNotFoundError(highlight_id)
+        return record
+
+    async def list_by_file(self, file_id: UUID) -> list[models.ORMFileHighlight]:
+        stmt = select(models.ORMFileHighlight).where(models.ORMFileHighlight.file_id == file_id)
+        return list(await self.session.scalars(stmt))
+
+    def save(self, record: models.ORMFileHighlight) -> None:
+        self.session.add(record)
+
+    async def delete(self, record: models.ORMFileHighlight) -> None:
+        await self.session.delete(record)
+
+
+class FileCommentRepository(Repository):
+    async def get_by_id(self, comment_id: UUID):
+        record = await self.session.get(models.ORMFileComment, comment_id)
+        if not record:
+            raise AnnotationNotFoundError(comment_id)
+        return record
+
+    async def list_by_file(self, file_id: UUID) -> list[models.ORMFileComment]:
+        stmt = select(models.ORMFileComment).where(models.ORMFileComment.file_id == file_id)
+        return list(await self.session.scalars(stmt))
+
+    def save(self, record: models.ORMFileComment) -> None:
+        self.session.add(record)
+
+    async def delete(self, record: models.ORMFileComment) -> None:
+        await self.session.delete(record)
 
 
 class FileRepository(Repository):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -53,7 +54,6 @@ class FileResponse(BaseModel):
     collection_id: UUID | None = None
     description: str | None = None
     page_count: int
-    thumbnail: str | None = None
     tags: list[TagResponse] = Field(default_factory=list)
 
     state: FileStateResponse
@@ -71,9 +71,11 @@ class FileStateResponse(BaseModel):
     current_page: int
     scale: str
 
+    updated_at: datetime | None = None
+
     @classmethod
     def with_defaults(cls):
-        return cls(is_favorite=False, current_page=1, scale="1.0")
+        return cls(is_favorite=False, current_page=1, scale="1.0", updated_at=None)
 
 
 class PatchFileStateRequest(BaseModel):
@@ -128,3 +130,54 @@ class ResourcePermissionResponse(BaseModel):
     entity_type: str
     name: str
     assignments: list[AssignmentResponse]
+
+
+class NormalizedRect(BaseModel):
+    """
+    All values are fractions (0..1) of the .page element's box,
+    so they survive zoom / rotate without recomputation.
+    """
+
+    top: float = Field(ge=0, le=1)
+    left: float = Field(ge=0, le=1)
+    width: float = Field(ge=0, le=1)
+    height: float = Field(ge=0, le=1)
+
+
+class CreateHighlightRequest(BaseModel):
+    page: int
+    color: str
+    excerpt: str
+    rects: list[NormalizedRect]
+    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
+
+
+class PatchHighlightRequest(BaseModel):
+    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
+    color: str | None = None
+
+
+class HighlightResponse(CreateHighlightRequest):
+    id: UUID
+    author_id: UUID | None = None
+    author_name: str | None = None
+
+
+class CreateCommentRequest(BaseModel):
+    page: int
+    body: str
+    excerpt: str
+    rects: list[NormalizedRect]
+    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
+
+
+class PatchCommentRequest(BaseModel):
+    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
+    body: str | None = None
+
+
+class CommentResponse(CreateCommentRequest):
+    id: UUID
+    author_id: UUID | None = None
+    created_at: datetime
+    author_name: str | None = None

@@ -25,7 +25,8 @@ import { useCallback } from "react";
 import { LuFileText, LuHardDriveUpload, LuUpload } from "react-icons/lu";
 import { useParams } from "react-router";
 import { Empty } from "./shared/common";
-import { FileCard, FileTagsInput } from "./shared/file";
+import { FileTagsInput } from "./shared/file";
+import { FileList, LayoutSwitch } from "./shared/layout";
 
 export function FolderPage() {
   const { folderid } = useParams();
@@ -52,7 +53,10 @@ function FolderView({
           {collection.name}
         </Heading>
 
-        <UploadFileAction folder_id={collection.id} />
+        <Group gap={6}>
+          <LayoutSwitch layoutKey={collection.id} />
+          <UploadFileAction folder_id={collection.id} />
+        </Group>
       </Group>
 
       {collection.files?.length == 0 && (
@@ -62,9 +66,9 @@ function FolderView({
         />
       )}
 
-      {collection.files?.map((file) => (
-        <FileCard file={file} key={file.id} />
-      ))}
+      {collection.files && (
+        <FileList files={collection.files} layoutKey={collection.id} />
+      )}
     </Stack>
   );
 }
@@ -114,6 +118,7 @@ function UploadFileDialog(props: {
     handleSubmit,
     state,
     reset,
+    isPending,
   } = useFormMutation({
     formOptions: {
       defaultValues: defaultValues,
@@ -143,6 +148,7 @@ function UploadFileDialog(props: {
       title="Upload file"
       onSubmit={() => handleSubmit()}
       confirmBtnText="Upload"
+      isPending={isPending}
     >
       <FormField
         name="name"
