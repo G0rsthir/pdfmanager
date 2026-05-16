@@ -1,16 +1,24 @@
 import {
   createCollectionMutation,
   deleteCollectionMutation,
+  deleteCollectionPermissionMutation,
   getCollectionPermissionsOptions,
   getLibraryTreeOptions,
+  inviteToCollectionMutation,
+  listCollectionMoveTargetsOptions,
   listCollectionsOptions,
   updateCollectionMutation,
+  updateCollectionPermissionMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { LibraryTreeNode } from "@/api/types.gen";
+import type {
+  LibraryTreeNode,
+  ResourcePermissionResponse,
+} from "@/api/types.gen";
 import { parseAPIError } from "@/common/error";
 import { GenericIconButton } from "@/components/ui/button";
 import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
+import { Form } from "@/components/ui/form/container";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import {
@@ -21,9 +29,11 @@ import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import { useGlobalStore } from "@/store";
 import {
+  Alert,
   Button,
   CloseButton,
   Combobox,
+  createListCollection,
   createTreeCollection,
   Dialog,
   Field,
@@ -32,6 +42,7 @@ import {
   Link,
   Menu,
   Portal,
+  Select,
   Stack,
   Text,
   TreeView,
@@ -84,6 +95,8 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
           name: "",
           children: data,
           entity_type: "group",
+          is_read_only_by_current_user: false,
+          is_shared: false,
         },
       }),
     [data],
@@ -189,9 +202,11 @@ function TreeNodeActions({
       <TreeNodeMenu opacitySelector=".css-wurrfy:hover &">
         {isGroup && (
           <Menu.Item
+            disabled={node.is_read_only_by_current_user}
             value="createGroup"
             onClick={(e) => {
               e.stopPropagation();
+              if (node.is_read_only_by_current_user) return;
               setDialog({ type: "create", nodeType: "group" });
             }}
           >
@@ -201,8 +216,10 @@ function TreeNodeActions({
         {isGroup && (
           <Menu.Item
             value="createFolder"
+            disabled={node.is_read_only_by_current_user}
             onClick={(e) => {
               e.stopPropagation();
+              if (node.is_read_only_by_current_user) return;
               setDialog({ type: "create", nodeType: "folder" });
             }}
           >
@@ -231,8 +248,10 @@ function TreeNodeActions({
           value="delete"
           color="fg.error"
           _hover={{ bg: "bg.error", color: "fg.error" }}
+          disabled={node.is_read_only_by_current_user}
           onClick={(e) => {
             e.stopPropagation();
+            if (node.is_read_only_by_current_user) return;
             setDialog({ type: "delete", nodeType: node.entity_type });
           }}
         >
@@ -246,11 +265,9 @@ function TreeNodeActions({
         parent_id={node.id}
       />
       <EditNodeDialog
-        type={dialog?.nodeType ?? "group"}
         open={dialog?.type === "edit"}
         onClose={onClose}
-        defaaultValues={node}
-        id={node.id}
+        node={node}
       />
       <DeleteNodeDialog
         type={dialog?.nodeType ?? "group"}
@@ -383,6 +400,7 @@ function CreateNodeDialog(props: {
       title={`New ${label}`}
       onSubmit={() => handleSubmit()}
       confirmBtnText="Create"
+      submitOnEnter
     >
       <FormField
         name="name"
@@ -410,10 +428,17 @@ interface CollectionSelectProps {
   defaultValue?: string;
   onBlur: () => void;
   required?: boolean;
+  allowedCollectionIds?: string[];
 }
 
 export function CollectionSelect(props: CollectionSelectProps) {
-  const { onValueChange, defaultValue, required, onBlur } = props;
+  const {
+    onValueChange,
+    defaultValue,
+    required,
+    allowedCollectionIds = [],
+    onBlur,
+  } = props;
 
   const hydrated = useRef(false);
 
@@ -452,10 +477,11 @@ export function CollectionSelect(props: CollectionSelectProps) {
         query.data.map((item) => ({
           label: item.name,
           value: item.id,
+          disabled: !allowedCollectionIds.includes(item.id),
         })),
       );
     }
-  }, [query.data, query.isSuccess, set]);
+  }, [query.data, query.isSuccess, allowedCollectionIds, set]);
 
   useEffect(() => {
     if (combobox.value.length && collection.size && !hydrated.current) {
@@ -492,24 +518,22 @@ export function CollectionSelect(props: CollectionSelectProps) {
 }
 
 function EditNodeDialog(props: {
-  type: NodeType;
   open: boolean;
   onClose: () => void;
-  defaaultValues: {
-    parent_id?: string | null;
-    name: string;
-  };
-  id: string;
+  node: LibraryTreeNode;
 }) {
-  const {
-    type,
-    open,
-    onClose,
-    defaaultValues: { parent_id, name },
-    id,
-  } = props;
+  const { open, onClose, node } = props;
 
-  const label = nodeLabel(type);
+  const label = nodeLabel(node.entity_type);
+
+  const moveTargetsQ = useAPIQuery({
+    ...listCollectionMoveTargetsOptions({
+      path: {
+        id: node.id,
+      },
+    }),
+    enabled: open,
+  });
 
   const {
     Field: FormField,
@@ -519,12 +543,12 @@ function EditNodeDialog(props: {
   } = useFormMutation({
     formOptions: {
       defaultValues: {
-        name: name,
-        parent_id: parent_id,
+        name: node.name,
+        parent_id: node.parent_id,
       },
     },
     mutationOptions: updateCollectionMutation,
-    onMutate: (value) => ({ path: { id }, body: value }),
+    onMutate: (value) => ({ path: { id: node.id }, body: value }),
     successMessage: `${label} updated successfully`,
     onSuccess: onClose,
   });
@@ -541,6 +565,7 @@ function EditNodeDialog(props: {
       title={`Edit ${label}`}
       onSubmit={() => handleSubmit()}
       confirmBtnText="Update"
+      disabled={node.is_read_only_by_current_user}
     >
       <FormField
         name="name"
@@ -548,7 +573,11 @@ function EditNodeDialog(props: {
           onChange: ({ value }) => (!value ? "Name is required" : undefined),
         }}
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={node.is_read_only_by_current_user}
+          >
             <Field.Label>
               Name <Field.RequiredIndicator />
             </Field.Label>
@@ -564,11 +593,16 @@ function EditNodeDialog(props: {
       <FormField
         name="parent_id"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={node.is_read_only_by_current_user}
+          >
             <CollectionSelect
               defaultValue={fieldState.value ?? ""}
               onValueChange={handleChange}
               onBlur={handleBlur}
+              allowedCollectionIds={moveTargetsQ.data?.map((c) => c.id)}
             />
             <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>
@@ -662,7 +696,7 @@ export function PermissionsDialog(props: {
             </Dialog.Header>
             <Dialog.Body>
               <QueryView query={query}>
-                {(access) => <PermissionsView access={access} />}
+                {(access) => <ManageCollectionPermissions access={access} />}
               </QueryView>
             </Dialog.Body>
             <Dialog.Footer>
@@ -678,5 +712,165 @@ export function PermissionsDialog(props: {
         </Dialog.Positioner>
       </Portal>
     </Dialog.Root>
+  );
+}
+
+function ManageCollectionPermissions(props: {
+  access: ResourcePermissionResponse;
+}) {
+  const { access } = props;
+
+  const session = useGlobalStore(useShallow((state) => state.session));
+
+  const isReadOnly = access.assignments.some(
+    (p) => p.permission == "read" && p.user.id === session?.user.id,
+  );
+
+  const { mutate: deletePermission } = useAPIMutation({
+    ...deleteCollectionPermissionMutation(),
+    onSuccess() {
+      showSuccessNotification("Permission deleted successfully");
+    },
+    onError(error) {
+      showErrorNotification(
+        "Failed to delete permission",
+        parseAPIError(error).message,
+      );
+    },
+  });
+
+  const { mutate: updatePermission } = useAPIMutation({
+    ...updateCollectionPermissionMutation(),
+    onSuccess() {
+      showSuccessNotification("Permission updated successfully");
+    },
+    onError(error) {
+      showErrorNotification(
+        "Failed to update permission",
+        parseAPIError(error).message,
+      );
+    },
+  });
+
+  return (
+    <Stack gap={4}>
+      {isReadOnly && (
+        <Alert.Root status="warning">
+          <Alert.Indicator />
+          <Alert.Title>You have view-only access to this resource</Alert.Title>
+        </Alert.Root>
+      )}
+      <InviteForm collectionId={access.id} readOnly={isReadOnly} />
+      <PermissionsView
+        assignments={access.assignments}
+        onDelete={(id) =>
+          deletePermission({ path: { id, collection_id: access.id } })
+        }
+        onModify={(id, permission) =>
+          updatePermission({
+            path: { id, collection_id: access.id },
+            body: { permission },
+          })
+        }
+      />
+    </Stack>
+  );
+}
+
+const PERMISSION_OPTIONS = createListCollection({
+  items: [
+    { value: "read", label: "Viewer" },
+    { value: "modify", label: "Editor" },
+  ],
+});
+
+function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
+  const { collectionId, readOnly } = props;
+
+  const {
+    Field: FormField,
+    handleSubmit,
+    state,
+  } = useFormMutation({
+    formOptions: {
+      defaultValues: {
+        email: "",
+        permission: "read" as "read" | "modify",
+      },
+    },
+    mutationOptions: inviteToCollectionMutation,
+    onMutate: (value) => ({ body: value, path: { id: collectionId } }),
+    successMessage: "User invited to collection",
+  });
+
+  return (
+    <Form onSubmit={handleSubmit}>
+      <Stack>
+        <Group gap={2}>
+          <FormField
+            name="email"
+            children={({ state: fieldState, handleChange, handleBlur }) => (
+              <Field.Root
+                invalid={!fieldState.meta.isValid}
+                required
+                disabled={readOnly}
+                flex={1}
+              >
+                <Input
+                  value={fieldState.value}
+                  onChange={(e) => handleChange(e.target.value)}
+                  onBlur={handleBlur}
+                  placeholder="Add people by email"
+                />
+                <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+              </Field.Root>
+            )}
+          />
+
+          <FormField
+            name="permission"
+            children={({ state: fieldState, handleChange, handleBlur }) => (
+              <Select.Root
+                collection={PERMISSION_OPTIONS}
+                value={[fieldState.value]}
+                onValueChange={(e) =>
+                  handleChange(e.value[0] as "read" | "modify")
+                }
+                onInteractOutside={handleBlur}
+                disabled={readOnly}
+                width="120px"
+              >
+                <Select.HiddenSelect />
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Permission" />
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Portal>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {PERMISSION_OPTIONS.items.map((item) => (
+                        <Select.Item item={item} key={item.value}>
+                          {item.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Portal>
+              </Select.Root>
+            )}
+          />
+
+          <Button type="submit" variant="surface" disabled={readOnly}>
+            Invite
+          </Button>
+        </Group>
+        <FormError errors={state.errorMap.onSubmit} />
+      </Stack>
+    </Form>
   );
 }

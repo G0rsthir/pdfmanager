@@ -1,6 +1,7 @@
 import {
   deleteFileMutation,
   listCollectionsOptions,
+  listFileMoveTargetsOptions,
   listTagsOptions,
   patchFileStateMutation,
   updateFileMutation,
@@ -141,10 +142,17 @@ interface FileFolderSelectProps {
   defaultValue?: string;
   onBlur: () => void;
   required?: boolean;
+  allowedFolderIds?: string[];
 }
 
 export function FileFolderSelect(props: FileFolderSelectProps) {
-  const { onValueChange, defaultValue, required, onBlur } = props;
+  const {
+    onValueChange,
+    defaultValue,
+    required,
+    allowedFolderIds = [],
+    onBlur,
+  } = props;
 
   const hydrated = useRef(false);
 
@@ -185,10 +193,11 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
           .map((item) => ({
             label: item.name,
             value: item.id,
+            disabled: !allowedFolderIds.includes(item.id),
           })),
       );
     }
-  }, [query.data, query.isSuccess, set]);
+  }, [query.data, query.isSuccess, set, allowedFolderIds]);
 
   useEffect(() => {
     if (combobox.value.length && collection.size && !hydrated.current) {
@@ -225,7 +234,12 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
   );
 }
 
-export function FileRow({ file }: { file: FileResponse }) {
+export function FileRow(props: {
+  file: FileResponse;
+  includeReadDate?: boolean;
+}) {
+  const { file, includeReadDate = true } = props;
+
   return (
     <Card.Root
       variant="outline"
@@ -285,6 +299,15 @@ export function FileRow({ file }: { file: FileResponse }) {
                 ))}
               </Group>
               <Group gap={3} justifyContent="end">
+                {includeReadDate && file.state.updated_at && (
+                  <Text
+                    textStyle="xs"
+                    color="fg.muted"
+                    title={new Date(file.state.updated_at).toLocaleString()}
+                  >
+                    Read {formatRelativeTime(file.state.updated_at)}
+                  </Text>
+                )}
                 {file.page_count != null && (
                   <Text textStyle="xs">
                     Page {file.state.current_page} of {file.page_count}
@@ -451,7 +474,9 @@ export function FavoriteButton({ file }: { file: FileResponse }) {
 
 type FileDialog = "edit" | "delete" | null;
 
-export function FileCardActions({ file }: { file: FileResponse }) {
+export function FileCardActions(props: { file: FileResponse }) {
+  const { file } = props;
+
   const [dialog, setDialog] = useState<FileDialog>(null);
 
   return (
@@ -464,7 +489,8 @@ export function FileCardActions({ file }: { file: FileResponse }) {
           value="delete"
           color="fg.error"
           _hover={{ bg: "bg.error", color: "fg.error" }}
-          onClick={() => setDialog("delete")}
+          onSelect={() => setDialog("delete")}
+          disabled={file.is_read_only_by_current_user}
         >
           Delete
         </Menu.Item>
@@ -533,6 +559,15 @@ function EditFileDialog(props: {
     onSuccess: onClose,
   });
 
+  const moveTargetsQ = useAPIQuery({
+    ...listFileMoveTargetsOptions({
+      path: {
+        id: file.id,
+      },
+    }),
+    enabled: open,
+  });
+
   const handleClose = useCallback(() => {
     reset();
     onClose();
@@ -545,11 +580,16 @@ function EditFileDialog(props: {
       title="Edit file"
       onSubmit={() => handleSubmit()}
       confirmBtnText="Update"
+      disabled={file.is_read_only_by_current_user}
     >
       <FormField
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={file.is_read_only_by_current_user}
+          >
             <Field.Label>
               Name <Field.RequiredIndicator />
             </Field.Label>
@@ -565,7 +605,10 @@ function EditFileDialog(props: {
       <FormField
         name="description"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            disabled={file.is_read_only_by_current_user}
+          >
             <Field.Label>Description</Field.Label>
             <Input
               value={fieldState.value}
@@ -582,9 +625,14 @@ function EditFileDialog(props: {
           onChange: ({ value }) => (!value ? "Folder is required" : undefined),
         }}
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={file.is_read_only_by_current_user}
+          >
             <FileFolderSelect
               defaultValue={fieldState.value ?? ""}
+              allowedFolderIds={moveTargetsQ.data?.map((c) => c.id)}
               onValueChange={handleChange}
               onBlur={handleBlur}
               required
@@ -596,7 +644,10 @@ function EditFileDialog(props: {
       <FormField
         name="tags"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            disabled={file.is_read_only_by_current_user}
+          >
             <FileTagsInput
               defaultValue={fieldState.value ?? []}
               onValueChange={handleChange}

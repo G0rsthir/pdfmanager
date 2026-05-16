@@ -35,7 +35,7 @@ export async function refreshAccess(): Promise<AccessToken | undefined> {
 
   // Refetch session since session ID may differ
   const session = await getUserSession();
-  if (session.response.ok) {
+  if (session.response?.ok) {
     useGlobalStore.getState().updateSession(session.data);
   }
 

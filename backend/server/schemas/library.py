@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+from server.const import RESOURCE_PERMISSIONS
 from server.schemas.identity import UserSummaryResponse
 
 
@@ -31,6 +32,15 @@ class UpdateCollectionRequest(BaseModel):
     parent_id: UUID | None = None
 
 
+class InviteToCollectionRequest(BaseModel):
+    email: str
+    permission: Literal["read", "modify"]
+
+
+class UpdateCollectionPermissionRequest(BaseModel):
+    permission: Literal["read", "modify"]
+
+
 class CollectionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -45,6 +55,31 @@ class CollectionWithDetailsResponse(CollectionResponse):
 
     files: list[FileResponse] = Field(default_factory=list)
 
+    owner: UserSummaryResponse
+
+    # Helpful for permission calculation, but not part of the actual response
+    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+
+    @computed_field
+    @property
+    def is_shared_with_current_user(self) -> bool:
+        if self.target_permission and self.target_permission != "owner":
+            return True
+
+        return False
+
+    @computed_field
+    @property
+    def is_read_only_by_current_user(self) -> bool:
+        """
+        Whether current user can only read this collection
+        """
+
+        if self.target_permission == "read":
+            return True
+
+        return False
+
 
 class FileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -58,10 +93,25 @@ class FileResponse(BaseModel):
 
     state: FileStateResponse
 
+    # Helpful for permission calculation, but not part of the actual response
+    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+
     @computed_field
     @property
     def tags_name_list(self) -> list[str]:
         return [tag.name for tag in self.tags]
+
+    @computed_field
+    @property
+    def is_read_only_by_current_user(self) -> bool:
+        """
+        Whether current user can only read this file
+        """
+
+        if self.target_permission == "read":
+            return True
+
+        return False
 
 
 class FileStateResponse(BaseModel):
@@ -97,8 +147,36 @@ class LibraryTreeNode(BaseModel):
     children: list[LibraryTreeNode] = Field(default_factory=list)
     entity_type: Literal["group", "folder"]
     parent_id: UUID | None = None
-    # TODO
-    is_shared: bool = False
+
+    # Helpful for permission calculation, but not part of the actual response
+    target_parent: LibraryTreeNode | None = Field(default=None, exclude=True)
+    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+    target_permission_count: int | None = Field(default=None, exclude=True)
+
+    @computed_field
+    @property
+    def is_shared(self) -> bool:
+        if self.target_permission_count and self.target_permission_count > 1:
+            return True
+
+        if self.target_parent and self.target_parent.is_shared:
+            return True
+
+        return False
+
+    @computed_field
+    @property
+    def is_read_only_by_current_user(self) -> bool:
+        if self.target_permission == "read":
+            return True
+
+        if self.target_permission in ("owner", "modify"):
+            return False
+
+        if self.target_parent and self.target_parent.is_read_only_by_current_user:
+            return True
+
+        return False
 
 
 class UpdateTagRequest(BaseModel):
@@ -121,12 +199,40 @@ class TagWithDetailsResponse(TagResponse):
 
 class AssignmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
     user: UserSummaryResponse
     inherited_from: UUID | None = None
-    permission: Literal["owner", "read", "modify"]
+    permission: RESOURCE_PERMISSIONS
+
+    # Helpful for permission calculation, but not part of the actual response
+    target_user_id: UUID = Field(exclude=True)
+    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+
+    @computed_field
+    @property
+    def is_read_only_by_current_user(self) -> bool:
+        """
+        Whether current user can only read this assignment
+        """
+
+        if self.inherited_from is not None:
+            return True
+
+        if self.target_user_id == self.user.id:
+            return True
+
+        if self.target_permission == "read":
+            return True
+
+        if self.permission == "owner":
+            return True
+
+        return False
 
 
 class ResourcePermissionResponse(BaseModel):
+    id: UUID
     entity_type: str
     name: str
     assignments: list[AssignmentResponse]

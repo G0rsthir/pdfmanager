@@ -1,4 +1,5 @@
 import {
+  listAnnotationLabelsOptions,
   listTagsOptions,
   searchFilesOptions,
 } from "@/api/@tanstack/react-query.gen";
@@ -7,7 +8,7 @@ import type {
   SearchHitResponse,
   TagResponse,
 } from "@/api/types.gen";
-import { QueryView } from "@/components/ui/feedback";
+import { MultiQueryView, QueryView } from "@/components/ui/feedback";
 import {
   SearchBar,
   type SearchKeyDef,
@@ -37,7 +38,13 @@ import { Empty } from "./shared/common";
 import { FavoriteButton, FileCardActions } from "./shared/file";
 import { toFileUrl } from "./shared/path";
 
-type SearchParamKeys = "tag" | "text" | "name" | "description";
+type SearchParamKeys =
+  | "tag"
+  | "text"
+  | "name"
+  | "description"
+  | "label"
+  | "comment";
 
 type SearchParamDef = Record<SearchParamKeys, { type: "array" }>;
 
@@ -46,6 +53,8 @@ const searchParamDef: SearchParamDef = {
   text: { type: "array" },
   name: { type: "array" },
   description: { type: "array" },
+  label: { type: "array" },
+  comment: { type: "array" },
 };
 
 function useLibrarySearchParams() {
@@ -82,18 +91,30 @@ function useLibrarySearchParams() {
 }
 
 export function SearchPage() {
-  const query = useAPIQuery({
+  const tagsQ = useAPIQuery({
     ...listTagsOptions(),
   });
 
+  const labelsQ = useAPIQuery({
+    ...listAnnotationLabelsOptions(),
+  });
+
   return (
-    <QueryView query={query}>{(data) => <SearchView tags={data} />}</QueryView>
+    <MultiQueryView queries={[tagsQ, labelsQ]}>
+      {(data) => <SearchView tags={data[0]} labels={data[1]} />}
+    </MultiQueryView>
   );
 }
 
 type SearchFilterKeyDef = SearchKeyDef & { isSingleUse?: boolean };
 
-function SearchView({ tags }: { tags: TagResponse[] }) {
+function SearchView({
+  tags,
+  labels,
+}: {
+  tags: TagResponse[];
+  labels: string[];
+}) {
   const {
     tokens,
     setTokens: setTokensRaw,
@@ -116,13 +137,23 @@ function SearchView({ tags }: { tags: TagResponse[] }) {
         values: [],
         isSingleUse: true,
       },
+      comment: {
+        label: "Comment",
+        values: [],
+        isSingleUse: true,
+      },
+      label: {
+        label: "Annotation Label",
+        values: labels,
+        isSingleUse: true,
+      },
       text: {
         label: "This little action gonna cost you 51 years. Full text search",
         values: [],
         isSingleUse: true,
       },
     }),
-    [tags],
+    [tags, labels],
   );
 
   const activeKeys = useMemo(() => {
@@ -192,6 +223,8 @@ function SearchQuery(props: SearchQueryProps) {
         text: searchParams.text?.[0],
         name: searchParams.name?.[0],
         description: searchParams.description?.[0],
+        label: searchParams.label?.[0],
+        comment: searchParams.comment?.[0],
       },
     }),
   });
@@ -345,6 +378,7 @@ export function SearchFileHitsCard(props: {
   );
 }
 
+// TODO add JSX for fragments
 function SearchHitItem(props: {
   hit: SearchHitResponse;
   fileId: string;
@@ -358,6 +392,11 @@ function SearchHitItem(props: {
       name: "Title",
       description: "Description",
       content: "Content",
+      label: "Label",
+      comment: "Comment",
+      title: "Title",
+      page: "Page",
+      highlight: "Highlight",
     }[hit.fragment_type] ?? hit.fragment_type;
 
   return (
@@ -366,7 +405,6 @@ function SearchHitItem(props: {
         folderId,
         fileId,
         page: hit.page_number ?? undefined,
-        preview: hit.page_number ? true : undefined,
       })}
     >
       <Stack

@@ -22,13 +22,15 @@ def build_oidc_provider_response(provider: ORMAuthProviderOidc, request: Request
     return response
 
 
-def build_file_response(file_details: FileWithDetails) -> FileResponse:
+def build_file_response(file_details: FileWithDetails, user_id: UUID) -> FileResponse:
+    permission = file_details.get_effective_permission(user_id)
     return FileResponse(
         **file_details.file.__dict__,
         state=FileStateResponse.model_validate(file_details.state)
         if file_details.state
         else FileStateResponse.with_defaults(),
         tags=[TagResponse.model_validate(tag) for tag in file_details.tags],
+        target_permission=permission,
     )
 
 

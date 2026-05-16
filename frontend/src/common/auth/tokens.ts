@@ -83,12 +83,12 @@ export async function refreshSession() {
 export async function loadSession() {
   const res = await getUserSession();
 
-  if (res.response.ok) {
+  if (res.response?.ok) {
     useGlobalStore.getState().updateSession(res.data);
     return true;
   }
 
-  if (res.response.status !== 401) {
+  if (res.response?.status !== 401) {
     useGlobalStore.getState().updateSession(undefined);
     throw res.error;
   }
@@ -101,7 +101,7 @@ export async function loadSession() {
 
   const retry = await getUserSession();
 
-  if (!retry.response.ok) {
+  if (!retry.response?.ok) {
     useGlobalStore.getState().updateSession(undefined);
     throw retry.error;
   }

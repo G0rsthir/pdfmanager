@@ -232,7 +232,8 @@ def upgrade() -> None:
         doc_id UNINDEXED,
         entity_type UNINDEXED,
         page_number UNINDEXED,
-        fragment_type UNINDEXED
+        fragment_type UNINDEXED,
+        source_id UNINDEXED
     )
     """)
     )
@@ -254,7 +255,6 @@ def upgrade() -> None:
     FOR EACH ROW
     BEGIN
         DELETE FROM resource_permissions WHERE resource_id = OLD.id;
-        DELETE FROM content_fts WHERE doc_id = OLD.id;
     END;
     """)
     )

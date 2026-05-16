@@ -48,6 +48,7 @@ interface AnnotationsPanelProps {
   draftComment: CommentDraft | null;
   currentPage: number;
   tab: AnnotationTab;
+  readOnly?: boolean;
   onTabChange: (tab: AnnotationTab) => void;
   onClose: () => void;
   onJumpToHighlight: (highlight: HighlightItem) => void;
@@ -62,6 +63,7 @@ export function AnnotationsPanel(props: AnnotationsPanelProps) {
     draftComment,
     currentPage,
     tab,
+    readOnly,
     onTabChange,
     onClose,
     onJumpToHighlight,
@@ -126,6 +128,7 @@ export function AnnotationsPanel(props: AnnotationsPanelProps) {
             )}
             <CommentList
               items={comments.items}
+              readOnly={readOnly}
               onJump={onJumpToComment}
               onDelete={comments.delete}
               onUpdate={comments.update}
@@ -143,6 +146,7 @@ export function AnnotationsPanel(props: AnnotationsPanelProps) {
           <HighlightList
             items={highlights.items}
             currentPage={currentPage}
+            readOnly={readOnly}
             onJump={onJumpToHighlight}
             onDelete={highlights.delete}
             onUpdate={highlights.update}
@@ -225,11 +229,12 @@ function CommentComposer(props: {
 function CommentList(props: {
   items: CommentItem[];
   currentPage: number;
+  readOnly?: boolean;
   onJump: (item: CommentItem) => void;
   onDelete: CommentsApi["delete"];
   onUpdate: CommentsApi["update"];
 }) {
-  const { items, currentPage, onJump, onDelete, onUpdate } = props;
+  const { items, currentPage, readOnly, onJump, onDelete, onUpdate } = props;
   const [scope, setScope] = useState<"all" | "page">("all");
 
   const visible = useMemo(
@@ -287,6 +292,7 @@ function CommentList(props: {
               aria-label="Delete comment"
               colorPalette="red"
               onClick={() => onDelete(comment.id)}
+              disabled={readOnly}
             >
               <LuTrash2 />
             </GenericIconButton>
@@ -307,10 +313,12 @@ function CommentList(props: {
           <BodyField
             value={comment.body}
             onChange={(v) => onUpdate(comment.id, { body: v })}
+            disabled={readOnly}
           />
           <LabelField
             value={comment.label ?? ""}
             onChange={(v) => onUpdate(comment.id, { label: v || undefined })}
+            disabled={readOnly}
           />
         </Stack>
       ))}
@@ -321,8 +329,9 @@ function CommentList(props: {
 function BodyField(props: {
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
-  const { value, onChange } = props;
+  const { value, disabled, onChange } = props;
 
   return (
     <Editable.Root
@@ -333,6 +342,7 @@ function BodyField(props: {
         if (next && next !== value) onChange(next);
       }}
       placeholder="Add a note…"
+      disabled={disabled}
     >
       <Editable.Preview textStyle="sm" whiteSpace="pre-wrap" />
       <Editable.Textarea rows={3} resize="none" />
@@ -343,11 +353,12 @@ function BodyField(props: {
 function HighlightList(props: {
   items: HighlightsApi["items"];
   currentPage: number;
+  readOnly?: boolean;
   onJump: (item: HighlightItem) => void;
   onDelete: HighlightsApi["delete"];
   onUpdate: HighlightsApi["update"];
 }) {
-  const { items, currentPage, onJump, onDelete, onUpdate } = props;
+  const { items, currentPage, readOnly, onJump, onDelete, onUpdate } = props;
   const [scope, setScope] = useState<"all" | "page">("all");
 
   const visible = useMemo(
@@ -429,6 +440,7 @@ function HighlightList(props: {
               onChange={(v) =>
                 onUpdate(highlight.id, { label: v || undefined })
               }
+              disabled={readOnly}
             />
           </Stack>
         </Group>
@@ -499,8 +511,9 @@ function ColorSwatchMenu(props: {
 function LabelField(props: {
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
-  const { value, onChange } = props;
+  const { value, disabled, onChange } = props;
 
   return (
     <Editable.Root
@@ -508,6 +521,7 @@ function LabelField(props: {
       defaultValue={value}
       onValueCommit={(e) => onChange(e.value)}
       placeholder="Add label…"
+      disabled={disabled}
     >
       <Editable.Preview
         color={value ? "fg.muted" : "fg.subtle"}

@@ -7,6 +7,8 @@ LOGGING_LEVEL = Literal["DEBUG", "INFO", "ERROR"]
 
 LOGGING_LEVEL_WITH_DEFAULT = Literal["DEFAULT"] | LOGGING_LEVEL
 
+RESOURCE_PERMISSIONS = Literal["owner", "read", "modify"]
+
 
 class UnsetEnum(Enum):
     UNSET = "UNSET"
@@ -49,3 +51,11 @@ class RolesEnum(StrEnum):
 class AuthProviderTypesEnum(StrEnum):
     LOCAL = "LOCAL"
     OIDC = "OIDC"
+
+
+class FragmentType(StrEnum):
+    TITLE = "title"
+    DESCRIPTION = "description"
+    PAGE = "page"
+    COMMENT = "comment"
+    LABEL = "label"

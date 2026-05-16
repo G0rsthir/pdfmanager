@@ -2,14 +2,16 @@ from contextlib import asynccontextmanager
 from io import BytesIO
 from logging import getLogger
 from pathlib import Path
+from typing import Literal
 from uuid import UUID
 
 from fastapi import UploadFile
 
-from server.const import UNSET, UnsetEnum
+from server.const import UNSET, FragmentType, UnsetEnum
 from server.exceptions import (
     InsufficientPermissionError,
     InvalidActionError,
+    UserNotFoundError,
 )
 from server.infrastructure.pdf import PdfFile
 from server.infrastructure.search import ContentFragment, SearchBackend
@@ -32,6 +34,7 @@ from server.repositories import (
     PermissionAssignment,
     PermissionRepository,
     TagRepository,
+    UserRepository,
 )
 from server.schemas.general import PdfStorageFile
 from server.schemas.library import CreateCollectionRequest, LibraryTreeNode, NormalizedRect
@@ -48,6 +51,7 @@ class LibraryService:
         storage_backend: StorageBackend,
         highlight_repo: FileHighlightRepository,
         comment_repo: FileCommentRepository,
+        user_repo: UserRepository,
     ):
         self._collection_repo = collection_repo
         self._file_repo = file_repo
@@ -57,6 +61,7 @@ class LibraryService:
         self._storage_backend = storage_backend
         self._highlight_repo = highlight_repo
         self._comment_repo = comment_repo
+        self._user_repo = user_repo
         self._logger = getLogger(__name__)
 
     async def get_collection(self, user_id: UUID, collection_id: UUID):
@@ -90,12 +95,29 @@ class LibraryService:
         await self._collection_repo.commit()
 
     async def list_collections(self, user_id: UUID) -> list[ORMCollection]:
-        # TODO ability to exclude read-only collections
-        visible = await self._permission_repo.list_visible_collection_ids(user_id)
+        visible = await self._permission_repo.list_accessible_collection_ids(user_id)
         if not visible:
             return []
 
         return await self._collection_repo.list_by_ids(visible)
+
+    async def list_move_targets_for_collection(self, user_id: UUID, source_id: UUID) -> list[ORMCollection]:
+        """
+        Collections the user can move 'source_id' into.
+        """
+        perm = await self._permission_repo.get_effective_for_collection(source_id, user_id)
+        if not perm or not perm.can_modify:
+            return []
+
+        writable_ids = await self._permission_repo.list_accessible_collection_ids(user_id, ["modify", "owner"])
+
+        if not writable_ids:
+            return []
+
+        candidates = [cid for cid in writable_ids if source_id != cid]
+
+        cols = await self._collection_repo.list_by_ids(candidates)
+        return [c for c in cols if c.entity_type == "group"]
 
     async def delete_collection(self, user_id: UUID, collection_id: UUID):
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
@@ -132,6 +154,38 @@ class LibraryService:
         if file.thumbnail:
             await self._storage_backend.delete(file.thumbnail)
 
+    async def move_collection(self, source_id: UUID, parent_id: UUID | None, user_id: UUID):
+        source = await self._collection_repo.get_by_id(source_id)
+
+        if source.parent_id == parent_id:
+            return
+
+        if source.id == parent_id:
+            raise InvalidActionError(rule="collection_parent_self", msg="Collection cannot be its own parent.")
+
+        perm = await self._permission_repo.get_effective_for_collection(source_id, user_id)
+
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=source_id)
+
+        if parent_id is None:
+            source.parent_id = parent_id
+            return
+
+        parent = await self._collection_repo.get_by_id(parent_id)
+
+        if parent.entity_type != "group":
+            raise InvalidActionError(
+                rule="collection_parent_must_be_group", msg="Collection can only be moved into groups."
+            )
+
+        parent_perm = await self._permission_repo.get_effective_for_collection(parent_id, user_id)
+
+        if not parent_perm or not parent_perm.can_modify:
+            raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=source_id)
+
+        source.parent_id = parent_id
+
     async def update_collection(self, user_id, collection_id, name, parent_id=None):
         collection = await self._collection_repo.get_by_id(collection_id)
 
@@ -139,21 +193,10 @@ class LibraryService:
         if not perm or not perm.can_modify:
             raise InsufficientPermissionError(action="update", resource="Collection", identifier=collection_id)
 
-        if parent_id == collection.id:
-            raise InvalidActionError(rule="collection_parent_self", msg="Collection cannot be its own parent.")
-
-        is_move = parent_id != collection.parent_id
-
-        if is_move and not perm.is_owner:
-            raise InsufficientPermissionError(action="move", resource="Collection", identifier=collection_id)
-
-        if is_move and parent_id is not None:
-            parent_perm = await self._permission_repo.get_effective_for_collection(parent_id, user_id)
-            if not parent_perm or not parent_perm.is_owner:
-                raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=parent_id)
+        if parent_id != collection.parent_id:
+            await self.move_collection(source_id=collection_id, parent_id=parent_id, user_id=user_id)
 
         collection.name = name
-        collection.parent_id = parent_id
         await self._collection_repo.commit()
 
     async def resolve_tags(self, names: list[str]) -> list[ORMTag]:
@@ -233,28 +276,28 @@ class LibraryService:
 
         if file.name != name:
             file.name = name
-            await self._search_engine.delete_fragments(doc_id=file.id, fragment_type="name")
+            await self._search_engine.delete_fragments(doc_id=file.id, fragment_type=FragmentType.TITLE)
             await self._search_engine.index(
                 [
                     ContentFragment(
                         content=name,
                         doc_id=file.id,
                         entity_type=file.content_type,
-                        fragment_type="name",
+                        fragment_type=FragmentType.TITLE,
                     ),
                 ]
             )
 
         if file.description != description:
             file.description = description
-            await self._search_engine.delete_fragments(doc_id=file.id, fragment_type="description")
+            await self._search_engine.delete_fragments(doc_id=file.id, fragment_type=FragmentType.DESCRIPTION)
             await self._search_engine.index(
                 [
                     ContentFragment(
                         content=description or "",
                         doc_id=file.id,
                         entity_type=file.content_type,
-                        fragment_type="description",
+                        fragment_type=FragmentType.DESCRIPTION,
                     ),
                 ]
             )
@@ -298,13 +341,13 @@ class LibraryService:
                         content=name,
                         doc_id=file_record.id,
                         entity_type=file_record.content_type,
-                        fragment_type="name",
+                        fragment_type=FragmentType.TITLE,
                     ),
                     ContentFragment(
                         content=description or "",
                         doc_id=file_record.id,
                         entity_type=file_record.content_type,
-                        fragment_type="description",
+                        fragment_type=FragmentType.DESCRIPTION,
                     ),
                 ]
             )
@@ -378,6 +421,32 @@ class LibraryService:
         async with self._storage_backend.open_path(storage_key) as path:
             yield path
 
+    async def list_move_targets_for_file(self, user_id: UUID, source_id: UUID) -> list[ORMCollection]:
+        """
+        Collections the user can move 'source_id' into.
+        """
+        file = await self._file_repo.get_by_id(source_id)
+        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
+        if not perm or not perm.can_modify:
+            return []
+
+        writable_ids = await self._permission_repo.list_accessible_collection_ids(user_id, ["modify", "owner"])
+
+        if not writable_ids:
+            return []
+
+        cols = await self._collection_repo.list_by_ids(writable_ids)
+        return [c for c in cols if c.entity_type == "folder"]
+
+    async def list_distinct_labels(self, user_id: UUID):
+        files = await self._file_repo.list_visible_to_user(user_id=user_id)
+        if not files:
+            return []
+        file_ids = [f.id for f in files]
+        highlight_labels = await self._highlight_repo.list_distinct_labels(file_ids)
+        comment_labels = await self._comment_repo.list_distinct_labels(file_ids)
+        return sorted({*highlight_labels, *comment_labels})
+
     async def list_file_highlights(self, user_id: UUID, file_id: UUID):
 
         file = await self._file_repo.get_by_id(file_id)
@@ -415,8 +484,23 @@ class LibraryService:
             author_id=user_id,
         )
 
+        fragments = []
+
+        if highlight.label:
+            fragments.append(
+                ContentFragment(
+                    content=highlight.label,
+                    doc_id=file.id,
+                    entity_type=file.content_type,
+                    fragment_type=FragmentType.LABEL,
+                    source_id=highlight.id,
+                    page_number=highlight.page,
+                )
+            )
+
         self._highlight_repo.save(highlight)
         await self._highlight_repo.commit()
+        await self._search_engine.index(fragments)
 
     async def patch_highlight(
         self,
@@ -442,6 +526,23 @@ class LibraryService:
         if label is not UNSET:
             highlight.label = label
 
+        await self._search_engine.delete_fragment_by_source(highlight.id)
+
+        fragments = []
+        if label and label is not UNSET:
+            fragments.append(
+                ContentFragment(
+                    content=label,
+                    doc_id=file.id,
+                    entity_type=file.content_type,
+                    fragment_type=FragmentType.LABEL,
+                    source_id=highlight.id,
+                    page_number=highlight.page,
+                )
+            )
+
+        await self._search_engine.index(fragments)
+
         await self._highlight_repo.commit()
 
     async def delete_highlight(self, user_id: UUID, file_id: UUID, highlight_id: UUID):
@@ -459,6 +560,7 @@ class LibraryService:
             )
         await self._highlight_repo.delete(highlight)
         await self._highlight_repo.commit()
+        await self._search_engine.delete_fragment_by_source(highlight.id)
 
     async def list_file_comments(self, user_id: UUID, file_id: UUID):
 
@@ -500,6 +602,31 @@ class LibraryService:
         self._comment_repo.save(comment)
         await self._comment_repo.commit()
 
+        fragments = [
+            ContentFragment(
+                content=comment.body,
+                doc_id=file.id,
+                entity_type=file.content_type,
+                fragment_type=FragmentType.COMMENT,
+                source_id=comment.id,
+                page_number=comment.page,
+            ),
+        ]
+
+        if comment.label:
+            fragments.append(
+                ContentFragment(
+                    content=comment.label,
+                    doc_id=file.id,
+                    entity_type=file.content_type,
+                    fragment_type=FragmentType.LABEL,
+                    source_id=comment.id,
+                    page_number=comment.page,
+                )
+            )
+
+        await self._search_engine.index(fragments)
+
     async def patch_comment(
         self,
         user_id: UUID,
@@ -524,6 +651,33 @@ class LibraryService:
 
         await self._comment_repo.commit()
 
+        await self._search_engine.delete_fragment_by_source(comment.id)
+
+        fragments = [
+            ContentFragment(
+                content=comment.body,
+                doc_id=file.id,
+                entity_type=file.content_type,
+                fragment_type=FragmentType.COMMENT,
+                source_id=comment.id,
+                page_number=comment.page,
+            ),
+        ]
+
+        if label and label is not UNSET:
+            fragments.append(
+                ContentFragment(
+                    content=label,
+                    doc_id=file.id,
+                    entity_type=file.content_type,
+                    fragment_type=FragmentType.LABEL,
+                    source_id=comment.id,
+                    page_number=comment.page,
+                )
+            )
+
+        await self._search_engine.index(fragments)
+
     async def delete_comment(self, user_id: UUID, file_id: UUID, comment_id: UUID):
         file = await self._file_repo.get_by_id(file_id)
 
@@ -537,6 +691,7 @@ class LibraryService:
             raise InvalidActionError(rule="file_comment_mismatch", msg="Comment does not belong to the specified file.")
         await self._comment_repo.delete(comment)
         await self._comment_repo.commit()
+        await self._search_engine.delete_fragment_by_source(comment.id)
 
     async def get_file(self, user_id: UUID, file_id: UUID) -> FileWithDetails:
 
@@ -550,7 +705,7 @@ class LibraryService:
 
         tags_by_file = await self._tags_repo.list_personalized_by_files([file.id], user_id)
 
-        return FileWithDetails(file=file, state=state, tags=tags_by_file.get(file.id, []))
+        return FileWithDetails(file=file, state=state, tags=tags_by_file.get(file.id, []), permissions=[perm])
 
     async def list_files(
         self,
@@ -570,21 +725,19 @@ class LibraryService:
         states = await self._file_repo.list_states(file_ids, user_id)
         states = {state.file_id: state for state in states}
         tags_by_file = await self._tags_repo.list_personalized_by_files(file_ids, user_id)
+
         return [
-            FileWithDetails(
-                file=f,
-                state=states.get(f.id),
-                tags=tags_by_file.get(f.id, []),
-            )
+            FileWithDetails(file=f, state=states.get(f.id), tags=tags_by_file.get(f.id, []), permissions=[])
             for f in files
         ]
 
     async def get_library_tree(self, user_id: UUID) -> list[LibraryTreeNode]:
-        visible = await self._permission_repo.list_visible_collection_ids(user_id)
+        visible = await self._permission_repo.list_accessible_collection_ids(user_id)
         if not visible:
             return []
 
         collections = await self._collection_repo.list_by_ids(visible)
+        grants = await self._permission_repo.list_direct_grants_by_resource(visible)
 
         nodes = {
             c.id: LibraryTreeNode(
@@ -593,16 +746,22 @@ class LibraryService:
                 entity_type=c.entity_type,
                 parent_id=c.parent_id,
                 children=[],
-                # TODO
-                # is_shared=True
             )
             for c in collections
         }
         roots = []
         for n in nodes.values():
             parent = nodes.get(n.parent_id) if n.parent_id else None
+
+            # Calculate permissions for the current user on this node,
+            # which will be helpful for frontend rendering and permission checks.
+            relevant_grants = grants.get(n.id, [])
+            n.target_permission = next((g.permission for g in relevant_grants if g.user_id == user_id), None)
+            n.target_permission_count = len(relevant_grants)
+
             if parent:
                 parent.children.append(n)
+                n.target_parent = parent
             else:
                 roots.append(n)
         return roots
@@ -642,3 +801,93 @@ class LibraryService:
             )
 
         return await self._permission_repo.list_for_collection(collection_id)
+
+    async def delete_collection_permission(self, user_id: UUID, collection_id: UUID, assignment_id: UUID):
+
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(
+                action="modify",
+                resource="Permissions",
+                identifier=collection_id,
+            )
+
+        assignment = await self._permission_repo.get_by_id_or_none(assignment_id)
+
+        if not assignment or assignment.resource_id != collection_id:
+            raise InvalidActionError(
+                rule="permission_assignment_mismatch",
+                msg="Permission assignment does not belong to the specified collection.",
+            )
+
+        if assignment.is_owner:
+            raise InvalidActionError(
+                rule="delete_owner_permission",
+                msg="Owner permissions cannot be deleted.",
+            )
+
+        await self._permission_repo.delete(assignment)
+        await self._permission_repo.commit()
+
+    async def update_collection_permission(
+        self, user_id: UUID, collection_id: UUID, assignment_id: UUID, permission: Literal["read", "modify"]
+    ):
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(
+                action="modify",
+                resource="Permissions",
+                identifier=collection_id,
+            )
+
+        assignment = await self._permission_repo.get_by_id_or_none(assignment_id)
+
+        if not assignment or assignment.resource_id != collection_id:
+            raise InvalidActionError(
+                rule="permission_assignment_mismatch",
+                msg="Permission assignment does not belong to the specified collection.",
+            )
+
+        if assignment.is_owner:
+            raise InvalidActionError(
+                rule="update_owner_permission",
+                msg="Owner permissions cannot be modified.",
+            )
+
+        assignment.permission = permission
+        await self._permission_repo.commit()
+
+    async def invite_to_collection(
+        self, user_id: UUID, collection_id: UUID, email: str, permission: Literal["read", "modify"]
+    ):
+
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
+        if not perm or not perm.can_modify:
+            raise InsufficientPermissionError(
+                action="invite",
+                resource="Permissions",
+                identifier=collection_id,
+                user=user_id,
+            )
+
+        user = await self._user_repo.get_by_email(email)
+
+        if not user:
+            raise UserNotFoundError(email)
+
+        if user.id == user_id:
+            raise InvalidActionError(
+                rule="invite_self",
+                msg="Users cannot invite themselves to collections.",
+            )
+
+        perm = await self._permission_repo.get_effective_for_collection(collection_id, user.id)
+
+        if perm and perm.is_owner:
+            raise InvalidActionError(
+                rule="invite_owner",
+                msg="User is already an owner of the collection.",
+            )
+
+        await self._permission_repo.grant(resource_id=collection_id, user_id=user.id, permission=permission)
+        await self._permission_repo.commit()

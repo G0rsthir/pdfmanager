@@ -14,7 +14,7 @@ import aiofiles
 import aiofiles.os
 
 from server.exceptions import DuplicateResourceError
-from server.infrastructure.utils import Entity
+from server.infrastructure.utils import Entity, sniff_content_type
 
 
 @dataclass(kw_only=True)
@@ -83,8 +83,11 @@ class LocalStorageBackend(StorageBackend):
         hasher = hashlib.sha256()
         temp_path = scope_dir / f".tmp_{uuid4()}"
         file_size = 0
+        head = b""
         async with aiofiles.open(temp_path, "wb") as f:
             while chunk := data.read(64 * 1024):
+                if len(head) < 16:
+                    head = (head + chunk)[:16]
                 hasher.update(chunk)
                 await f.write(chunk)
                 file_size += len(chunk)
@@ -106,8 +109,7 @@ class LocalStorageBackend(StorageBackend):
             size=file_size,
             hash=file_hash,
             original_name=filename,
-            # TODO autodiscovery
-            content_type="application/pdf",
+            content_type=sniff_content_type(head),
         )
 
     async def delete(self, location: str) -> None:

@@ -60,7 +60,6 @@ export function FilePage() {
 
   const [searchParams] = useSearchParamMulti({
     page: { type: "string" },
-    preview: { type: "string" },
   });
 
   const [docParams, setDocParams] = useState<DocumentInitParameters>("");
@@ -114,10 +113,7 @@ export function FilePage() {
     [fileid],
   );
 
-  const intialPage = searchParams.page ? Number(searchParams.page) : undefined;
-  const startInPreview = searchParams.preview
-    ? searchParams.preview === "true"
-    : undefined;
+  const previewPage = searchParams.page ? Number(searchParams.page) : undefined;
 
   return (
     <QueryView query={query}>
@@ -127,12 +123,13 @@ export function FilePage() {
             file={docParams}
             fileName={file.name}
             initialScaleValue={file.state.scale}
-            intialPage={intialPage ?? file.state.current_page}
-            startInPreviewMode={startInPreview}
+            intialPage={file.state.current_page}
+            startInPreviewPage={previewPage}
             comments={comments}
             highlights={highlights}
             onPageChange={handlePageChange}
             onScaleChange={handleScaleChange}
+            readOnly={file.is_read_only_by_current_user}
           />
         );
       }}

@@ -34,39 +34,49 @@ async def search_files(
     if not files_with_details:
         return []
 
-    if not query.text:
-        return [FileSearchResponse(file=build_file_response(file), hits=[]) for file in files_with_details]
+    file_map = {str(f.file.id): f for f in files_with_details}
+    searches = query.searches()
 
-    result = await search_engine.search(
-        query=query.text,
-        doc_ids=[file.file.id for file in files_with_details],
-    )
+    if not searches:
+        return [
+            FileSearchResponse(file=build_file_response(f, user_id=access_session.user_id), hits=[])
+            for f in files_with_details
+        ]
 
-    # Group hits by file, track best rank per file
-    file_map = {str(file.file.id): file for file in files_with_details}
+    doc_ids = [f.file.id for f in files_with_details]
     hits_by_file: dict[str, list[SearchHitResponse]] = defaultdict(list)
     best_rank: dict[str, float] = {}
+    matched_per_filter: list[set[str]] = []
 
-    for hit in result.hits:
-        hits_by_file[hit.doc_id].append(
-            SearchHitResponse(
-                snippet=hit.snippet,
-                page_number=hit.page_number,
-                fragment_type=hit.fragment_type,
-                rank=hit.rank,
-            )
+    for q_text, fragment_types in searches:
+        result = await search_engine.search(
+            query=q_text,
+            doc_ids=doc_ids,
+            fragment_types=fragment_types,
         )
-        if hit.doc_id not in best_rank or hit.rank < best_rank[hit.doc_id]:
-            best_rank[hit.doc_id] = hit.rank
+        ids_here: set[str] = set()
+        for hit in result.hits:
+            hits_by_file[hit.doc_id].append(
+                SearchHitResponse(
+                    snippet=hit.snippet,
+                    page_number=hit.page_number,
+                    fragment_type=hit.fragment_type,
+                    rank=hit.rank,
+                )
+            )
+            if hit.doc_id not in best_rank or hit.rank < best_rank[hit.doc_id]:
+                best_rank[hit.doc_id] = hit.rank
+            ids_here.add(hit.doc_id)
+        matched_per_filter.append(ids_here)
 
-    # Build response sorted by best rank (lower = better)
-    matched_ids = sorted(hits_by_file.keys(), key=lambda file_id: best_rank[file_id])
+    # AND across filters: file must match every active search
+    matched_ids = sorted(set.intersection(*matched_per_filter), key=lambda fid: best_rank[fid])
 
     return [
         FileSearchResponse(
-            file=build_file_response(file_map[file_id]),
-            hits=hits_by_file[file_id],
+            file=build_file_response(file_map[fid], user_id=access_session.user_id),
+            hits=hits_by_file[fid],
         )
-        for file_id in matched_ids
-        if file_id in file_map
+        for fid in matched_ids
+        if fid in file_map
     ]

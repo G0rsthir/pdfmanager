@@ -9,6 +9,7 @@ from server.dependencies import (
     AccessSecurity,
     FileRepositoryDependency,
     LibraryServiceDependency,
+    PermissionDependency,
     UserRepositoryDependency,
     run_with_indexing_service,
 )
@@ -26,6 +27,7 @@ from server.schemas.library import (
     FileResponse,
     FileStateResponse,
     HighlightResponse,
+    InviteToCollectionRequest,
     LibraryTreeNode,
     ListFilesQueryParams,
     PatchCommentRequest,
@@ -33,6 +35,7 @@ from server.schemas.library import (
     PatchHighlightRequest,
     ResourcePermissionResponse,
     TagWithDetailsResponse,
+    UpdateCollectionPermissionRequest,
     UpdateCollectionRequest,
     UpdateFileRequest,
     UpdateTagRequest,
@@ -48,7 +51,33 @@ async def list_collections(
     library_service: LibraryServiceDependency,
 ):
 
-    return await library_service.list_collections(user_id=access_session.user_id)
+    collections = await library_service.list_collections(user_id=access_session.user_id)
+
+    return [
+        CollectionResponse(
+            id=collection.id,
+            name=collection.name,
+            parent_id=collection.parent_id,
+            entity_type=collection.entity_type,
+        )
+        for collection in collections
+    ]
+
+
+@router.get(
+    path="/collections/{id}/move-targets",
+    operation_id="ListCollectionMoveTargets",
+    response_model=list[CollectionResponse],
+)
+async def list_collection_move_targets(
+    collection_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+    targets = await library_service.list_move_targets_for_collection(
+        user_id=access_session.user_id, source_id=collection_id
+    )
+    return [CollectionResponse(id=c.id, name=c.name, parent_id=c.parent_id, entity_type=c.entity_type) for c in targets]
 
 
 @router.post(path="/collections", operation_id="CreateCollection")
@@ -66,17 +95,32 @@ async def get_collection(
     collection_id: Annotated[UUID, Path(alias="id")],
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
     library_service: LibraryServiceDependency,
+    user_repo: UserRepositoryDependency,
+    permissions: PermissionDependency,
 ):
 
     collection = await library_service.get_collection(user_id=access_session.user_id, collection_id=collection_id)
     files = await library_service.list_files(user_id=access_session.user_id, collection_id=collection_id)
+
+    perm = await permissions.get_effective_for_collection(collection_id, access_session.user_id)
+    perm = perm.permission if perm else None
+
+    owner_perm = await permissions.get_effective_owner_for_collection(collection_id)
+    owner = await user_repo.get_by_id(owner_perm.user_id) if owner_perm else None
+
+    if not owner:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Owner of the collection not found"
+        )
 
     return CollectionWithDetailsResponse(
         id=collection.id,
         name=collection.name,
         parent_id=collection.parent_id,
         entity_type=collection.entity_type,
-        files=[build_file_response(file) for file in files],
+        files=[build_file_response(file, user_id=access_session.user_id) for file in files],
+        target_permission=perm,
+        owner=UserSummaryResponse.model_validate(owner),
     )
 
 
@@ -92,21 +136,80 @@ async def get_collection_permissions(
 ):
 
     collection = await library_service.get_collection(user_id=access_session.user_id, collection_id=collection_id)
-    assignments = await library_service.list_collection_permissions(
+    grants = await library_service.list_collection_permissions(
         user_id=access_session.user_id, collection_id=collection_id
     )
 
+    user_grant = next((g.permission for g in grants if g.permission.user_id == access_session.user_id), None)
+
     return ResourcePermissionResponse(
+        id=collection.id,
         entity_type=collection.entity_type,
         name=collection.name,
         assignments=[
             AssignmentResponse(
+                id=assign.permission.id,
                 user=UserSummaryResponse.model_validate(assign.user),
                 permission=assign.permission.permission,
                 inherited_from=assign.inherited_from,
+                target_user_id=access_session.user_id,
+                target_permission=user_grant.permission if user_grant else None,
             )
-            for assign in assignments
+            for assign in grants
         ],
+    )
+
+
+@router.post(path="/collections/{id}/permissions/invite", operation_id="InviteToCollection")
+async def invite_to_collection(
+    collection_id: Annotated[UUID, Path(alias="id")],
+    data: InviteToCollectionRequest,
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    try:
+        await library_service.invite_to_collection(
+            user_id=access_session.user_id,
+            collection_id=collection_id,
+            email=data.email,
+            permission=data.permission,
+        )
+    except InvalidActionError as e:
+        if e.rule == "user_not_found":
+            raise FieldError(field="email", msg="User with this email does not exist") from e
+        raise
+
+
+@router.delete(path="/collections/{collection_id}/permissions/{id}", operation_id="DeleteCollectionPermission")
+async def delete_collection_permission(
+    collection_id: Annotated[UUID, Path()],
+    permission_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    await library_service.delete_collection_permission(
+        user_id=access_session.user_id,
+        collection_id=collection_id,
+        assignment_id=permission_id,
+    )
+
+
+@router.put(path="/collections/{collection_id}/permissions/{id}", operation_id="UpdateCollectionPermission")
+async def update_collection_permission(
+    collection_id: Annotated[UUID, Path()],
+    permission_id: Annotated[UUID, Path(alias="id")],
+    data: UpdateCollectionPermissionRequest,
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    library_service: LibraryServiceDependency,
+):
+
+    await library_service.update_collection_permission(
+        user_id=access_session.user_id,
+        collection_id=collection_id,
+        assignment_id=permission_id,
+        permission=data.permission,
     )
 
 
@@ -135,6 +238,20 @@ async def delete_collection(
 ):
 
     await library_service.delete_collection(user_id=access_session.user_id, collection_id=collection_id)
+
+
+@router.get(
+    path="/files/{id}/move-targets",
+    operation_id="ListFileMoveTargets",
+    response_model=list[CollectionResponse],
+)
+async def list_file_move_targets(
+    file_id: Annotated[UUID, Path(alias="id")],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+    targets = await library_service.list_move_targets_for_file(user_id=access_session.user_id, source_id=file_id)
+    return [CollectionResponse(id=c.id, name=c.name, parent_id=c.parent_id, entity_type=c.entity_type) for c in targets]
 
 
 @router.delete(path="/files/{id}", operation_id="DeleteFile")
@@ -219,7 +336,7 @@ async def list_files(
         description=query.description,
     )
 
-    return [build_file_response(file) for file in files]
+    return [build_file_response(file, user_id=access_session.user_id) for file in files]
 
 
 @router.post(path="/files/upload", operation_id="UploadFile")
@@ -267,7 +384,8 @@ async def get_file_details(
 ):
 
     file = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
-    return build_file_response(file)
+
+    return build_file_response(file, user_id=access_session.user_id)
 
 
 @router.get(path="/files/{id}/download", response_class=FastAPIFileResponse, operation_id="GetFile")
@@ -280,6 +398,16 @@ async def download_file(
 
     async with library_service.open_file(view.file.storage_key) as path:
         return FastAPIFileResponse(path, media_type=view.file.content_type)
+
+
+@router.get(path="/files/{id}/annotations/labels", response_model=list[str], operation_id="ListAnnotationLabels")
+async def list_annotation_labels(
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    labels = await library_service.list_distinct_labels(user_id=access_session.user_id)
+    return labels
 
 
 @router.get(

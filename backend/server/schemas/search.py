@@ -2,22 +2,34 @@ from typing import Literal
 
 from pydantic import BaseModel, computed_field
 
+from server.const import FragmentType
 from server.schemas.library import FileResponse
 from server.schemas.query import PaginationQueryParams
 
 
-# TODO add comments and highlights to search results
 class SearchFilesQueryParams(PaginationQueryParams):
     tags: list[str] | None = None
     name: str | None = None
     description: str | None = None
     text: str | None = None
+    comment: str | None = None
+    label: str | None = None
+
+    def searches(self) -> list[tuple[str, list[FragmentType] | None]]:
+        out: list[tuple[str, list[FragmentType] | None]] = []
+        if self.text:
+            out.append((self.text, [FragmentType.PAGE, FragmentType.TITLE, FragmentType.DESCRIPTION]))
+        if self.comment:
+            out.append((self.comment, [FragmentType.COMMENT]))
+        if self.label:
+            out.append((self.label, [FragmentType.LABEL]))
+        return out
 
 
 class SearchHitResponse(BaseModel):
     snippet: str
     page_number: int | None = None
-    fragment_type: str
+    fragment_type: FragmentType
     rank: float
 
 

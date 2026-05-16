@@ -11,17 +11,21 @@ export function FormModal(props: {
   confirmBtnPalette?: string;
   onSubmit: () => void;
   isPending?: boolean;
+  submitOnEnter?: boolean;
+  disabled?: boolean;
 }) {
   const {
     open,
-    close,
     children,
     title,
+    isPending,
+    disabled,
+    submitOnEnter = false,
     confirmBtnPalette,
     confirmBtnType,
     confirmBtnText = "Confirm",
     onSubmit,
-    isPending,
+    close,
   } = props;
 
   const ConfirmBtn = confirmBtnType == "adminWrite" ? AdminWriteButton : Button;
@@ -36,7 +40,21 @@ export function FormModal(props: {
       <Portal>
         <Dialog.Backdrop onClick={(e) => e.stopPropagation()} />
         <Dialog.Positioner onClick={(e) => e.stopPropagation()}>
-          <Dialog.Content>
+          <Dialog.Content
+            onKeyDown={(e) => {
+              if (
+                submitOnEnter &&
+                e.key == "Enter" &&
+                !e.shiftKey &&
+                !(e.target instanceof HTMLTextAreaElement) &&
+                !isPending &&
+                !disabled
+              ) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+          >
             <Dialog.CloseTrigger asChild>
               <CloseButton colorPalette="gray" />
             </Dialog.CloseTrigger>
@@ -55,6 +73,7 @@ export function FormModal(props: {
                 Cancel
               </Button>
               <ConfirmBtn
+                disabled={disabled}
                 colorPalette={confirmBtnPalette}
                 onClick={onSubmit}
                 loading={isPending}

@@ -186,8 +186,6 @@ class ORMFile(Base):
 
     # # Relationships
     collection_id: Mapped[UUID] = mapped_column(ForeignKey("collections.id", ondelete="CASCADE"))
-    # TODO
-    # created_by:
 
     @property
     def is_pdf(self) -> bool:
@@ -266,6 +264,9 @@ class ORMResourcePermission(Base):
     @property
     def is_owner(self) -> bool:
         return self.permission == "owner"
+
+    def __repr__(self):
+        return f"ORMResourcePermission(id={self.id}, user_id={self.user_id} permission='{self.permission}')"
 
 
 class ORMTag(Base):

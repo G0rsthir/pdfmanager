@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import and_, delete, exists, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server import models
+from server.const import RESOURCE_PERMISSIONS
 from server.exceptions import (
     AnnotationNotFoundError,
     AuthProviderNotFoundError,
@@ -173,6 +173,13 @@ class FileWithDetails:
     file: models.ORMFile
     state: models.ORMFileState | None
     tags: list[PersonalizedTag]
+    permissions: list[models.ORMResourcePermission]
+
+    def get_effective_permission(self, user_id: UUID) -> RESOURCE_PERMISSIONS | None:
+        direct = next((p for p in self.permissions if p.user_id == user_id), None)
+        if direct:
+            return direct.permission
+        return None
 
 
 class CollectionRepository(Repository):
@@ -216,6 +223,21 @@ class FileHighlightRepository(Repository):
         stmt = select(models.ORMFileHighlight).where(models.ORMFileHighlight.file_id == file_id)
         return list(await self.session.scalars(stmt))
 
+    async def list_distinct_labels(self, file_ids: list[UUID]) -> list[str]:
+        if not file_ids:
+            return []
+        stmt = (
+            select(models.ORMFileHighlight.label)
+            .where(
+                models.ORMFileHighlight.file_id.in_(file_ids),
+                models.ORMFileHighlight.label.is_not(None),
+            )
+            .distinct()
+        )
+        records = await self.session.execute(stmt)
+
+        return [record[0] for record in records.all() if record[0] is not None]
+
     def save(self, record: models.ORMFileHighlight) -> None:
         self.session.add(record)
 
@@ -233,6 +255,22 @@ class FileCommentRepository(Repository):
     async def list_by_file(self, file_id: UUID) -> list[models.ORMFileComment]:
         stmt = select(models.ORMFileComment).where(models.ORMFileComment.file_id == file_id)
         return list(await self.session.scalars(stmt))
+
+    async def list_distinct_labels(self, file_ids: list[UUID]) -> list[str]:
+        if not file_ids:
+            return []
+        stmt = (
+            select(models.ORMFileComment.label)
+            .where(
+                models.ORMFileComment.file_id.in_(file_ids),
+                models.ORMFileComment.label.is_not(None),
+            )
+            .distinct()
+        )
+
+        records = await self.session.execute(stmt)
+
+        return [record[0] for record in records.all() if record[0] is not None]
 
     def save(self, record: models.ORMFileComment) -> None:
         self.session.add(record)
@@ -536,6 +574,22 @@ class PermissionAssignment:
 
 
 class PermissionRepository(Repository):
+    async def get_by_id_or_none(self, permission_id: UUID):
+        return await self.session.get(models.ORMResourcePermission, permission_id)
+
+    async def list_direct_grants_by_resource(
+        self, resource_ids: list[UUID]
+    ) -> dict[UUID, list[models.ORMResourcePermission]]:
+        if not resource_ids:
+            return {}
+        stmt = select(models.ORMResourcePermission).where(models.ORMResourcePermission.resource_id.in_(resource_ids))
+        rows = await self.session.scalars(stmt)
+
+        result: dict[UUID, list[models.ORMResourcePermission]] = {}
+        for permission in rows:
+            result.setdefault(permission.resource_id, []).append(permission)
+        return result
+
     async def list_for_collection(self, collection_id: UUID) -> list[PermissionAssignment]:
         """
         Everyone with access (direct + inherited). Closest grant wins per user.
@@ -600,7 +654,6 @@ class PermissionRepository(Repository):
             PermissionAssignment(
                 permission=row[0],
                 user=row[1],
-                # TODO
                 inherited_from=row.source_id if row.source_id != collection_id else None,
             )
             for row in rows
@@ -610,7 +663,7 @@ class PermissionRepository(Repository):
         self,
         resource_id: UUID,
         user_id: UUID,
-        permission: Literal["owner", "modify", "read"],
+        permission: RESOURCE_PERMISSIONS,
     ):
 
         stmt = select(models.ORMResourcePermission).where(
@@ -662,27 +715,108 @@ class PermissionRepository(Repository):
         )
         return await self.session.scalar(stmt)
 
-    async def list_visible_collection_ids(self, user_id: UUID) -> list[UUID]:
+    async def get_effective_owner_for_collection(self, collection_id: UUID) -> models.ORMResourcePermission | None:
         """
-        All collection IDs the user can see (anything they have a grant on, plus all descendants).
+        Closest user with 'owner' permission, walking up from the collection.
+        None if no owner grant exists in the ancestor chain.
         """
-        granted = (
-            select(models.ORMResourcePermission.resource_id)
-            .where(models.ORMResourcePermission.user_id == user_id)
-            .scalar_subquery()
+        anc = (
+            select(
+                models.ORMCollection.id,
+                models.ORMCollection.parent_id,
+                literal(0).label("depth"),
+            )
+            .where(models.ORMCollection.id == collection_id)
+            .cte("anc", recursive=True)
         )
-        visible = (
+        anc = anc.union_all(
+            select(
+                models.ORMCollection.id,
+                models.ORMCollection.parent_id,
+                anc.c.depth + 1,
+            ).join(anc, models.ORMCollection.id == anc.c.parent_id)
+        )
+
+        stmt = (
+            select(models.ORMResourcePermission)
+            .join(anc, anc.c.id == models.ORMResourcePermission.resource_id)
+            .where(models.ORMResourcePermission.permission == "owner")
+            .order_by(anc.c.depth.asc())
+            .limit(1)
+        )
+        return await self.session.scalar(stmt)
+
+    async def list_accessible_collection_ids(
+        self, user_id: UUID, permission: list[RESOURCE_PERMISSIONS] | None = None
+    ) -> list[UUID]:
+        """
+        All collection IDs the user can access (anything they have a grant on, plus all descendants).
+        """
+        grant_filter = [models.ORMResourcePermission.user_id == user_id]
+        if permission:
+            grant_filter.append(models.ORMResourcePermission.permission.in_(permission))
+
+        granted = select(models.ORMResourcePermission.resource_id).where(*grant_filter).scalar_subquery()
+
+        accessible = (
             select(models.ORMCollection.id, models.ORMCollection.parent_id)
             .where(models.ORMCollection.id.in_(granted))
-            .cte("visible", recursive=True)
+            .cte("accessible", recursive=True)
         )
-        visible = visible.union_all(
+        accessible = accessible.union_all(
             select(models.ORMCollection.id, models.ORMCollection.parent_id).join(
-                visible, models.ORMCollection.parent_id == visible.c.id
+                accessible, models.ORMCollection.parent_id == accessible.c.id
             )
         )
-        rows = await self.session.scalars(select(visible.c.id))
+        rows = await self.session.scalars(select(accessible.c.id))
         return list(set(rows))
+
+    async def list_owners_for_collections(self, collection_ids: list[UUID]) -> dict[UUID, UUID]:
+        """
+        Closest 'owner' user_id per collection, walking each one's ancestor chain.
+        Collections with no owner anywhere up the chain are omitted.
+        """
+        if not collection_ids:
+            return {}
+
+        anc = (
+            select(
+                models.ORMCollection.id.label("seed_id"),
+                models.ORMCollection.id.label("anc_id"),
+                models.ORMCollection.parent_id.label("parent_id"),
+                literal(0).label("depth"),
+            )
+            .where(models.ORMCollection.id.in_(collection_ids))
+            .cte("anc", recursive=True)
+        )
+        anc = anc.union_all(
+            select(
+                anc.c.seed_id,
+                models.ORMCollection.id.label("anc_id"),
+                models.ORMCollection.parent_id.label("parent_id"),
+                (anc.c.depth + 1).label("depth"),
+            ).join(anc, models.ORMCollection.id == anc.c.parent_id)
+        )
+
+        ranked = (
+            select(
+                anc.c.seed_id,
+                models.ORMResourcePermission.user_id,
+                func.row_number()
+                .over(
+                    partition_by=anc.c.seed_id,
+                    order_by=anc.c.depth.asc(),
+                )
+                .label("rn"),
+            )
+            .join(anc, anc.c.anc_id == models.ORMResourcePermission.resource_id)
+            .where(models.ORMResourcePermission.permission == "owner")
+            .subquery()
+        )
+
+        stmt = select(ranked.c.seed_id, ranked.c.user_id).where(ranked.c.rn == 1)
+        rows = await self.session.execute(stmt)
+        return {seed_id: user_id for seed_id, user_id in rows}
 
     async def get_effective_for_file(self, file: models.ORMFile, user_id: UUID) -> models.ORMResourcePermission | None:
         """

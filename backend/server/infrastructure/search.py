@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from uuid import UUID
@@ -5,14 +6,17 @@ from uuid import UUID
 from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.const import FragmentType
+
 
 @dataclass(kw_only=True)
 class ContentFragment:
     content: str
     doc_id: UUID
     entity_type: str
-    fragment_type: str
+    fragment_type: FragmentType
     page_number: int | None = None
+    source_id: UUID | None = None
 
 
 @dataclass(kw_only=True)
@@ -21,7 +25,7 @@ class SearchHit:
     snippet: str
     rank: float
     entity_type: str
-    fragment_type: str
+    fragment_type: FragmentType
     page_number: int | None = None
 
 
@@ -41,7 +45,11 @@ class SearchBackend(ABC):
         pass
 
     @abstractmethod
-    async def delete_fragments(self, doc_id: UUID, fragment_type: str):
+    async def delete_fragments(self, doc_id: UUID, fragment_type: FragmentType):
+        pass
+
+    @abstractmethod
+    async def delete_fragment_by_source(self, source_id: UUID):
         pass
 
     @abstractmethod
@@ -49,18 +57,28 @@ class SearchBackend(ABC):
         self,
         query: str,
         doc_ids: list[UUID],
+        fragment_types: list[FragmentType] | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> SearchResults:
         pass
 
 
+def _to_fts_match(q: str) -> str:
+    tokens = re.findall(r"\w+", q, flags=re.UNICODE)
+    if not tokens:
+        return '""'
+    return " ".join(f'"{t}"*' for t in tokens)
+
+
 class Fts5SearchBackend(SearchBackend):
     # Lower rank == better
-    FRAGMENT_BOOST: dict[str, float] = {
-        "title": 0.3,
-        "description": 0.5,
-        "page": 1.0,
+    FRAGMENT_BOOST: dict[FragmentType, float] = {
+        FragmentType.TITLE: 0.3,
+        FragmentType.DESCRIPTION: 0.8,
+        FragmentType.PAGE: 1.0,
+        FragmentType.COMMENT: 0.5,
+        FragmentType.LABEL: 0.4,
     }
     DEFAULT_BOOST = 1.0
 
@@ -72,13 +90,16 @@ class Fts5SearchBackend(SearchBackend):
         return f"{cases} ELSE {self.DEFAULT_BOOST}"
 
     async def index(self, fragments: list[ContentFragment]) -> None:
+        if not fragments:
+            return
+
         for fragment in fragments:
             if not fragment.content.strip():
                 continue
             await self.session.execute(
                 text(
-                    "INSERT INTO content_fts (content, doc_id, entity_type, page_number, fragment_type) "
-                    "VALUES (:content, :doc_id, :entity_type, :page_number, :fragment_type)"
+                    "INSERT INTO content_fts (content, doc_id, entity_type, page_number, fragment_type, source_id) "
+                    "VALUES (:content, :doc_id, :entity_type, :page_number, :fragment_type, :source_id)"
                 ),
                 {
                     "content": fragment.content,
@@ -86,6 +107,7 @@ class Fts5SearchBackend(SearchBackend):
                     "entity_type": fragment.entity_type,
                     "page_number": fragment.page_number,
                     "fragment_type": fragment.fragment_type,
+                    "source_id": str(fragment.source_id) if fragment.source_id else None,
                 },
             )
         await self.session.commit()
@@ -98,10 +120,17 @@ class Fts5SearchBackend(SearchBackend):
         await self.session.execute(stmt, {"doc_ids": [str(d) for d in doc_ids]})
         await self.session.commit()
 
-    async def delete_fragments(self, doc_id: UUID, fragment_type: str) -> None:
+    async def delete_fragments(self, doc_id: UUID, fragment_type: str):
         await self.session.execute(
             text("DELETE FROM content_fts WHERE doc_id = :doc_id AND fragment_type = :fragment_type"),
             {"doc_id": str(doc_id), "fragment_type": fragment_type},
+        )
+        await self.session.commit()
+
+    async def delete_fragment_by_source(self, source_id: UUID):
+        await self.session.execute(
+            text("DELETE FROM content_fts WHERE source_id = :source_id"),
+            {"source_id": str(source_id)},
         )
         await self.session.commit()
 
@@ -109,11 +138,12 @@ class Fts5SearchBackend(SearchBackend):
         self,
         query: str,
         doc_ids: list[UUID],
+        fragment_types: list[str] | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> SearchResults:
         where = ["content_fts MATCH :query"]
-        params = {"query": query, "limit": limit, "offset": offset}
+        params = {"query": _to_fts_match(query), "limit": limit, "offset": offset}
         binds: list = []
 
         if not doc_ids:
@@ -122,6 +152,11 @@ class Fts5SearchBackend(SearchBackend):
         where.append("doc_id IN :doc_ids")
         params["doc_ids"] = [str(d) for d in doc_ids]
         binds.append(bindparam("doc_ids", expanding=True))
+
+        if fragment_types:
+            where.append("fragment_type IN :fragment_types")
+            params["fragment_types"] = fragment_types
+            binds.append(bindparam("fragment_types", expanding=True))
 
         where_clause = " AND ".join(where)
 

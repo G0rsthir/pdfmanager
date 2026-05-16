@@ -6,7 +6,7 @@ Simple PDF manager - nothing more.
 
 ### Features
 
-* Quality of Life - Tags, search, favorites
+* Quality of Life - Tags, search, favorites, annotations
 * Tree-like grouping
 * File state tracking
 * SSO / OIDC

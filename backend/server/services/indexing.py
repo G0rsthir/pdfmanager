@@ -1,6 +1,7 @@
 import asyncio
 from uuid import UUID
 
+from server.const import FragmentType
 from server.infrastructure.pdf import PdfFile
 from server.infrastructure.search import ContentFragment, SearchBackend
 from server.infrastructure.storage import StorageBackend
@@ -23,7 +24,7 @@ class IndexingService:
                     content=page.text,
                     doc_id=file_id,
                     entity_type="pdf",
-                    fragment_type="page",
+                    fragment_type=FragmentType.PAGE,
                     page_number=page.page_number,
                 )
                 for page in pages

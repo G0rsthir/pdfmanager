@@ -378,13 +378,14 @@ export function PagePeekBar(props: PagePeekBarProps) {
 
 export function SelectionPopover(props: {
   containerRef: React.RefObject<HTMLElement | null>;
+  readOnly?: boolean;
   onSelect: (action: PopoverAction, popover: SelectionPopoverState) => void;
 }) {
-  const { containerRef, onSelect } = props;
+  const { containerRef, readOnly, onSelect } = props;
 
   const [popover] = useSelectionPopover(containerRef);
 
-  if (!popover) return null;
+  if (!popover || readOnly) return null;
 
   return (
     <Box

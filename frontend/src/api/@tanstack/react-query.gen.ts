@@ -16,6 +16,7 @@ import {
   createSetupUser,
   createUser,
   deleteCollection,
+  deleteCollectionPermission,
   deleteComment,
   deleteFile,
   deleteHighlight,
@@ -32,10 +33,14 @@ import {
   getFileThumbnail,
   getLibraryTree,
   getOidcAuthProvider,
+  inviteToCollection,
+  listAnnotationLabels,
   listAuthProviders,
+  listCollectionMoveTargets,
   listCollections,
   listFileComments,
   listFileHighlights,
+  listFileMoveTargets,
   listFiles,
   listOidcAuthProviders,
   listRoles,
@@ -52,6 +57,7 @@ import {
   revokeToken,
   searchFiles,
   updateCollection,
+  updateCollectionPermission,
   updateFile,
   updateOidcAuthProvider,
   updateTag,
@@ -79,6 +85,8 @@ import type {
   CreateUserError,
   DeleteCollectionData,
   DeleteCollectionError,
+  DeleteCollectionPermissionData,
+  DeleteCollectionPermissionError,
   DeleteCommentData,
   DeleteCommentError,
   DeleteFileData,
@@ -115,8 +123,15 @@ import type {
   GetOidcAuthProviderData,
   GetOidcAuthProviderError,
   GetOidcAuthProviderResponse,
+  InviteToCollectionData,
+  InviteToCollectionError,
+  ListAnnotationLabelsData,
+  ListAnnotationLabelsResponse,
   ListAuthProvidersData,
   ListAuthProvidersResponse,
+  ListCollectionMoveTargetsData,
+  ListCollectionMoveTargetsError,
+  ListCollectionMoveTargetsResponse,
   ListCollectionsData,
   ListCollectionsResponse,
   ListFileCommentsData,
@@ -125,6 +140,9 @@ import type {
   ListFileHighlightsData,
   ListFileHighlightsError,
   ListFileHighlightsResponse,
+  ListFileMoveTargetsData,
+  ListFileMoveTargetsError,
+  ListFileMoveTargetsResponse,
   ListFilesData,
   ListFilesError,
   ListFilesResponse,
@@ -157,6 +175,8 @@ import type {
   SearchFilesResponse,
   UpdateCollectionData,
   UpdateCollectionError,
+  UpdateCollectionPermissionData,
+  UpdateCollectionPermissionError,
   UpdateFileData,
   UpdateFileError,
   UpdateOidcAuthProviderData,
@@ -435,6 +455,34 @@ export const createCollectionMutation = (
   return mutationOptions;
 };
 
+export const listCollectionMoveTargetsQueryKey = (
+  options: Options<ListCollectionMoveTargetsData>,
+) => createQueryKey("listCollectionMoveTargets", options);
+
+/**
+ * List Collection Move Targets
+ */
+export const listCollectionMoveTargetsOptions = (
+  options: Options<ListCollectionMoveTargetsData>,
+) =>
+  queryOptions<
+    ListCollectionMoveTargetsResponse,
+    ListCollectionMoveTargetsError,
+    ListCollectionMoveTargetsResponse,
+    ReturnType<typeof listCollectionMoveTargetsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listCollectionMoveTargets({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listCollectionMoveTargetsQueryKey(options),
+  });
+
 /**
  * Delete Collection
  */
@@ -540,6 +588,115 @@ export const getCollectionPermissionsOptions = (
       return data;
     },
     queryKey: getCollectionPermissionsQueryKey(options),
+  });
+
+/**
+ * Invite To Collection
+ */
+export const inviteToCollectionMutation = (
+  options?: Partial<Options<InviteToCollectionData>>,
+): UseMutationOptions<
+  unknown,
+  InviteToCollectionError,
+  Options<InviteToCollectionData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    InviteToCollectionError,
+    Options<InviteToCollectionData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await inviteToCollection({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Delete Collection Permission
+ */
+export const deleteCollectionPermissionMutation = (
+  options?: Partial<Options<DeleteCollectionPermissionData>>,
+): UseMutationOptions<
+  unknown,
+  DeleteCollectionPermissionError,
+  Options<DeleteCollectionPermissionData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    DeleteCollectionPermissionError,
+    Options<DeleteCollectionPermissionData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await deleteCollectionPermission({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Update Collection Permission
+ */
+export const updateCollectionPermissionMutation = (
+  options?: Partial<Options<UpdateCollectionPermissionData>>,
+): UseMutationOptions<
+  unknown,
+  UpdateCollectionPermissionError,
+  Options<UpdateCollectionPermissionData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    UpdateCollectionPermissionError,
+    Options<UpdateCollectionPermissionData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await updateCollectionPermission({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const listFileMoveTargetsQueryKey = (
+  options: Options<ListFileMoveTargetsData>,
+) => createQueryKey("listFileMoveTargets", options);
+
+/**
+ * List File Move Targets
+ */
+export const listFileMoveTargetsOptions = (
+  options: Options<ListFileMoveTargetsData>,
+) =>
+  queryOptions<
+    ListFileMoveTargetsResponse,
+    ListFileMoveTargetsError,
+    ListFileMoveTargetsResponse,
+    ReturnType<typeof listFileMoveTargetsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listFileMoveTargets({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listFileMoveTargetsQueryKey(options),
   });
 
 /**
@@ -761,6 +918,34 @@ export const getFileOptions = (options: Options<GetFileData>) =>
       return data;
     },
     queryKey: getFileQueryKey(options),
+  });
+
+export const listAnnotationLabelsQueryKey = (
+  options?: Options<ListAnnotationLabelsData>,
+) => createQueryKey("listAnnotationLabels", options);
+
+/**
+ * List Annotation Labels
+ */
+export const listAnnotationLabelsOptions = (
+  options?: Options<ListAnnotationLabelsData>,
+) =>
+  queryOptions<
+    ListAnnotationLabelsResponse,
+    DefaultError,
+    ListAnnotationLabelsResponse,
+    ReturnType<typeof listAnnotationLabelsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listAnnotationLabels({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listAnnotationLabelsQueryKey(options),
   });
 
 export const listFileHighlightsQueryKey = (

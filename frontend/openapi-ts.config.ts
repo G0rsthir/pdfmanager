@@ -5,7 +5,7 @@ export default defineConfig({
   output: {
     path: "./src/api",
     indexFile: false,
-    postProcess: ["eslint", "prettier"],
+    postProcess: ["prettier"], // TODO "eslint" - broken
   },
   plugins: [
     "@hey-api/schemas",

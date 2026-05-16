@@ -53,7 +53,8 @@ interface ReactPDFViewerProps {
   intialPage: number;
   initialScaleValue: string;
   fileName?: string;
-  startInPreviewMode?: boolean;
+  startInPreviewPage?: number;
+  readOnly?: boolean;
   onPageChange?: (value: number) => void;
   onScaleChange?: (value: string) => void;
   highlights: HighlightsApi;
@@ -66,11 +67,12 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     intialPage,
     initialScaleValue = "1",
     fileName = "document.pdf",
-    startInPreviewMode = false,
+    startInPreviewPage,
     comments,
     highlights,
     onPageChange,
     onScaleChange,
+    readOnly,
   } = props;
 
   const [numPages, setNumPages] = useState(0);
@@ -94,7 +96,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const pdfViewerRef = useRef<PDFViewer | null>(null);
   const eventBusRef = useRef<EventBus | null>(null);
   const findControllerRef = useRef<PDFFindController | null>(null);
-  const isPeekingRef = useRef(startInPreviewMode);
+  const isPeekingRef = useRef(false);
   const pdfHistoryRef = useRef<PDFHistory | null>(null);
   const lastLocationRef = useRef<Bookmark | null>(null);
 
@@ -139,6 +141,16 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
         pdfViewer.currentPageNumber = intialPage;
       }
     });
+
+    // Start in peeking mode once the first page is rendered
+    const onFirstRender = () => {
+      eventBus.off("pagerendered", onFirstRender);
+      if (!startInPreviewPage) return;
+      beginPeek();
+      pdfViewer.scrollPageIntoView({ pageNumber: startInPreviewPage });
+    };
+
+    eventBus.on("pagerendered", onFirstRender);
 
     eventBus.on("pagechanging", (e: { pageNumber: number }) => {
       setCurrentPage(e.pageNumber);
@@ -620,6 +632,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
             <SelectionPopover
               containerRef={containerRef}
               onSelect={handleSelectionAction}
+              readOnly={readOnly}
             />
           </Box>
           <PagePeekBar
@@ -632,6 +645,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
         </Box>
         {showAnnotations && (
           <AnnotationsPanel
+            readOnly={readOnly}
             comments={commentsApi}
             highlights={highlights}
             draftComment={draftComment}

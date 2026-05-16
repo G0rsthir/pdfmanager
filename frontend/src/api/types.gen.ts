@@ -49,6 +49,10 @@ export type AppStateResponse = {
  * AssignmentResponse
  */
 export type AssignmentResponse = {
+  /**
+   * Id
+   */
+  id: string;
   user: UserSummaryResponse;
   /**
    * Inherited From
@@ -58,6 +62,12 @@ export type AssignmentResponse = {
    * Permission
    */
   permission: "owner" | "read" | "modify";
+  /**
+   * Is Read Only By Current User
+   *
+   * Whether current user can only read this assignment
+   */
+  readonly is_read_only_by_current_user: boolean;
 };
 
 /**
@@ -314,6 +324,17 @@ export type CollectionWithDetailsResponse = {
    * Files
    */
   files?: Array<FileResponse>;
+  owner: UserSummaryResponse;
+  /**
+   * Is Shared With Current User
+   */
+  readonly is_shared_with_current_user: boolean;
+  /**
+   * Is Read Only By Current User
+   *
+   * Whether current user can only read this collection
+   */
+  readonly is_read_only_by_current_user: boolean;
 };
 
 /**
@@ -517,6 +538,12 @@ export type FileResponse = {
    * Tags Name List
    */
   readonly tags_name_list: Array<string>;
+  /**
+   * Is Read Only By Current User
+   *
+   * Whether current user can only read this file
+   */
+  readonly is_read_only_by_current_user: boolean;
 };
 
 /**
@@ -531,7 +558,7 @@ export type FileSearchResponse = {
   /**
    * Score
    */
-  score: "weak" | "good" | "strong";
+  readonly score: "weak" | "good" | "strong";
 };
 
 /**
@@ -555,6 +582,22 @@ export type FileStateResponse = {
    */
   updated_at?: Date | null;
 };
+
+/**
+ * FragmentType
+ */
+export const FragmentType = {
+  TITLE: "title",
+  DESCRIPTION: "description",
+  PAGE: "page",
+  COMMENT: "comment",
+  LABEL: "label",
+} as const;
+
+/**
+ * FragmentType
+ */
+export type FragmentType = (typeof FragmentType)[keyof typeof FragmentType];
 
 /**
  * HTTPValidationError
@@ -607,6 +650,20 @@ export type HighlightResponse = {
 };
 
 /**
+ * InviteToCollectionRequest
+ */
+export type InviteToCollectionRequest = {
+  /**
+   * Email
+   */
+  email: string;
+  /**
+   * Permission
+   */
+  permission: "read" | "modify";
+};
+
+/**
  * LibraryTreeNode
  */
 export type LibraryTreeNode = {
@@ -633,7 +690,11 @@ export type LibraryTreeNode = {
   /**
    * Is Shared
    */
-  is_shared?: boolean;
+  readonly is_shared: boolean;
+  /**
+   * Is Read Only By Current User
+   */
+  readonly is_read_only_by_current_user: boolean;
 };
 
 /**
@@ -752,6 +813,10 @@ export type PatchHighlightRequest = {
  */
 export type ResourcePermissionResponse = {
   /**
+   * Id
+   */
+  id: string;
+  /**
    * Entity Type
    */
   entity_type: string;
@@ -821,10 +886,7 @@ export type SearchHitResponse = {
    * Page Number
    */
   page_number?: number | null;
-  /**
-   * Fragment Type
-   */
-  fragment_type: string;
+  fragment_type: FragmentType;
   /**
    * Rank
    */
@@ -903,6 +965,16 @@ export type TagWithDetailsResponse = {
    * File Count
    */
   file_count: number;
+};
+
+/**
+ * UpdateCollectionPermissionRequest
+ */
+export type UpdateCollectionPermissionRequest = {
+  /**
+   * Permission
+   */
+  permission: "read" | "modify";
 };
 
 /**
@@ -1110,6 +1182,25 @@ export type AppStateResponseWritable = {
 };
 
 /**
+ * AssignmentResponse
+ */
+export type AssignmentResponseWritable = {
+  /**
+   * Id
+   */
+  id: string;
+  user: UserSummaryResponse;
+  /**
+   * Inherited From
+   */
+  inherited_from?: string | null;
+  /**
+   * Permission
+   */
+  permission: "owner" | "read" | "modify";
+};
+
+/**
  * AuthProviderOidcUpdateRequest
  */
 export type AuthProviderOidcUpdateRequestWritable = {
@@ -1175,6 +1266,7 @@ export type CollectionWithDetailsResponseWritable = {
    * Files
    */
   files?: Array<FileResponseWritable>;
+  owner: UserSummaryResponse;
 };
 
 /**
@@ -1217,6 +1309,54 @@ export type FileSearchResponseWritable = {
    * Hits
    */
   hits: Array<SearchHitResponse>;
+};
+
+/**
+ * LibraryTreeNode
+ */
+export type LibraryTreeNodeWritable = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Children
+   */
+  children?: Array<LibraryTreeNodeWritable>;
+  /**
+   * Entity Type
+   */
+  entity_type: "group" | "folder";
+  /**
+   * Parent Id
+   */
+  parent_id?: string | null;
+};
+
+/**
+ * ResourcePermissionResponse
+ */
+export type ResourcePermissionResponseWritable = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Entity Type
+   */
+  entity_type: string;
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Assignments
+   */
+  assignments: Array<AssignmentResponseWritable>;
 };
 
 /**
@@ -1526,6 +1666,40 @@ export type CreateCollectionResponses = {
   200: unknown;
 };
 
+export type ListCollectionMoveTargetsData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/collections/{id}/move-targets";
+};
+
+export type ListCollectionMoveTargetsErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ListCollectionMoveTargetsError =
+  ListCollectionMoveTargetsErrors[keyof ListCollectionMoveTargetsErrors];
+
+export type ListCollectionMoveTargetsResponses = {
+  /**
+   * Response Listcollectionmovetargets
+   *
+   * Successful Response
+   */
+  200: Array<CollectionResponse>;
+};
+
+export type ListCollectionMoveTargetsResponse =
+  ListCollectionMoveTargetsResponses[keyof ListCollectionMoveTargetsResponses];
+
 export type DeleteCollectionData = {
   body?: never;
   path: {
@@ -1646,6 +1820,135 @@ export type GetCollectionPermissionsResponses = {
 
 export type GetCollectionPermissionsResponse =
   GetCollectionPermissionsResponses[keyof GetCollectionPermissionsResponses];
+
+export type InviteToCollectionData = {
+  body: InviteToCollectionRequest;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/collections/{id}/permissions/invite";
+};
+
+export type InviteToCollectionErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type InviteToCollectionError =
+  InviteToCollectionErrors[keyof InviteToCollectionErrors];
+
+export type InviteToCollectionResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type DeleteCollectionPermissionData = {
+  body?: never;
+  path: {
+    /**
+     * Collection Id
+     */
+    collection_id: string;
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/collections/{collection_id}/permissions/{id}";
+};
+
+export type DeleteCollectionPermissionErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type DeleteCollectionPermissionError =
+  DeleteCollectionPermissionErrors[keyof DeleteCollectionPermissionErrors];
+
+export type DeleteCollectionPermissionResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type UpdateCollectionPermissionData = {
+  body: UpdateCollectionPermissionRequest;
+  path: {
+    /**
+     * Collection Id
+     */
+    collection_id: string;
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/collections/{collection_id}/permissions/{id}";
+};
+
+export type UpdateCollectionPermissionErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type UpdateCollectionPermissionError =
+  UpdateCollectionPermissionErrors[keyof UpdateCollectionPermissionErrors];
+
+export type UpdateCollectionPermissionResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ListFileMoveTargetsData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/library/files/{id}/move-targets";
+};
+
+export type ListFileMoveTargetsErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ListFileMoveTargetsError =
+  ListFileMoveTargetsErrors[keyof ListFileMoveTargetsErrors];
+
+export type ListFileMoveTargetsResponses = {
+  /**
+   * Response Listfilemovetargets
+   *
+   * Successful Response
+   */
+  200: Array<CollectionResponse>;
+};
+
+export type ListFileMoveTargetsResponse =
+  ListFileMoveTargetsResponses[keyof ListFileMoveTargetsResponses];
 
 export type DeleteFileData = {
   body?: never;
@@ -1910,6 +2213,25 @@ export type GetFileResponses = {
    */
   200: unknown;
 };
+
+export type ListAnnotationLabelsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/files/{id}/annotations/labels";
+};
+
+export type ListAnnotationLabelsResponses = {
+  /**
+   * Response Listannotationlabels
+   *
+   * Successful Response
+   */
+  200: Array<string>;
+};
+
+export type ListAnnotationLabelsResponse =
+  ListAnnotationLabelsResponses[keyof ListAnnotationLabelsResponses];
 
 export type ListFileHighlightsData = {
   body?: never;
@@ -2273,6 +2595,14 @@ export type SearchFilesData = {
      * Text
      */
     text?: string | null;
+    /**
+     * Comment
+     */
+    comment?: string | null;
+    /**
+     * Label
+     */
+    label?: string | null;
   };
   url: "/api/v1/search/files";
 };

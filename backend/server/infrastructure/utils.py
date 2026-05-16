@@ -59,3 +59,23 @@ def file_backup(file_path: str | Path, delete_on_success: bool = True, suffix: s
 class Entity:
     def to_dict(self):
         return {k: v for k, v in asdict(self).items() if not k.startswith("_")}
+
+
+def sniff_content_type(head: bytes) -> str:
+    """
+    Content type sniffing based on file signatures (magic numbers).
+    If needed, this can be replaced with python-magic.
+    """
+    if head.startswith(b"%PDF-"):
+        return "application/pdf"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if head.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if head.startswith(b"GIF87a") or head.startswith(b"GIF89a"):
+        return "image/gif"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    if head.startswith(b"PK\x03\x04"):
+        return "application/zip"
+    return "application/octet-stream"

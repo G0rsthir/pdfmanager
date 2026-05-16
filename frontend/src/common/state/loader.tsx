@@ -18,10 +18,9 @@ function useInitialLoader() {
   const { loadAppState } = useAppState();
 
   useEffect(() => {
-    if (isComplete || isLoading) return;
-    setIsLoading(true);
-
     (async () => {
+      if (isComplete || isLoading) return;
+      setIsLoading(true);
       try {
         await Promise.all([loadAppState(), loadSession()]);
       } catch (e) {

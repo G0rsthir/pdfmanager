@@ -111,6 +111,7 @@ def get_library_service(
     permission_repo: PermissionDependency,
     highlight_repo: HighlightRepositoryDependency,
     comment_repo: CommentRepositoryDependency,
+    user_repo: UserRepositoryDependency,
 ) -> LibraryService:
     env: AppEnvSettings = request.app.state.env
     backend = LocalStorageBackend(env.STORAGE_DIR)
@@ -124,6 +125,7 @@ def get_library_service(
         storage_backend=backend,
         highlight_repo=highlight_repo,
         comment_repo=comment_repo,
+        user_repo=user_repo,
     )
 
 

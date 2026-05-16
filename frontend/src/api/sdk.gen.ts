@@ -43,6 +43,9 @@ import type {
   CreateUserResponses,
   DeleteCollectionData,
   DeleteCollectionErrors,
+  DeleteCollectionPermissionData,
+  DeleteCollectionPermissionErrors,
+  DeleteCollectionPermissionResponses,
   DeleteCollectionResponses,
   DeleteCommentData,
   DeleteCommentErrors,
@@ -88,8 +91,16 @@ import type {
   GetOidcAuthProviderData,
   GetOidcAuthProviderErrors,
   GetOidcAuthProviderResponses,
+  InviteToCollectionData,
+  InviteToCollectionErrors,
+  InviteToCollectionResponses,
+  ListAnnotationLabelsData,
+  ListAnnotationLabelsResponses,
   ListAuthProvidersData,
   ListAuthProvidersResponses,
+  ListCollectionMoveTargetsData,
+  ListCollectionMoveTargetsErrors,
+  ListCollectionMoveTargetsResponses,
   ListCollectionsData,
   ListCollectionsResponses,
   ListFileCommentsData,
@@ -98,6 +109,9 @@ import type {
   ListFileHighlightsData,
   ListFileHighlightsErrors,
   ListFileHighlightsResponses,
+  ListFileMoveTargetsData,
+  ListFileMoveTargetsErrors,
+  ListFileMoveTargetsResponses,
   ListFilesData,
   ListFilesErrors,
   ListFilesResponses,
@@ -135,6 +149,9 @@ import type {
   SearchFilesResponses,
   UpdateCollectionData,
   UpdateCollectionErrors,
+  UpdateCollectionPermissionData,
+  UpdateCollectionPermissionErrors,
+  UpdateCollectionPermissionResponses,
   UpdateCollectionResponses,
   UpdateFileData,
   UpdateFileErrors,
@@ -162,7 +179,8 @@ import type {
 export type Options<
   TData extends TDataShape = TDataShape,
   ThrowOnError extends boolean = boolean,
-> = Options2<TData, ThrowOnError> & {
+  TResponse = unknown,
+> = Options2<TData, ThrowOnError, TResponse> & {
   /**
    * You can provide a client instance returned by `createClient()` instead of
    * individual options. This might be also useful if you want to implement a
@@ -314,6 +332,22 @@ export const createCollection = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * List Collection Move Targets
+ */
+export const listCollectionMoveTargets = <ThrowOnError extends boolean = false>(
+  options: Options<ListCollectionMoveTargetsData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    ListCollectionMoveTargetsResponses,
+    ListCollectionMoveTargetsErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/collections/{id}/move-targets",
+    ...options,
+  });
+
+/**
  * Delete Collection
  */
 export const deleteCollection = <ThrowOnError extends boolean = false>(
@@ -379,6 +413,82 @@ export const getCollectionPermissions = <ThrowOnError extends boolean = false>(
   >({
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/collections/{id}/permissions",
+    ...options,
+  });
+
+/**
+ * Invite To Collection
+ */
+export const inviteToCollection = <ThrowOnError extends boolean = false>(
+  options: Options<InviteToCollectionData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    InviteToCollectionResponses,
+    InviteToCollectionErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/collections/{id}/permissions/invite",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete Collection Permission
+ */
+export const deleteCollectionPermission = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<DeleteCollectionPermissionData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    DeleteCollectionPermissionResponses,
+    DeleteCollectionPermissionErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/collections/{collection_id}/permissions/{id}",
+    ...options,
+  });
+
+/**
+ * Update Collection Permission
+ */
+export const updateCollectionPermission = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<UpdateCollectionPermissionData, ThrowOnError>,
+) =>
+  (options.client ?? client).put<
+    UpdateCollectionPermissionResponses,
+    UpdateCollectionPermissionErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/collections/{collection_id}/permissions/{id}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * List File Move Targets
+ */
+export const listFileMoveTargets = <ThrowOnError extends boolean = false>(
+  options: Options<ListFileMoveTargetsData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    ListFileMoveTargetsResponses,
+    ListFileMoveTargetsErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/move-targets",
     ...options,
   });
 
@@ -540,6 +650,22 @@ export const getFile = <ThrowOnError extends boolean = false>(
       ...options,
     },
   );
+
+/**
+ * List Annotation Labels
+ */
+export const listAnnotationLabels = <ThrowOnError extends boolean = false>(
+  options?: Options<ListAnnotationLabelsData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    ListAnnotationLabelsResponses,
+    unknown,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/files/{id}/annotations/labels",
+    ...options,
+  });
 
 /**
  * List File Highlights

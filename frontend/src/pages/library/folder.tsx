@@ -19,6 +19,7 @@ import {
   Icon,
   Input,
   Stack,
+  Text,
   useDisclosure,
 } from "@chakra-ui/react";
 import { useCallback } from "react";
@@ -49,13 +50,23 @@ function FolderView({
   return (
     <Stack gap={6}>
       <Group justify="space-between" align="center">
-        <Heading size="3xl" fontWeight="normal">
-          {collection.name}
-        </Heading>
+        <Stack>
+          <Heading size="3xl" fontWeight="normal">
+            {collection.name}
+          </Heading>
+          {collection.is_shared_with_current_user && (
+            <Text color="fg.muted" fontSize="sm">
+              {collection.owner.name}'s files
+            </Text>
+          )}
+        </Stack>
 
         <Group gap={6}>
           <LayoutSwitch layoutKey={collection.id} />
-          <UploadFileAction folder_id={collection.id} />
+          <UploadFileAction
+            folder_id={collection.id}
+            readOnly={collection.is_read_only_by_current_user}
+          />
         </Group>
       </Group>
 
@@ -73,7 +84,13 @@ function FolderView({
   );
 }
 
-function UploadFileAction({ folder_id }: { folder_id: string }) {
+function UploadFileAction({
+  folder_id,
+  readOnly,
+}: {
+  folder_id: string;
+  readOnly?: boolean;
+}) {
   const { open, onOpen, onClose } = useDisclosure();
 
   return (
@@ -82,6 +99,7 @@ function UploadFileAction({ folder_id }: { folder_id: string }) {
         <LuHardDriveUpload /> Upload file
       </Button>
       <UploadFileDialog
+        readOnly={readOnly}
         open={open}
         onClose={onClose}
         collection_id={folder_id}
@@ -102,8 +120,9 @@ function UploadFileDialog(props: {
   open: boolean;
   onClose: () => void;
   collection_id: string;
+  readOnly?: boolean;
 }) {
-  const { open, onClose, collection_id } = props;
+  const { open, onClose, collection_id, readOnly } = props;
 
   const defaultValues: UploadFormValues = {
     name: "",
@@ -149,11 +168,12 @@ function UploadFileDialog(props: {
       onSubmit={() => handleSubmit()}
       confirmBtnText="Upload"
       isPending={isPending}
+      disabled={readOnly}
     >
       <FormField
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
+          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
             <Field.Label>Name</Field.Label>
             <Input
               value={fieldState.value}
@@ -167,7 +187,7 @@ function UploadFileDialog(props: {
       <FormField
         name="description"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
+          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
             <Field.Label>Description</Field.Label>
             <Input
               value={fieldState.value}
@@ -181,7 +201,7 @@ function UploadFileDialog(props: {
       <FormField
         name="tags"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
+          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
             <FileTagsInput
               defaultValue={[]}
               onValueChange={handleChange}
@@ -198,7 +218,7 @@ function UploadFileDialog(props: {
             !value ? "Please select a file" : undefined,
         }}
         children={({ state: fieldState, handleChange }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
+          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
             <FileUpload.Root
               alignItems="stretch"
               maxFiles={1}

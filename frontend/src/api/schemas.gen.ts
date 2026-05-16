@@ -60,6 +60,11 @@ export const AppStateResponseSchema = {
 
 export const AssignmentResponseSchema = {
   properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
     user: {
       $ref: "#/components/schemas/UserSummaryResponse",
     },
@@ -80,9 +85,15 @@ export const AssignmentResponseSchema = {
       enum: ["owner", "read", "modify"],
       title: "Permission",
     },
+    is_read_only_by_current_user: {
+      type: "boolean",
+      title: "Is Read Only By Current User",
+      description: "Whether current user can only read this assignment",
+      readOnly: true,
+    },
   },
   type: "object",
-  required: ["user", "permission"],
+  required: ["id", "user", "permission", "is_read_only_by_current_user"],
   title: "AssignmentResponse",
 } as const;
 
@@ -456,9 +467,30 @@ export const CollectionWithDetailsResponseSchema = {
       type: "array",
       title: "Files",
     },
+    owner: {
+      $ref: "#/components/schemas/UserSummaryResponse",
+    },
+    is_shared_with_current_user: {
+      type: "boolean",
+      title: "Is Shared With Current User",
+      readOnly: true,
+    },
+    is_read_only_by_current_user: {
+      type: "boolean",
+      title: "Is Read Only By Current User",
+      description: "Whether current user can only read this collection",
+      readOnly: true,
+    },
   },
   type: "object",
-  required: ["id", "name", "entity_type"],
+  required: [
+    "id",
+    "name",
+    "entity_type",
+    "owner",
+    "is_shared_with_current_user",
+    "is_read_only_by_current_user",
+  ],
   title: "CollectionWithDetailsResponse",
 } as const;
 
@@ -761,9 +793,22 @@ export const FileResponseSchema = {
       title: "Tags Name List",
       readOnly: true,
     },
+    is_read_only_by_current_user: {
+      type: "boolean",
+      title: "Is Read Only By Current User",
+      description: "Whether current user can only read this file",
+      readOnly: true,
+    },
   },
   type: "object",
-  required: ["id", "name", "page_count", "state", "tags_name_list"],
+  required: [
+    "id",
+    "name",
+    "page_count",
+    "state",
+    "tags_name_list",
+    "is_read_only_by_current_user",
+  ],
   title: "FileResponse",
 } as const;
 
@@ -821,6 +866,12 @@ export const FileStateResponseSchema = {
   type: "object",
   required: ["is_favorite", "current_page", "scale"],
   title: "FileStateResponse",
+} as const;
+
+export const FragmentTypeSchema = {
+  type: "string",
+  enum: ["title", "description", "page", "comment", "label"],
+  title: "FragmentType",
 } as const;
 
 export const HTTPValidationErrorSchema = {
@@ -904,6 +955,23 @@ export const HighlightResponseSchema = {
   title: "HighlightResponse",
 } as const;
 
+export const InviteToCollectionRequestSchema = {
+  properties: {
+    email: {
+      type: "string",
+      title: "Email",
+    },
+    permission: {
+      type: "string",
+      enum: ["read", "modify"],
+      title: "Permission",
+    },
+  },
+  type: "object",
+  required: ["email", "permission"],
+  title: "InviteToCollectionRequest",
+} as const;
+
 export const LibraryTreeNodeSchema = {
   properties: {
     id: {
@@ -942,11 +1010,22 @@ export const LibraryTreeNodeSchema = {
     is_shared: {
       type: "boolean",
       title: "Is Shared",
-      default: false,
+      readOnly: true,
+    },
+    is_read_only_by_current_user: {
+      type: "boolean",
+      title: "Is Read Only By Current User",
+      readOnly: true,
     },
   },
   type: "object",
-  required: ["id", "name", "entity_type"],
+  required: [
+    "id",
+    "name",
+    "entity_type",
+    "is_shared",
+    "is_read_only_by_current_user",
+  ],
   title: "LibraryTreeNode",
 } as const;
 
@@ -1124,6 +1203,11 @@ export const PatchHighlightRequestSchema = {
 
 export const ResourcePermissionResponseSchema = {
   properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
     entity_type: {
       type: "string",
       title: "Entity Type",
@@ -1141,7 +1225,7 @@ export const ResourcePermissionResponseSchema = {
     },
   },
   type: "object",
-  required: ["entity_type", "name", "assignments"],
+  required: ["id", "entity_type", "name", "assignments"],
   title: "ResourcePermissionResponse",
 } as const;
 
@@ -1230,8 +1314,7 @@ export const SearchHitResponseSchema = {
       title: "Page Number",
     },
     fragment_type: {
-      type: "string",
-      title: "Fragment Type",
+      $ref: "#/components/schemas/FragmentType",
     },
     rank: {
       type: "number",
@@ -1324,6 +1407,19 @@ export const TagWithDetailsResponseSchema = {
   type: "object",
   required: ["id", "name", "color", "file_count"],
   title: "TagWithDetailsResponse",
+} as const;
+
+export const UpdateCollectionPermissionRequestSchema = {
+  properties: {
+    permission: {
+      type: "string",
+      enum: ["read", "modify"],
+      title: "Permission",
+    },
+  },
+  type: "object",
+  required: ["permission"],
+  title: "UpdateCollectionPermissionRequest",
 } as const;
 
 export const UpdateCollectionRequestSchema = {
@@ -1615,6 +1711,39 @@ export const AppStateResponseWritableSchema = {
   title: "AppStateResponse",
 } as const;
 
+export const AssignmentResponseWritableSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    user: {
+      $ref: "#/components/schemas/UserSummaryResponse",
+    },
+    inherited_from: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Inherited From",
+    },
+    permission: {
+      type: "string",
+      enum: ["owner", "read", "modify"],
+      title: "Permission",
+    },
+  },
+  type: "object",
+  required: ["id", "user", "permission"],
+  title: "AssignmentResponse",
+} as const;
+
 export const AuthProviderOidcUpdateRequestWritableSchema = {
   properties: {
     name: {
@@ -1707,9 +1836,12 @@ export const CollectionWithDetailsResponseWritableSchema = {
       type: "array",
       title: "Files",
     },
+    owner: {
+      $ref: "#/components/schemas/UserSummaryResponse",
+    },
   },
   type: "object",
-  required: ["id", "name", "entity_type"],
+  required: ["id", "name", "entity_type", "owner"],
   title: "CollectionWithDetailsResponse",
 } as const;
 
@@ -1783,6 +1915,75 @@ export const FileSearchResponseWritableSchema = {
   type: "object",
   required: ["file", "hits"],
   title: "FileSearchResponse",
+} as const;
+
+export const LibraryTreeNodeWritableSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    children: {
+      items: {
+        $ref: "#/components/schemas/LibraryTreeNodeWritable",
+      },
+      type: "array",
+      title: "Children",
+    },
+    entity_type: {
+      type: "string",
+      enum: ["group", "folder"],
+      title: "Entity Type",
+    },
+    parent_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Parent Id",
+    },
+  },
+  type: "object",
+  required: ["id", "name", "entity_type"],
+  title: "LibraryTreeNode",
+} as const;
+
+export const ResourcePermissionResponseWritableSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    entity_type: {
+      type: "string",
+      title: "Entity Type",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    assignments: {
+      items: {
+        $ref: "#/components/schemas/AssignmentResponseWritable",
+      },
+      type: "array",
+      title: "Assignments",
+    },
+  },
+  type: "object",
+  required: ["id", "entity_type", "name", "assignments"],
+  title: "ResourcePermissionResponse",
 } as const;
 
 export const RoleResponseWritableSchema = {
