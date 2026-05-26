@@ -44,5 +44,5 @@ export function useFormMutation<
     setErrorMap: form.setErrorMap,
   });
 
-  return Object.assign(form, { isPending });
+  return { form, isPending };
 }

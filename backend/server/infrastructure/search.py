@@ -7,6 +7,7 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.const import FragmentType
+from server.infrastructure.utils import Entity
 
 
 @dataclass(kw_only=True)
@@ -17,16 +18,19 @@ class ContentFragment:
     fragment_type: FragmentType
     page_number: int | None = None
     source_id: UUID | None = None
+    field: str | None = None
 
 
 @dataclass(kw_only=True)
-class SearchHit:
-    doc_id: str
+class SearchHit(Entity):
+    doc_id: UUID
     snippet: str
     rank: float
     entity_type: str
     fragment_type: FragmentType
     page_number: int | None = None
+    source_id: UUID | None = None
+    field: str | None = None
 
 
 @dataclass(kw_only=True)
@@ -72,13 +76,11 @@ def _to_fts_match(q: str) -> str:
 
 
 class Fts5SearchBackend(SearchBackend):
-    # Lower rank == better
     FRAGMENT_BOOST: dict[FragmentType, float] = {
-        FragmentType.TITLE: 0.3,
-        FragmentType.DESCRIPTION: 0.8,
+        FragmentType.TITLE: 3.0,
+        FragmentType.DESCRIPTION: 1.5,
         FragmentType.PAGE: 1.0,
-        FragmentType.COMMENT: 0.5,
-        FragmentType.LABEL: 0.4,
+        FragmentType.ANNOTATION: 2.0,
     }
     DEFAULT_BOOST = 1.0
 
@@ -98,8 +100,8 @@ class Fts5SearchBackend(SearchBackend):
                 continue
             await self.session.execute(
                 text(
-                    "INSERT INTO content_fts (content, doc_id, entity_type, page_number, fragment_type, source_id) "
-                    "VALUES (:content, :doc_id, :entity_type, :page_number, :fragment_type, :source_id)"
+                    "INSERT INTO content_fts (content, doc_id, entity_type, page_number, fragment_type, source_id, field) "
+                    "VALUES (:content, :doc_id, :entity_type, :page_number, :fragment_type, :source_id, :field)"
                 ),
                 {
                     "content": fragment.content,
@@ -108,6 +110,7 @@ class Fts5SearchBackend(SearchBackend):
                     "page_number": fragment.page_number,
                     "fragment_type": fragment.fragment_type,
                     "source_id": str(fragment.source_id) if fragment.source_id else None,
+                    "field": fragment.field,
                 },
             )
         await self.session.commit()
@@ -138,7 +141,7 @@ class Fts5SearchBackend(SearchBackend):
         self,
         query: str,
         doc_ids: list[UUID],
-        fragment_types: list[str] | None = None,
+        fragment_types: list[FragmentType] | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> SearchResults:
@@ -168,7 +171,7 @@ class Fts5SearchBackend(SearchBackend):
 
         results = await self.session.execute(
             text(
-                f"SELECT doc_id, entity_type, page_number, fragment_type, "
+                f"SELECT doc_id, entity_type, page_number, fragment_type, source_id, field, "
                 f"snippet(content_fts, 0, '<mark>', '</mark>', '...', 40) as snippet, "
                 f"rank * CASE fragment_type {self._boost_cases()} END as weighted_rank "
                 f"FROM content_fts "
@@ -182,12 +185,14 @@ class Fts5SearchBackend(SearchBackend):
         return SearchResults(
             hits=[
                 SearchHit(
-                    doc_id=row.doc_id,
+                    doc_id=UUID(row.doc_id),
                     entity_type=row.entity_type,
                     page_number=row.page_number,
                     fragment_type=row.fragment_type,
                     snippet=row.snippet,
                     rank=row.weighted_rank,
+                    source_id=UUID(row.source_id) if row.source_id else None,
+                    field=row.field,
                 )
                 for row in results
             ],

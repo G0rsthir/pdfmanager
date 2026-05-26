@@ -212,58 +212,44 @@ class CollectionRepository(Repository):
         await self.session.delete(collection)
 
 
-class FileHighlightRepository(Repository):
-    async def get_by_id(self, highlight_id: UUID):
-        record = await self.session.get(models.ORMFileHighlight, highlight_id)
+class AnnotationRepository(Repository):
+    async def get_by_id(self, annotation_id: UUID):
+        record = await self.session.get(models.ORMAnnotation, annotation_id)
         if not record:
-            raise AnnotationNotFoundError(highlight_id)
+            raise AnnotationNotFoundError(annotation_id)
         return record
 
-    async def list_by_file(self, file_id: UUID) -> list[models.ORMFileHighlight]:
-        stmt = select(models.ORMFileHighlight).where(models.ORMFileHighlight.file_id == file_id)
+    async def list_by_ids(self, ids: list[UUID]) -> dict[UUID, models.ORMAnnotation]:
+        if not ids:
+            return {}
+        stmt = select(models.ORMAnnotation).where(models.ORMAnnotation.id.in_(ids))
+        records = await self.session.scalars(stmt)
+        return {c.id: c for c in records}
+
+    async def list_by_file(self, file_id: UUID) -> list[models.ORMAnnotation]:
+        stmt = select(models.ORMAnnotation).where(models.ORMAnnotation.file_id == file_id)
         return list(await self.session.scalars(stmt))
 
-    async def list_distinct_labels(self, file_ids: list[UUID]) -> list[str]:
-        if not file_ids:
-            return []
-        stmt = (
-            select(models.ORMFileHighlight.label)
-            .where(
-                models.ORMFileHighlight.file_id.in_(file_ids),
-                models.ORMFileHighlight.label.is_not(None),
-            )
-            .distinct()
+    async def list_by_label(self, label: str, file_ids: list[UUID] | None = None) -> dict[UUID, models.ORMAnnotation]:
+        if not label:
+            return {}
+
+        stmt = select(models.ORMAnnotation).where(
+            models.ORMAnnotation.label == label,
         )
-        records = await self.session.execute(stmt)
-
-        return [record[0] for record in records.all() if record[0] is not None]
-
-    def save(self, record: models.ORMFileHighlight) -> None:
-        self.session.add(record)
-
-    async def delete(self, record: models.ORMFileHighlight) -> None:
-        await self.session.delete(record)
-
-
-class FileCommentRepository(Repository):
-    async def get_by_id(self, comment_id: UUID):
-        record = await self.session.get(models.ORMFileComment, comment_id)
-        if not record:
-            raise AnnotationNotFoundError(comment_id)
-        return record
-
-    async def list_by_file(self, file_id: UUID) -> list[models.ORMFileComment]:
-        stmt = select(models.ORMFileComment).where(models.ORMFileComment.file_id == file_id)
-        return list(await self.session.scalars(stmt))
+        if file_ids is not None:
+            stmt = stmt.where(models.ORMAnnotation.file_id.in_(file_ids))
+        records = await self.session.scalars(stmt)
+        return {c.id: c for c in records}
 
     async def list_distinct_labels(self, file_ids: list[UUID]) -> list[str]:
         if not file_ids:
             return []
         stmt = (
-            select(models.ORMFileComment.label)
+            select(models.ORMAnnotation.label)
             .where(
-                models.ORMFileComment.file_id.in_(file_ids),
-                models.ORMFileComment.label.is_not(None),
+                models.ORMAnnotation.file_id.in_(file_ids),
+                models.ORMAnnotation.label.is_not(None),
             )
             .distinct()
         )
@@ -272,10 +258,10 @@ class FileCommentRepository(Repository):
 
         return [record[0] for record in records.all() if record[0] is not None]
 
-    def save(self, record: models.ORMFileComment) -> None:
+    def save(self, record: models.ORMAnnotation) -> None:
         self.session.add(record)
 
-    async def delete(self, record: models.ORMFileComment) -> None:
+    async def delete(self, record: models.ORMAnnotation) -> None:
         await self.session.delete(record)
 
 
@@ -285,6 +271,13 @@ class FileRepository(Repository):
         if not record:
             raise LibraryFileNotFoundError(file_id)
         return record
+
+    async def list_by_ids(self, ids: list[UUID]) -> dict[UUID, models.ORMFile]:
+        if not ids:
+            return {}
+        stmt = select(models.ORMFile).where(models.ORMFile.id.in_(ids))
+        records = await self.session.scalars(stmt)
+        return {c.id: c for c in records}
 
     async def list_visible_to_user(
         self,

@@ -142,13 +142,7 @@ function EditTagDialog(props: {
 }) {
   const { tag, open, onClose } = props;
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    Subscribe,
-    reset,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: tag.name ?? "grey",
@@ -170,9 +164,9 @@ function EditTagDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   const swatchesColors = useMemo(() => {
     const colors: Record<string, string> = {};
@@ -187,11 +181,11 @@ function EditTagDialog(props: {
       open={open}
       close={handleClose}
       title="Edit Tag"
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
     >
       <Stack gap="4">
-        <FormField
+        <form.Field
           name="name"
           children={({ state: fieldState, handleChange, handleBlur }) => (
             <Field.Root invalid={!fieldState.meta.isValid} required disabled>
@@ -211,7 +205,7 @@ function EditTagDialog(props: {
             </Field.Root>
           )}
         />
-        <FormField
+        <form.Field
           name="color"
           children={({ state: fieldState, handleChange }) => (
             <Field.Root invalid={!fieldState.meta.isValid}>
@@ -251,13 +245,13 @@ function EditTagDialog(props: {
             </Field.Root>
           )}
         />
-        <FormError errors={state.errorMap.onSubmit} />
+        <FormError errors={form.state.errorMap.onSubmit} />
 
         <Group gap="2" align="center">
           <Text textStyle="sm" color="fg.muted">
             Preview:
           </Text>
-          <Subscribe
+          <form.Subscribe
             selector={(state) => state.values}
             children={(state) => {
               return (

@@ -29,9 +29,6 @@ export default defineConfig([
         { argsIgnorePattern: "^_" },
       ],
       "react-x/no-array-index-key": "off",
-      // TODO  / react Compiler
-      "react-x/static-components": "off",
-      "react-hooks/preserve-manual-memoization": "off",
     },
   },
 ]);

@@ -199,6 +199,8 @@ class ORMFileState(Base, AuditMixin):
     scale: Mapped[str] = mapped_column(default="1.0")
     is_favorite: Mapped[bool] = mapped_column(default=False)
 
+    last_read_at: Mapped[datetime | None] = mapped_column(type_=DateTimeUTC(timezone=True), default=None)
+
     # Relationships
     file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -207,31 +209,13 @@ class ORMFileState(Base, AuditMixin):
         return f"ORMFileState(id={self.id}, user_id={self.user_id}, is_favorite={self.is_favorite} )"
 
 
-class ORMFileHighlight(Base, AuditMixin):
-    __tablename__ = "file_highlights"
-
-    page: Mapped[int]
-    color: Mapped[str]
-    excerpt: Mapped[str]
-    rects: Mapped[list] = mapped_column(JSON)
-
-    # User-set identifier, used to cross-reference.
-    label: Mapped[str | None] = mapped_column(default=None)
-
-    # Relationships
-    file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
-    author_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-
-    def __repr__(self):
-        return f"ORMFileHighlight(id={self.id}, page={self.page}, excerpt='{self.excerpt}' )"
-
-
-class ORMFileComment(Base, AuditMixin):
-    __tablename__ = "file_comments"
+class ORMAnnotation(Base, AuditMixin):
+    __tablename__ = "annotations"
 
     page: Mapped[int]
     body: Mapped[str]
     excerpt: Mapped[str]
+    color: Mapped[str]
     rects: Mapped[list] = mapped_column(JSON)
 
     # User-set identifier, used to cross-reference.
@@ -242,7 +226,7 @@ class ORMFileComment(Base, AuditMixin):
     author_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
     def __repr__(self):
-        return f"ORMFileComment(id={self.id}, page={self.page}, excerpt='{self.excerpt}' )"
+        return f"ORMAnnotation(id={self.id}, page={self.page}, excerpt='{self.excerpt}' )"
 
 
 class ORMResourcePermission(Base):

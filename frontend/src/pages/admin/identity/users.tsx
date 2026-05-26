@@ -226,13 +226,7 @@ function DeleteUserDialog(props: {
 function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
   const { open, onClose } = props;
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-    setFieldValue,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: "",
@@ -254,26 +248,26 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   useEffect(() => {
-    if (queryRoles.data?.length && !state.values.role_id) {
-      setFieldValue("role_id", queryRoles.data[0].id);
+    if (queryRoles.data?.length && !form.state.values.role_id) {
+      form.setFieldValue("role_id", queryRoles.data[0].id);
     }
-  }, [queryRoles.data, setFieldValue, state.values.role_id]);
+  }, [queryRoles.data, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title="Create User"
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
       confirmBtnType="adminWrite"
     >
-      <FormField
+      <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -289,7 +283,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="email"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -305,7 +299,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="password"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root required invalid={!fieldState.meta.isValid}>
@@ -322,7 +316,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="password_confirm"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root required invalid={!fieldState.meta.isValid}>
@@ -339,7 +333,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="role_id"
         validators={{
           onChange: ({ value }) => (!value ? "Role is required" : undefined),
@@ -357,7 +351,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="is_enabled"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid}>
@@ -373,7 +367,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           </Field.Root>
         )}
       />
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }
@@ -440,12 +434,7 @@ function EditUserDialog(props: {
 }) {
   const { user, open, onClose } = props;
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: user.name,
@@ -465,20 +454,20 @@ function EditUserDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title="Edit User"
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
       confirmBtnType="adminWrite"
     >
-      <FormField
+      <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -494,7 +483,7 @@ function EditUserDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="email"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -510,7 +499,7 @@ function EditUserDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="role_id"
         validators={{
           onChange: ({ value }) => (!value ? "Role is required" : undefined),
@@ -528,7 +517,7 @@ function EditUserDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="is_enabled"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid}>
@@ -544,7 +533,7 @@ function EditUserDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }
@@ -556,12 +545,7 @@ function ResetPasswordDialog(props: {
 }) {
   const { open, userId, onClose } = props;
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         password: "",
@@ -575,20 +559,20 @@ function ResetPasswordDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title="Reset password"
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
       confirmBtnType="adminWrite"
     >
-      <FormField
+      <form.Field
         name="password"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root required invalid={!fieldState.meta.isValid}>
@@ -605,7 +589,7 @@ function ResetPasswordDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="password_confirm"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root required invalid={!fieldState.meta.isValid}>
@@ -622,7 +606,7 @@ function ResetPasswordDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }

@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import type { NormalizedRect, SelectionPopoverState } from "./types";
+import type {
+  NormalizedRect,
+  OutlineItem,
+  OutlineRawItem,
+  SelectionPopoverState,
+} from "./types";
 
 /**
  * Walk up to PDF.js's per-page wrapper.
@@ -97,4 +102,19 @@ export function useSelectionPopover(
   }, [containerRef, popover]);
 
   return [popover, dismiss] as const;
+}
+
+export function normalizeOutline(
+  nodes: OutlineRawItem[] | null,
+): OutlineItem[] {
+  if (!nodes) return [];
+  return nodes.map((n) => ({
+    id: crypto.randomUUID(),
+    title: n.title ?? "",
+    bold: n.bold,
+    italic: n.italic,
+    dest: n.dest ?? null,
+    url: n.url ?? null,
+    children: normalizeOutline(n.items),
+  }));
 }

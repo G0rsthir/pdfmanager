@@ -271,11 +271,7 @@ function OidcProviderView(props: {
 
   const shouldRedirect = useRef(false);
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: provider.name,
@@ -304,12 +300,12 @@ function OidcProviderView(props: {
 
   const testConnection = useCallback(() => {
     shouldRedirect.current = true;
-    handleSubmit();
-  }, [handleSubmit]);
+    form.handleSubmit();
+  }, [form]);
 
   return (
     <>
-      <Form onSubmit={handleSubmit}>
+      <Form onSubmit={form.handleSubmit}>
         <Stack gap={6} pt={2}>
           <Box bg="bg.muted" borderRadius="l3" p={4}>
             <Stack gap={1}>
@@ -328,7 +324,7 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <FormField
+            <form.Field
               name="name"
               children={({ state: fieldState, handleChange, handleBlur }) => (
                 <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -351,7 +347,7 @@ function OidcProviderView(props: {
             description="Well-known OIDC discovery endpoint used to fetch provider configuration automatically"
             required
           >
-            <FormField
+            <form.Field
               name="auto_discovery_url"
               children={({ state: fieldState, handleChange, handleBlur }) => (
                 <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -375,7 +371,7 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <FormField
+            <form.Field
               name="client_id"
               children={({ state: fieldState, handleChange, handleBlur }) => (
                 <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -399,7 +395,7 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <FormField
+            <form.Field
               name="client_secret"
               children={({ state: fieldState, handleChange, handleBlur }) => (
                 <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -422,7 +418,7 @@ function OidcProviderView(props: {
             fieldSpan={8}
             fontWeight="normal"
           >
-            <FormField
+            <form.Field
               name="additional_scopes"
               children={({ state: fieldState, handleChange, handleBlur }) => (
                 <Field.Root invalid={!fieldState.meta.isValid}>
@@ -445,7 +441,7 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <FormField
+            <form.Field
               name="group_claim_name"
               children={({ state: fieldState, handleChange, handleBlur }) => (
                 <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -468,7 +464,7 @@ function OidcProviderView(props: {
                 Map OIDC group values to application roles
               </Text>
             </Stack>
-            <GroupRulesEditor FormField={FormField} roles={roles} />
+            <GroupRulesEditor FormField={form.Field} roles={roles} />
           </Stack>
           <Separator />
 
@@ -478,7 +474,7 @@ function OidcProviderView(props: {
             fieldSpan={8}
             fontWeight="normal"
           >
-            <FormField
+            <form.Field
               name="is_enabled"
               children={({ state: fieldState, handleChange, handleBlur }) => (
                 <Field.Root invalid={!fieldState.meta.isValid}>
@@ -502,7 +498,7 @@ function OidcProviderView(props: {
             fieldSpan={8}
             fontWeight="normal"
           >
-            <FormField
+            <form.Field
               name="auto_login"
               validators={{
                 onChangeAsync: async ({ value }) => {
@@ -533,7 +529,7 @@ function OidcProviderView(props: {
               )}
             />
           </SettingsOption>
-          <FormError errors={state.errorMap.onSubmit} />
+          <FormError errors={form.state.errorMap.onSubmit} />
           <Group justifyContent="flex-end">
             <AdminWriteButton
               size="sm"
@@ -712,12 +708,7 @@ function CreateOidcProviderDialog(props: {
 }) {
   const { open, onClose } = props;
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: "",
@@ -730,20 +721,20 @@ function CreateOidcProviderDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title="Create OIDC provider"
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
       confirmBtnType="adminWrite"
     >
-      <FormField
+      <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -759,7 +750,7 @@ function CreateOidcProviderDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }

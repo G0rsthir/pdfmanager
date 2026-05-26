@@ -57,5 +57,5 @@ class FragmentType(StrEnum):
     TITLE = "title"
     DESCRIPTION = "description"
     PAGE = "page"
-    COMMENT = "comment"
+    ANNOTATION = "annotation"
     LABEL = "label"

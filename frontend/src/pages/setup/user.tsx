@@ -26,11 +26,7 @@ export function SetupUser({
 }) {
   const auth = useAuth();
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: "",
@@ -59,7 +55,7 @@ export function SetupUser({
   return (
     <Center h="100vh">
       <Container maxW="md">
-        <Form onSubmit={handleSubmit}>
+        <Form onSubmit={form.handleSubmit}>
           <Card.Root>
             <Card.Body>
               <Stack gap="6">
@@ -69,7 +65,7 @@ export function SetupUser({
                   </Heading>
                   <Text color="fg.muted">Add an initial application user</Text>
                 </Box>
-                <FormField
+                <form.Field
                   name="name"
                   children={({ state, handleChange, handleBlur }) => (
                     <Field.Root invalid={!state.meta.isValid} required>
@@ -85,7 +81,7 @@ export function SetupUser({
                     </Field.Root>
                   )}
                 />
-                <FormField
+                <form.Field
                   name="email"
                   children={({ state, handleChange, handleBlur }) => (
                     <Field.Root invalid={!state.meta.isValid} required>
@@ -102,7 +98,7 @@ export function SetupUser({
                     </Field.Root>
                   )}
                 />
-                <FormField
+                <form.Field
                   name="password"
                   children={({ state, handleChange, handleBlur }) => (
                     <Field.Root required invalid={!state.meta.isValid}>
@@ -119,7 +115,7 @@ export function SetupUser({
                     </Field.Root>
                   )}
                 />
-                <FormField
+                <form.Field
                   name="password_confirm"
                   children={({ state, handleChange, handleBlur }) => (
                     <Field.Root required invalid={!state.meta.isValid}>
@@ -136,7 +132,7 @@ export function SetupUser({
                     </Field.Root>
                   )}
                 />
-                <FormError errors={state.errorMap.onSubmit} />
+                <FormError errors={form.state.errorMap.onSubmit} />
                 <Button type="submit" w="full">
                   Sign in
                 </Button>

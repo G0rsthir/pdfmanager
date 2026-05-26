@@ -7,9 +7,9 @@ import {
   Button,
   CloseButton,
   ColorPicker,
+  createTreeCollection,
   Editable,
   Group,
-  Heading,
   Menu,
   parseColor,
   Portal,
@@ -19,56 +19,58 @@ import {
   Tabs,
   Text,
   Textarea,
+  TreeView,
 } from "@chakra-ui/react";
 import { useMemo, useState } from "react";
 import {
   LuCheck,
-  LuHighlighter,
+  LuChevronRight,
+  LuList,
   LuMessageSquare,
   LuTrash2,
   LuX,
 } from "react-icons/lu";
 import { GenericIconButton } from "../button";
+import { EditableCombobox } from "../editable";
 import type {
-  AnnotationTab,
-  CommentDraft,
-  CommentItem,
-  CommentsApi,
-  HighlightItem,
-  HighlightsApi,
+  AnnotationDraft,
+  AnnotationItem,
+  AnnotationsApi,
+  OutlineItem,
+  SidePanelTab,
 } from "./types";
 
 const HighlightColors = PaletteColors.filter((color) =>
   ["yellow", "green", "blue", "pink", "red"].includes(color.value),
 );
 
-interface AnnotationsPanelProps {
-  comments: CommentsApi;
-  highlights: HighlightsApi;
-  draftComment: CommentDraft | null;
+interface SidePanelProps {
+  annotations: AnnotationsApi;
+  draftAnnotation: AnnotationDraft | null;
   currentPage: number;
-  tab: AnnotationTab;
+  tab: SidePanelTab;
+  outline: OutlineItem[] | null;
   readOnly?: boolean;
-  onTabChange: (tab: AnnotationTab) => void;
+  onTabChange: (tab: SidePanelTab) => void;
   onClose: () => void;
-  onJumpToHighlight: (highlight: HighlightItem) => void;
-  onJumpToComment: (comment: CommentItem) => void;
-  onCancelDraftComment: () => void;
+  onJumpToAnnotation: (annotation: AnnotationItem) => void;
+  onJumpToOutlineItem: (dest: OutlineItem["dest"]) => void;
+  onCancelDraftAnnotation: () => void;
 }
 
-export function AnnotationsPanel(props: AnnotationsPanelProps) {
+export function SidePanel(props: SidePanelProps) {
   const {
-    comments,
-    highlights,
-    draftComment,
+    annotations,
+    draftAnnotation,
     currentPage,
     tab,
+    outline,
     readOnly,
     onTabChange,
     onClose,
-    onJumpToHighlight,
-    onJumpToComment,
-    onCancelDraftComment,
+    onJumpToAnnotation,
+    onJumpToOutlineItem,
+    onCancelDraftAnnotation,
   } = props;
 
   return (
@@ -81,14 +83,11 @@ export function AnnotationsPanel(props: AnnotationsPanelProps) {
       borderLeftWidth="1px"
       borderColor="border"
     >
-      <Group justify="space-between" align="center" px="3" py="2">
-        <Heading size="sm" fontWeight="medium">
-          Annotations
-        </Heading>
+      <Group justify="flex-end" align="center" px="3" py="2">
         <GenericIconButton
           size="xs"
           variant="ghost"
-          aria-label="Close annotations"
+          aria-label="Close Panel"
           onClick={onClose}
         >
           <LuX />
@@ -98,7 +97,7 @@ export function AnnotationsPanel(props: AnnotationsPanelProps) {
 
       <Tabs.Root
         value={tab}
-        onValueChange={(e) => onTabChange(e.value as AnnotationTab)}
+        onValueChange={(e) => onTabChange(e.value as SidePanelTab)}
         variant="line"
         size="sm"
         flex="1"
@@ -107,50 +106,46 @@ export function AnnotationsPanel(props: AnnotationsPanelProps) {
         flexDirection="column"
       >
         <Tabs.List px="2" flexShrink={0}>
-          <Tabs.Trigger value="comments">
+          <Tabs.Trigger value="annotations">
             <LuMessageSquare />
-            Comments
+            Annotations
           </Tabs.Trigger>
-          <Tabs.Trigger value="highlights">
-            <LuHighlighter />
-            Highlights
+          <Tabs.Trigger value="outline">
+            <LuList />
+            Outline
           </Tabs.Trigger>
         </Tabs.List>
 
-        <Tabs.Content value="comments" flex="1" minH={0} overflowY="auto" p="3">
-          <Stack gap={4}>
-            {draftComment && (
-              <CommentComposer
-                draft={draftComment}
-                onSubmit={comments.create}
-                onCancel={onCancelDraftComment}
-              />
-            )}
-            <CommentList
-              items={comments.items}
-              readOnly={readOnly}
-              onJump={onJumpToComment}
-              onDelete={comments.delete}
-              onUpdate={comments.update}
-              currentPage={currentPage}
-            />
-          </Stack>
-        </Tabs.Content>
         <Tabs.Content
-          value="highlights"
+          value="annotations"
           flex="1"
           minH={0}
           overflowY="auto"
           p="3"
         >
-          <HighlightList
-            items={highlights.items}
-            currentPage={currentPage}
-            readOnly={readOnly}
-            onJump={onJumpToHighlight}
-            onDelete={highlights.delete}
-            onUpdate={highlights.update}
-          />
+          <Stack gap={4}>
+            {draftAnnotation && (
+              <CommentComposer
+                draft={draftAnnotation}
+                onSubmit={annotations.create}
+                onCancel={onCancelDraftAnnotation}
+                labels={annotations.labels}
+              />
+            )}
+            <AnnotationList
+              items={annotations.items}
+              readOnly={readOnly}
+              onJump={onJumpToAnnotation}
+              onDelete={annotations.delete}
+              onUpdate={annotations.update}
+              currentPage={currentPage}
+              labels={annotations.labels}
+            />
+          </Stack>
+        </Tabs.Content>
+
+        <Tabs.Content value="outline" flex="1" minH={0} overflowY="auto" p="3">
+          <OutlineView items={outline} onNavigate={onJumpToOutlineItem} />
         </Tabs.Content>
       </Tabs.Root>
     </Stack>
@@ -158,11 +153,12 @@ export function AnnotationsPanel(props: AnnotationsPanelProps) {
 }
 
 function CommentComposer(props: {
-  draft: CommentDraft;
-  onSubmit: CommentsApi["create"];
+  draft: AnnotationDraft;
+  onSubmit: AnnotationsApi["create"];
+  labels?: AnnotationsApi["labels"];
   onCancel: () => void;
 }) {
-  const { draft, onSubmit, onCancel } = props;
+  const { draft, labels, onSubmit, onCancel } = props;
 
   const [body, setBody] = useState("");
   const [label, setLabel] = useState("");
@@ -175,6 +171,7 @@ function CommentComposer(props: {
       ...draft,
       body,
       label,
+      color: "gray",
     });
     setBody("");
   };
@@ -194,7 +191,7 @@ function CommentComposer(props: {
         </Badge>
         <CloseButton size="2xs" colorPalette="gray" onClick={onCancel} />
       </Group>
-      <Blockquote.Root colorPalette="purple">
+      <Blockquote.Root variant="plain">
         <Blockquote.Content>
           <Text textStyle="xs" color="fg.muted" lineClamp={2}>
             {draft.excerpt}
@@ -217,111 +214,11 @@ function CommentComposer(props: {
         autoFocus
       />
       <Group gap={4}>
-        <LabelField value={label} onChange={setLabel} />
+        <LabelField value={label} onChange={setLabel} suggestions={labels} />
         <Button size="xs" variant="solid" onClick={submit} disabled={!trimmed}>
           Add
         </Button>
       </Group>
-    </Stack>
-  );
-}
-
-function CommentList(props: {
-  items: CommentItem[];
-  currentPage: number;
-  readOnly?: boolean;
-  onJump: (item: CommentItem) => void;
-  onDelete: CommentsApi["delete"];
-  onUpdate: CommentsApi["update"];
-}) {
-  const { items, currentPage, readOnly, onJump, onDelete, onUpdate } = props;
-  const [scope, setScope] = useState<"all" | "page">("all");
-
-  const visible = useMemo(
-    () =>
-      scope === "all" ? items : items.filter((c) => c.page === currentPage),
-    [items, scope, currentPage],
-  );
-
-  if (items.length === 0) {
-    return (
-      <Text textStyle="sm" color="fg.muted">
-        Select text in the document to add a comment.
-      </Text>
-    );
-  }
-
-  return (
-    <Stack gap={3}>
-      <SegmentGroup.Root
-        size="xs"
-        value={scope}
-        onValueChange={(e) => setScope(e.value as "all" | "page")}
-      >
-        <SegmentGroup.Indicator />
-        <SegmentGroup.Items
-          items={[
-            { value: "all", label: "All" },
-            { value: "page", label: "Current Page" },
-          ]}
-        />
-      </SegmentGroup.Root>
-      {visible.length === 0 && (
-        <Text textStyle="sm" color="fg.muted">
-          No comments on this page.
-        </Text>
-      )}
-      {visible.map((comment) => (
-        <Stack
-          key={comment.id}
-          gap={2}
-          p={3}
-          rounded="md"
-          bg="bg"
-          borderWidth="1px"
-          borderColor="border.muted"
-        >
-          <Group justify="space-between" align="baseline">
-            <Text textStyle="xs" color="fg.muted">
-              p. {comment.page} - {comment.author_name} -{" "}
-              {formatRelativeTime(comment.created_at)}
-            </Text>
-            <GenericIconButton
-              size="2xs"
-              variant="ghost"
-              aria-label="Delete comment"
-              colorPalette="red"
-              onClick={() => onDelete(comment.id)}
-              disabled={readOnly}
-            >
-              <LuTrash2 />
-            </GenericIconButton>
-          </Group>
-          <Blockquote.Root
-            colorPalette="purple"
-            cursor="pointer"
-            onClick={() => onJump(comment)}
-            color="fg.muted"
-            _hover={{ color: "fg" }}
-          >
-            <Blockquote.Content>
-              <Text textStyle="xs" lineClamp={2}>
-                {comment.excerpt}
-              </Text>
-            </Blockquote.Content>
-          </Blockquote.Root>
-          <BodyField
-            value={comment.body}
-            onChange={(v) => onUpdate(comment.id, { body: v })}
-            disabled={readOnly}
-          />
-          <LabelField
-            value={comment.label ?? ""}
-            onChange={(v) => onUpdate(comment.id, { label: v || undefined })}
-            disabled={readOnly}
-          />
-        </Stack>
-      ))}
     </Stack>
   );
 }
@@ -350,15 +247,17 @@ function BodyField(props: {
   );
 }
 
-function HighlightList(props: {
-  items: HighlightsApi["items"];
+function AnnotationList(props: {
+  items: AnnotationsApi["items"];
   currentPage: number;
   readOnly?: boolean;
-  onJump: (item: HighlightItem) => void;
-  onDelete: HighlightsApi["delete"];
-  onUpdate: HighlightsApi["update"];
+  labels?: AnnotationsApi["labels"];
+  onJump: (item: AnnotationItem) => void;
+  onDelete: AnnotationsApi["delete"];
+  onUpdate: AnnotationsApi["update"];
 }) {
-  const { items, currentPage, readOnly, onJump, onDelete, onUpdate } = props;
+  const { items, currentPage, readOnly, labels, onJump, onDelete, onUpdate } =
+    props;
   const [scope, setScope] = useState<"all" | "page">("all");
 
   const visible = useMemo(
@@ -370,7 +269,7 @@ function HighlightList(props: {
   if (items.length == 0) {
     return (
       <Text textStyle="sm" color="fg.muted">
-        Select text in the document to create a highlight.
+        Select text in the document to create a annotation.
       </Text>
     );
   }
@@ -391,12 +290,12 @@ function HighlightList(props: {
       </SegmentGroup.Root>
       {visible.length === 0 && (
         <Text textStyle="sm" color="fg.muted">
-          No highlights on this page.
+          No annotations on this page.
         </Text>
       )}
-      {visible.map((highlight) => (
+      {visible.map((annotation) => (
         <Group
-          key={highlight.id}
+          key={annotation.id}
           align="stretch"
           gap={0}
           rounded="md"
@@ -406,42 +305,53 @@ function HighlightList(props: {
           bg="bg"
         >
           <ColorSwatchMenu
-            color={highlight.color}
-            onChange={(color) => onUpdate(highlight.id, { color })}
+            color={annotation.color}
+            onChange={(color) => onUpdate(annotation.id, { color })}
           />
           <Stack gap={1} p={3} flex={1} minW={0}>
-            <Group justify="space-between">
-              <Text textStyle="xs" color="fg.muted">
-                p. {highlight.page}
-              </Text>
+            <Group justify="space-between" align="start">
+              <LabelField
+                value={annotation.label ?? ""}
+                onChange={(v) =>
+                  onUpdate(annotation.id, { label: v || undefined })
+                }
+                disabled={readOnly}
+                suggestions={labels}
+              />
               <GenericIconButton
                 size="2xs"
                 variant="ghost"
-                aria-label="Delete highlight"
+                aria-label="Delete annotation"
                 colorPalette="red"
                 onClick={() => {
-                  onDelete(highlight.id);
+                  onDelete(annotation.id);
                 }}
               >
                 <LuTrash2 />
               </GenericIconButton>
             </Group>
-            <Text
-              textStyle="sm"
-              lineClamp={2}
+            <Blockquote.Root
               cursor="pointer"
-              _hover={{ color: "colorPalette.300" }}
-              onClick={() => onJump(highlight)}
+              onClick={() => onJump(annotation)}
+              color="fg.muted"
+              variant="plain"
+              _hover={{ color: "fg" }}
             >
-              {highlight.excerpt}
-            </Text>
-            <LabelField
-              value={highlight.label ?? ""}
-              onChange={(v) =>
-                onUpdate(highlight.id, { label: v || undefined })
-              }
+              <Blockquote.Content>
+                <Text textStyle="xs" lineClamp={2}>
+                  {annotation.excerpt}
+                </Text>
+              </Blockquote.Content>
+            </Blockquote.Root>
+            <BodyField
+              value={annotation.body}
+              onChange={(v) => onUpdate(annotation.id, { body: v })}
               disabled={readOnly}
             />
+            <Text textStyle="xs" color="fg.muted" textAlign="end">
+              p. {annotation.page} - {annotation.author_name} -{" "}
+              {formatRelativeTime(annotation.created_at)}
+            </Text>
           </Stack>
         </Group>
       ))}
@@ -512,8 +422,9 @@ function LabelField(props: {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  suggestions?: string[];
 }) {
-  const { value, disabled, onChange } = props;
+  const { value, disabled, onChange, suggestions } = props;
 
   return (
     <Editable.Root
@@ -527,7 +438,74 @@ function LabelField(props: {
         color={value ? "fg.muted" : "fg.subtle"}
         fontFamily="mono"
       />
-      <Editable.Input fontFamily="mono" />
+      <EditableCombobox suggestions={suggestions ?? []} size="xs" />
     </Editable.Root>
+  );
+}
+
+function OutlineView(props: {
+  items: OutlineItem[] | null;
+  onNavigate: (dest: OutlineItem["dest"]) => void;
+}) {
+  const { items, onNavigate } = props;
+
+  const collection = useMemo(
+    () =>
+      createTreeCollection<OutlineItem>({
+        nodeToValue: (node) => node.id,
+        nodeToString: (node) => node.title,
+        rootNode: {
+          id: "ROOT",
+          title: "",
+          children: items ?? [],
+          dest: null,
+        },
+      }),
+    [items],
+  );
+
+  if (items === null) {
+    return (
+      <Text textStyle="sm" color="fg.muted">
+        Loading outline
+      </Text>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <Text textStyle="sm" color="fg.muted">
+        No outline available for this document.
+      </Text>
+    );
+  }
+
+  return (
+    <TreeView.Root
+      collection={collection}
+      expandOnClick={false}
+      lazyMount={true}
+    >
+      <TreeView.Tree>
+        <TreeView.Node
+          indentGuide={<TreeView.BranchIndentGuide />}
+          render={({ node, nodeState }) =>
+            nodeState.isBranch ? (
+              <TreeView.BranchControl>
+                <TreeView.BranchTrigger>
+                  <TreeView.BranchIndicator asChild>
+                    <LuChevronRight />
+                  </TreeView.BranchIndicator>
+                </TreeView.BranchTrigger>
+                <TreeView.BranchText>{node.title}</TreeView.BranchText>
+              </TreeView.BranchControl>
+            ) : (
+              <TreeView.Item onClick={() => onNavigate(node.dest)}>
+                <TreeView.ItemText>{node.title}</TreeView.ItemText>
+              </TreeView.Item>
+            )
+          }
+        />
+      </TreeView.Tree>
+    </TreeView.Root>
   );
 }

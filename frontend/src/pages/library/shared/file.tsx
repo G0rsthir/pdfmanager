@@ -299,13 +299,13 @@ export function FileRow(props: {
                 ))}
               </Group>
               <Group gap={3} justifyContent="end">
-                {includeReadDate && file.state.updated_at && (
+                {includeReadDate && file.state.last_read_at && (
                   <Text
                     textStyle="xs"
                     color="fg.muted"
-                    title={new Date(file.state.updated_at).toLocaleString()}
+                    title={new Date(file.state.last_read_at).toLocaleString()}
                   >
-                    Read {formatRelativeTime(file.state.updated_at)}
+                    Read {formatRelativeTime(file.state.last_read_at)}
                   </Text>
                 )}
                 {file.page_count != null && (
@@ -366,13 +366,13 @@ export function FileCard(props: {
           <GridItem minW={0}>
             <Stack gap={2} h="full">
               <Group>
-                {includeReadDate && file.state.updated_at && (
+                {includeReadDate && file.state.last_read_at && (
                   <Text
                     textStyle="xs"
                     color="fg.muted"
-                    title={new Date(file.state.updated_at).toLocaleString()}
+                    title={new Date(file.state.last_read_at).toLocaleString()}
                   >
-                    Read {formatRelativeTime(file.state.updated_at)}
+                    Read {formatRelativeTime(file.state.last_read_at)}
                   </Text>
                 )}
                 <Group gap={0} ms="auto">
@@ -539,12 +539,7 @@ function EditFileDialog(props: {
 }) {
   const { open, onClose, file } = props;
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: file.name,
@@ -569,20 +564,20 @@ function EditFileDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title="Edit file"
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
       disabled={file.is_read_only_by_current_user}
     >
-      <FormField
+      <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root
@@ -602,7 +597,7 @@ function EditFileDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="description"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root
@@ -619,7 +614,7 @@ function EditFileDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="collection_id"
         validators={{
           onChange: ({ value }) => (!value ? "Folder is required" : undefined),
@@ -641,7 +636,7 @@ function EditFileDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="tags"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root
@@ -657,7 +652,7 @@ function EditFileDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }

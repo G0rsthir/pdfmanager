@@ -14,24 +14,21 @@ import {
   getFileDetailsResponseTransformer,
   getFileStateResponseTransformer,
   getLibraryTreeResponseTransformer,
-  listFileCommentsResponseTransformer,
+  listAnnotationsResponseTransformer,
   listFilesResponseTransformer,
   refreshAuthTokenResponseTransformer,
   searchFilesResponseTransformer,
 } from "./transformers.gen";
 import type {
+  CreateAnnotationData,
+  CreateAnnotationErrors,
+  CreateAnnotationResponses,
   CreateAuthTokenData,
   CreateAuthTokenErrors,
   CreateAuthTokenResponses,
   CreateCollectionData,
   CreateCollectionErrors,
   CreateCollectionResponses,
-  CreateCommentData,
-  CreateCommentErrors,
-  CreateCommentResponses,
-  CreateHighlightData,
-  CreateHighlightErrors,
-  CreateHighlightResponses,
   CreateOidcAuthProviderData,
   CreateOidcAuthProviderErrors,
   CreateOidcAuthProviderResponses,
@@ -41,21 +38,18 @@ import type {
   CreateUserData,
   CreateUserErrors,
   CreateUserResponses,
+  DeleteAnnotationData,
+  DeleteAnnotationErrors,
+  DeleteAnnotationResponses,
   DeleteCollectionData,
   DeleteCollectionErrors,
   DeleteCollectionPermissionData,
   DeleteCollectionPermissionErrors,
   DeleteCollectionPermissionResponses,
   DeleteCollectionResponses,
-  DeleteCommentData,
-  DeleteCommentErrors,
-  DeleteCommentResponses,
   DeleteFileData,
   DeleteFileErrors,
   DeleteFileResponses,
-  DeleteHighlightData,
-  DeleteHighlightErrors,
-  DeleteHighlightResponses,
   DeleteOidcAuthProviderData,
   DeleteOidcAuthProviderErrors,
   DeleteOidcAuthProviderResponses,
@@ -96,6 +90,9 @@ import type {
   InviteToCollectionResponses,
   ListAnnotationLabelsData,
   ListAnnotationLabelsResponses,
+  ListAnnotationsData,
+  ListAnnotationsErrors,
+  ListAnnotationsResponses,
   ListAuthProvidersData,
   ListAuthProvidersResponses,
   ListCollectionMoveTargetsData,
@@ -103,12 +100,6 @@ import type {
   ListCollectionMoveTargetsResponses,
   ListCollectionsData,
   ListCollectionsResponses,
-  ListFileCommentsData,
-  ListFileCommentsErrors,
-  ListFileCommentsResponses,
-  ListFileHighlightsData,
-  ListFileHighlightsErrors,
-  ListFileHighlightsResponses,
   ListFileMoveTargetsData,
   ListFileMoveTargetsErrors,
   ListFileMoveTargetsResponses,
@@ -128,15 +119,12 @@ import type {
   OidcLoginData,
   OidcLoginErrors,
   OidcLoginResponses,
-  PatchCommentData,
-  PatchCommentErrors,
-  PatchCommentResponses,
+  PatchAnnotationData,
+  PatchAnnotationErrors,
+  PatchAnnotationResponses,
   PatchFileStateData,
   PatchFileStateErrors,
   PatchFileStateResponses,
-  PatchHighlightData,
-  PatchHighlightErrors,
-  PatchHighlightResponses,
   RefreshAuthTokenData,
   RefreshAuthTokenResponses,
   ResetUserPasswordData,
@@ -663,39 +651,40 @@ export const listAnnotationLabels = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{id}/annotations/labels",
+    url: "/api/v1/library/files/annotations/labels",
     ...options,
   });
 
 /**
- * List File Highlights
+ * List Annotations
  */
-export const listFileHighlights = <ThrowOnError extends boolean = false>(
-  options: Options<ListFileHighlightsData, ThrowOnError>,
+export const listAnnotations = <ThrowOnError extends boolean = false>(
+  options: Options<ListAnnotationsData, ThrowOnError>,
 ) =>
   (options.client ?? client).get<
-    ListFileHighlightsResponses,
-    ListFileHighlightsErrors,
+    ListAnnotationsResponses,
+    ListAnnotationsErrors,
     ThrowOnError
   >({
+    responseTransformer: listAnnotationsResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{id}/annotations/highlights",
+    url: "/api/v1/library/files/{id}/annotations",
     ...options,
   });
 
 /**
- * Create File Highlight
+ * Create Annotation
  */
-export const createHighlight = <ThrowOnError extends boolean = false>(
-  options: Options<CreateHighlightData, ThrowOnError>,
+export const createAnnotation = <ThrowOnError extends boolean = false>(
+  options: Options<CreateAnnotationData, ThrowOnError>,
 ) =>
   (options.client ?? client).post<
-    CreateHighlightResponses,
-    CreateHighlightErrors,
+    CreateAnnotationResponses,
+    CreateAnnotationErrors,
     ThrowOnError
   >({
     security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{id}/annotations/highlights",
+    url: "/api/v1/library/files/{id}/annotations",
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -704,107 +693,34 @@ export const createHighlight = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Delete File Highlight
+ * Delete  Annotation
  */
-export const deleteHighlight = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteHighlightData, ThrowOnError>,
+export const deleteAnnotation = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteAnnotationData, ThrowOnError>,
 ) =>
   (options.client ?? client).delete<
-    DeleteHighlightResponses,
-    DeleteHighlightErrors,
+    DeleteAnnotationResponses,
+    DeleteAnnotationErrors,
     ThrowOnError
   >({
     security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{file_id}/annotations/highlights/{id}",
+    url: "/api/v1/library/files/{file_id}/annotations/{id}",
     ...options,
   });
 
 /**
- * Patch File Highlight
+ * Patch Annotation
  */
-export const patchHighlight = <ThrowOnError extends boolean = false>(
-  options: Options<PatchHighlightData, ThrowOnError>,
+export const patchAnnotation = <ThrowOnError extends boolean = false>(
+  options: Options<PatchAnnotationData, ThrowOnError>,
 ) =>
   (options.client ?? client).patch<
-    PatchHighlightResponses,
-    PatchHighlightErrors,
+    PatchAnnotationResponses,
+    PatchAnnotationErrors,
     ThrowOnError
   >({
     security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{file_id}/annotations/highlights/{id}",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * List File Comments
- */
-export const listFileComments = <ThrowOnError extends boolean = false>(
-  options: Options<ListFileCommentsData, ThrowOnError>,
-) =>
-  (options.client ?? client).get<
-    ListFileCommentsResponses,
-    ListFileCommentsErrors,
-    ThrowOnError
-  >({
-    responseTransformer: listFileCommentsResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{id}/annotations/comments",
-    ...options,
-  });
-
-/**
- * Create File Comment
- */
-export const createComment = <ThrowOnError extends boolean = false>(
-  options: Options<CreateCommentData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    CreateCommentResponses,
-    CreateCommentErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{id}/annotations/comments",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * Delete File Comment
- */
-export const deleteComment = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteCommentData, ThrowOnError>,
-) =>
-  (options.client ?? client).delete<
-    DeleteCommentResponses,
-    DeleteCommentErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{file_id}/annotations/comments/{id}",
-    ...options,
-  });
-
-/**
- * Patch File Comment
- */
-export const patchComment = <ThrowOnError extends boolean = false>(
-  options: Options<PatchCommentData, ThrowOnError>,
-) =>
-  (options.client ?? client).patch<
-    PatchCommentResponses,
-    PatchCommentErrors,
-    ThrowOnError
-  >({
-    security: [{ scheme: "bearer", type: "http" }],
-    url: "/api/v1/library/files/{file_id}/annotations/comments/{id}",
+    url: "/api/v1/library/files/{file_id}/annotations/{id}",
     ...options,
     headers: {
       "Content-Type": "application/json",

@@ -60,13 +60,7 @@ export function ProfileContent() {
 function EditAccountDetails() {
   const { session, refreshSession } = useAuth();
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-    Subscribe,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: session?.user.name ?? "",
@@ -79,14 +73,14 @@ function EditAccountDetails() {
     resetForm: false,
     onSuccess: () => {
       refreshSession();
-      reset(state.values);
+      form.reset(form.state.values);
     },
   });
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onSubmit={form.handleSubmit}>
       <Stack>
-        <FormField
+        <form.Field
           name="name"
           children={({ state: fieldState, handleChange, handleBlur }) => (
             <Field.Root
@@ -106,7 +100,7 @@ function EditAccountDetails() {
             </Field.Root>
           )}
         />
-        <FormField
+        <form.Field
           name="email"
           children={({ state: fieldState, handleChange, handleBlur }) => (
             <Field.Root
@@ -126,8 +120,8 @@ function EditAccountDetails() {
             </Field.Root>
           )}
         />
-        <FormError errors={state.errorMap.onSubmit} />
-        <Subscribe
+        <FormError errors={form.state.errorMap.onSubmit} />
+        <form.Subscribe
           selector={(state) => state.isDirty}
           children={(isDirty) => {
             return (
@@ -152,11 +146,7 @@ function ChangePassword() {
   const { open, onOpen, onClose } = useDisclosure();
   const { session } = useAuth();
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         password_old: "",
@@ -194,9 +184,9 @@ function ChangePassword() {
     );
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onSubmit={form.handleSubmit}>
       <Stack>
-        <FormField
+        <form.Field
           name="password_old"
           children={({ state: fieldState, handleChange, handleBlur }) => (
             <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -213,7 +203,7 @@ function ChangePassword() {
             </Field.Root>
           )}
         />
-        <FormField
+        <form.Field
           name="password_new"
           children={({ state: fieldState, handleChange, handleBlur }) => (
             <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -230,7 +220,7 @@ function ChangePassword() {
             </Field.Root>
           )}
         />
-        <FormField
+        <form.Field
           name="password_confirm"
           children={({ state: fieldState, handleChange, handleBlur }) => (
             <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -247,7 +237,7 @@ function ChangePassword() {
             </Field.Root>
           )}
         />
-        <FormError errors={state.errorMap.onSubmit} />
+        <FormError errors={form.state.errorMap.onSubmit} />
         <Group justifyContent="flex-end">
           <Button type="submit">Update</Button>
         </Group>

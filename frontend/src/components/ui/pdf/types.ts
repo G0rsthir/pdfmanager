@@ -1,37 +1,26 @@
 import type {
-  CommentResponse,
-  CreateCommentRequest,
-  CreateHighlightRequest,
-  HighlightResponse,
+  AnnotationResponse,
+  CreateAnnotationRequest,
   NormalizedRect,
-  PatchCommentRequest,
-  PatchHighlightRequest,
+  PatchAnnotationRequest,
 } from "@/api/types.gen";
 export type { NormalizedRect } from "@/api/types.gen";
 
-export type HighlightItem = HighlightResponse;
-export type CreateHighlight = CreateHighlightRequest;
-export type PatchHighlight = PatchHighlightRequest;
+export type AnnotationItem = AnnotationResponse;
+export type AnnotationDraft = Pick<
+  AnnotationItem,
+  "page" | "excerpt" | "rects"
+>;
+export type CreateAnnotation = CreateAnnotationRequest;
+export type PatchAnnotation = PatchAnnotationRequest;
 
-export type CommentItem = CommentResponse;
-export type CommentDraft = Pick<CommentItem, "page" | "excerpt" | "rects">;
-export type CreateComment = CreateCommentRequest;
-export type PatchComment = PatchCommentRequest;
-
-export interface HighlightsApi {
-  items: HighlightItem[];
-  create: (input: CreateHighlight) => void;
-  update: (id: string, patch: PatchHighlight) => void;
+export interface AnnotationsApi {
+  items: AnnotationItem[];
+  create: (input: CreateAnnotation) => void;
+  update: (id: string, patch: PatchAnnotation) => void;
   delete: (id: string) => void;
   error?: Error | null;
-}
-
-export interface CommentsApi {
-  items: CommentItem[];
-  create: (input: CreateComment) => void;
-  update: (id: string, patch: PatchCommentRequest) => void;
-  delete: (id: string) => void;
-  error?: Error | null;
+  labels?: string[];
 }
 
 export interface ZoomPreset {
@@ -56,7 +45,39 @@ export interface SelectionPopoverState {
   anchor: { x: number; y: number };
 }
 
-export type AnnotationTab = "comments" | "highlights";
+export type SidePanelTab = "annotations" | "outline";
+
+/**
+ * The raw outline item as provided by PDF.js
+ */
+export interface OutlineRawItem {
+  title: string;
+  bold: boolean;
+  italic: boolean;
+  color: Uint8ClampedArray;
+  dest: string | unknown[] | null;
+  url: string | null;
+  unsafeUrl: string | undefined;
+  newWindow: boolean | undefined;
+  count: number | undefined;
+  items: OutlineRawItem[];
+}
+
+/**
+ * The processed outline item used in the UI.
+ */
+export interface OutlineItem {
+  id: string;
+  title: string;
+  bold?: boolean;
+  italic?: boolean;
+  /**
+   * PDF.js destination - pass back to linkService.goToDestination(dest).
+   * */
+  dest: string | unknown[] | null;
+  url?: string | null;
+  children: OutlineItem[];
+}
 
 export interface Bookmark {
   page: number;

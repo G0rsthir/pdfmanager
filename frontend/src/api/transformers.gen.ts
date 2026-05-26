@@ -6,7 +6,7 @@ import type {
   GetFileDetailsResponse,
   GetFileStateResponse,
   GetLibraryTreeResponse,
-  ListFileCommentsResponse,
+  ListAnnotationsResponse,
   ListFilesResponse,
   RefreshAuthTokenResponse,
   SearchFilesResponse,
@@ -32,8 +32,8 @@ export const refreshAuthTokenResponseTransformer = async (
 };
 
 const fileStateResponseSchemaResponseTransformer = (data: any) => {
-  if (data.updated_at) {
-    data.updated_at = new Date(data.updated_at);
+  if (data.last_read_at) {
+    data.last_read_at = new Date(data.last_read_at);
   }
   return data;
 };
@@ -100,22 +100,34 @@ export const listFilesResponseTransformer = async (
   return data;
 };
 
-const commentResponseSchemaResponseTransformer = (data: any) => {
+const annotationResponseSchemaResponseTransformer = (data: any) => {
   data.created_at = new Date(data.created_at);
   return data;
 };
 
-export const listFileCommentsResponseTransformer = async (
+export const listAnnotationsResponseTransformer = async (
   data: any,
-): Promise<ListFileCommentsResponse> => {
+): Promise<ListAnnotationsResponse> => {
   data = data.map((item: any) =>
-    commentResponseSchemaResponseTransformer(item),
+    annotationResponseSchemaResponseTransformer(item),
   );
+  return data;
+};
+
+const searchHitResponseSchemaResponseTransformer = (data: any) => {
+  if (data.annotation) {
+    data.annotation = annotationResponseSchemaResponseTransformer(
+      data.annotation,
+    );
+  }
   return data;
 };
 
 const fileSearchResponseSchemaResponseTransformer = (data: any) => {
   data.file = fileResponseSchemaResponseTransformer(data.file);
+  data.hits = data.hits.map((item: any) =>
+    searchHitResponseSchemaResponseTransformer(item),
+  );
   return data;
 };
 

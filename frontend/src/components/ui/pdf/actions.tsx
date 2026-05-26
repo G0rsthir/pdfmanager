@@ -19,6 +19,7 @@ import {
   LuHighlighter,
   LuMessageSquare,
   LuMinus,
+  LuPanelRight,
   LuPlus,
   LuRotateCcw,
   LuRotateCw,
@@ -225,7 +226,7 @@ export function Toolbar(props: ToolbarProps) {
         aria-pressed={showAnnotations}
         onClick={toggleAnnotations}
       >
-        <LuMessageSquare />
+        <LuPanelRight />
       </GenericIconButton>
       <Separator orientation="vertical" h="5" />
       <Group gap="0" ms="4">

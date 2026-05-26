@@ -54,7 +54,7 @@ function Lifecycle({ children }: { children?: React.ReactNode }) {
       replace: true,
     });
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
   }, []);
 
   useEffect(() => {

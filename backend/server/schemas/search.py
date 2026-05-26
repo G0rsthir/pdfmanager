@@ -1,10 +1,31 @@
-from typing import Literal
+from dataclasses import dataclass
+from typing import Any, Literal
+from uuid import UUID
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field, computed_field
 
 from server.const import FragmentType
-from server.schemas.library import FileResponse
+from server.infrastructure.search import SearchHit
+from server.schemas.library import AnnotationResponse, FileResponse
 from server.schemas.query import PaginationQueryParams
+
+
+@dataclass(kw_only=True)
+class SearchFilter:
+    query: str
+    fragment_types: list[FragmentType] | None
+
+
+@dataclass(kw_only=True)
+class EnrichedHit(SearchHit):
+    annotation: Any | None = None
+
+
+@dataclass(kw_only=True)
+class FileSearchResult:
+    hits: list[EnrichedHit]
+    best_rank: float
+    doc_id: UUID
 
 
 class SearchFilesQueryParams(PaginationQueryParams):
@@ -12,17 +33,23 @@ class SearchFilesQueryParams(PaginationQueryParams):
     name: str | None = None
     description: str | None = None
     text: str | None = None
-    comment: str | None = None
+    annotation: str | None = None
     label: str | None = None
 
-    def searches(self) -> list[tuple[str, list[FragmentType] | None]]:
-        out: list[tuple[str, list[FragmentType] | None]] = []
+    def filters(self) -> list[SearchFilter]:
+        out: list[SearchFilter] = []
         if self.text:
-            out.append((self.text, [FragmentType.PAGE, FragmentType.TITLE, FragmentType.DESCRIPTION]))
-        if self.comment:
-            out.append((self.comment, [FragmentType.COMMENT]))
+            out.append(
+                SearchFilter(
+                    query=self.text, fragment_types=[FragmentType.PAGE, FragmentType.TITLE, FragmentType.DESCRIPTION]
+                )
+            )
+        if self.annotation:
+            out.append(SearchFilter(query=self.annotation, fragment_types=[FragmentType.ANNOTATION]))
+
         if self.label:
-            out.append((self.label, [FragmentType.LABEL]))
+            out.append(SearchFilter(query=self.label, fragment_types=[FragmentType.LABEL]))
+
         return out
 
 
@@ -31,6 +58,9 @@ class SearchHitResponse(BaseModel):
     page_number: int | None = None
     fragment_type: FragmentType
     rank: float
+    source_id: UUID | None = Field(default=None, exclude=True)
+    annotation: AnnotationResponse | None = None
+    field: str | None = None
 
 
 class FileSearchResponse(BaseModel):

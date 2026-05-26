@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field
 
 from server.const import RESOURCE_PERMISSIONS
 from server.schemas.identity import UserSummaryResponse
@@ -121,11 +120,11 @@ class FileStateResponse(BaseModel):
     current_page: int
     scale: str
 
-    updated_at: datetime | None = None
+    last_read_at: AwareDatetime | None = None
 
     @classmethod
     def with_defaults(cls):
-        return cls(is_favorite=False, current_page=1, scale="1.0", updated_at=None)
+        return cls(is_favorite=False, current_page=1, scale="1.0", last_read_at=None)
 
 
 class PatchFileStateRequest(BaseModel):
@@ -250,40 +249,25 @@ class NormalizedRect(BaseModel):
     height: float = Field(ge=0, le=1)
 
 
-class CreateHighlightRequest(BaseModel):
+class CreateAnnotationRequest(BaseModel):
     page: int
+    body: str
     color: str
     excerpt: str
     rects: list[NormalizedRect]
     label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
 
 
-class PatchHighlightRequest(BaseModel):
+class PatchAnnotationRequest(BaseModel):
     label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
+    body: str | None = None
     color: str | None = None
 
 
-class HighlightResponse(CreateHighlightRequest):
+class AnnotationResponse(CreateAnnotationRequest):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     author_id: UUID | None = None
-    author_name: str | None = None
-
-
-class CreateCommentRequest(BaseModel):
-    page: int
-    body: str
-    excerpt: str
-    rects: list[NormalizedRect]
-    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
-
-
-class PatchCommentRequest(BaseModel):
-    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
-    body: str | None = None
-
-
-class CommentResponse(CreateCommentRequest):
-    id: UUID
-    author_id: UUID | None = None
-    created_at: datetime
+    created_at: AwareDatetime
     author_name: str | None = None

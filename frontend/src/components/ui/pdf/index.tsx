@@ -13,18 +13,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoadingError } from "../error";
 import { ContentLoadingOverlay } from "../feedback";
 import { PagePeekBar, SearchBar, SelectionPopover, Toolbar } from "./actions";
-import { renderPageComments, renderPageHighlights } from "./overlay";
-import { AnnotationsPanel } from "./panel";
+import { normalizeOutline } from "./hooks";
+import { renderPageAnnotations } from "./overlay";
+import { SidePanel } from "./panel";
 import "./style.css";
 import type {
-  AnnotationTab,
+  AnnotationDraft,
+  AnnotationsApi,
   Bookmark,
-  CommentDraft,
-  CommentsApi,
-  HighlightsApi,
   NormalizedRect,
+  OutlineItem,
   PopoverAction,
   SelectionPopoverState,
+  SidePanelTab,
 } from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -57,8 +58,7 @@ interface ReactPDFViewerProps {
   readOnly?: boolean;
   onPageChange?: (value: number) => void;
   onScaleChange?: (value: string) => void;
-  highlights: HighlightsApi;
-  comments: CommentsApi;
+  annotations: AnnotationsApi;
 }
 
 export function ReactPDFViewer(props: ReactPDFViewerProps) {
@@ -68,8 +68,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     initialScaleValue = "1",
     fileName = "document.pdf",
     startInPreviewPage,
-    comments,
-    highlights,
+    annotations,
     onPageChange,
     onScaleChange,
     readOnly,
@@ -86,8 +85,10 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const [showAnnotations, setShowAnnotations] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [matchCount, setMatchCount] = useState({ current: 0, total: 0 });
-  const [annotationTab, setAnnotationTab] = useState<AnnotationTab>("comments");
-  const [draftComment, setDraftComment] = useState<CommentDraft | null>(null);
+  const [outline, setOutline] = useState<OutlineItem[] | null>(null);
+  const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>("annotations");
+  const [draftAnnotation, setDraftAnnotation] =
+    useState<AnnotationDraft | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -98,7 +99,14 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const findControllerRef = useRef<PDFFindController | null>(null);
   const isPeekingRef = useRef(false);
   const pdfHistoryRef = useRef<PDFHistory | null>(null);
+  const linkServiceRef = useRef<PDFLinkService | null>(null);
   const lastLocationRef = useRef<Bookmark | null>(null);
+
+  const beginPeek = useCallback(() => {
+    if (isPeekingRef.current) return;
+    if (lastLocationRef.current) setBookmark(lastLocationRef.current);
+    isPeekingRef.current = true;
+  }, []);
 
   // Initialize PDFViewer
   useEffect(() => {
@@ -113,6 +121,8 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
       eventBus,
       ignoreDestinationZoom: true,
     });
+
+    linkServiceRef.current = linkService;
 
     const findController = new PDFFindController({ eventBus, linkService });
     findControllerRef.current = findController;
@@ -205,6 +215,9 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
         linkService.setDocument(pdfDoc, null);
         pdfHistory.initialize({ fingerprint: pdfDoc.fingerprints[0] ?? "" });
         setNumPages(pdfDoc.numPages);
+        pdfDoc.getOutline().then((nodes) => {
+          setOutline(normalizeOutline(nodes));
+        });
         setLoading(false);
       })
       .catch((err) => {
@@ -220,7 +233,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     };
 
     // initialScaleValue and intialPage are only used on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
   }, [file, onPageChange, onScaleChange]);
 
   const goToPage = useCallback(
@@ -301,12 +314,6 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     },
     [dispatchFind],
   );
-
-  const beginPeek = useCallback(() => {
-    if (isPeekingRef.current) return;
-    if (lastLocationRef.current) setBookmark(lastLocationRef.current);
-    isPeekingRef.current = true;
-  }, []);
 
   const returnFromPeek = useCallback(() => {
     if (bookmark == null) return;
@@ -460,96 +467,76 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     return () => window.removeEventListener("popstate", onPop);
   }, [beginPeek]);
 
-  const { create: createHighlight } = highlights;
+  const { create: createAnnotation } = annotations;
 
   const handleSelectionAction = useCallback(
     (action: PopoverAction, popover: SelectionPopoverState) => {
       if (action === "highlight") {
-        createHighlight({
+        createAnnotation({
           page: popover.page,
           excerpt: popover.text,
           color: "yellow",
           rects: popover.rects,
+          body: "",
         });
       } else {
-        setDraftComment({
+        setDraftAnnotation({
           page: popover.page,
           excerpt: popover.text,
           rects: popover.rects,
         });
       }
-      setAnnotationTab(action === "comment" ? "comments" : "highlights");
+      setSidePanelTab("annotations");
       setShowAnnotations(true);
       window.getSelection()?.removeAllRanges();
     },
-    [createHighlight],
+    [createAnnotation],
   );
 
-  const { create: onCreateComment } = comments;
-
-  const handleCreateComment: CommentsApi["create"] = useCallback(
+  const handleCreateAnnotation: AnnotationsApi["create"] = useCallback(
     (input) => {
-      onCreateComment(input);
-      setDraftComment(null);
+      createAnnotation(input);
+      setDraftAnnotation(null);
     },
-    [onCreateComment],
+    [createAnnotation],
   );
 
-  const commentsApi = useMemo(
-    () => ({ ...comments, create: handleCreateComment }),
-    [handleCreateComment, comments],
+  const annotationApi = useMemo(
+    () => ({ ...annotations, create: handleCreateAnnotation }),
+    [handleCreateAnnotation, annotations],
   );
 
-  // Sync highlight indicators with PDF.js text-layer renders.
+  // Sync annotations indicators with PDF.js text-layer renders.
   useEffect(() => {
     const eventBus = eventBusRef.current;
     const viewerDiv = viewerDivRef.current;
     if (!eventBus || !viewerDiv) return;
 
+    const handleOpen = () => {
+      setSidePanelTab("annotations");
+      setShowAnnotations(true);
+    };
+
     const handler = (e: { pageNumber: number }) =>
-      renderPageHighlights(viewerDiv, highlights.items, e.pageNumber);
+      renderPageAnnotations(
+        viewerDiv,
+        annotations.items,
+        e.pageNumber,
+        handleOpen,
+      );
     eventBus.on("textlayerrendered", handler);
 
     viewerDiv
       .querySelectorAll<HTMLElement>(".page[data-page-number]")
       .forEach((el) => {
         const num = parseInt(el.dataset.pageNumber!, 10);
-        renderPageHighlights(viewerDiv, highlights.items, num);
+        renderPageAnnotations(viewerDiv, annotations.items, num, handleOpen);
       });
 
     return () => {
       eventBus.off("textlayerrendered", handler);
     };
-  }, [highlights]);
-
-  // Sync comment indicators with PDF.js text-layer renders.
-  useEffect(() => {
-    const eventBus = eventBusRef.current;
-    const viewerDiv = viewerDivRef.current;
-    if (!eventBus || !viewerDiv) return;
-
-    const handler = (e: { pageNumber: number }) =>
-      renderPageComments(viewerDiv, comments.items, e.pageNumber, () => {
-        setAnnotationTab("comments");
-        setShowAnnotations(true);
-      });
-
-    eventBus.on("textlayerrendered", handler);
-
-    viewerDiv
-      .querySelectorAll<HTMLElement>(".page[data-page-number]")
-      .forEach((el) => {
-        const num = parseInt(el.dataset.pageNumber!, 10);
-        renderPageComments(viewerDiv, comments.items, num, () => {
-          setAnnotationTab("comments");
-          setShowAnnotations(true);
-        });
-      });
-
-    return () => {
-      eventBus.off("textlayerrendered", handler);
-    };
-  }, [comments]);
+  }, [annotations]);
 
   const jumpToAnchor = useCallback(
     async (anchor: { page: number; rects: NormalizedRect[] }) => {
@@ -579,7 +566,12 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     [beginPeek],
   );
 
-  // TODO Outline Panel
+  const handleJumpToOutlineItem = (dest: OutlineItem["dest"]) => {
+    if (!dest) return;
+    beginPeek();
+    linkServiceRef.current?.goToDestination(dest);
+  };
+
   return (
     <Stack ref={wrapperRef} gap="0" h="full" bg="bg">
       <Toolbar
@@ -636,7 +628,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
             />
           </Box>
           <PagePeekBar
-            open={isPeekingRef.current}
+            open={bookmark ? true : false}
             currentPage={currentPage}
             bookmark={bookmark}
             onReturn={returnFromPeek}
@@ -644,18 +636,18 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
           />
         </Box>
         {showAnnotations && (
-          <AnnotationsPanel
+          <SidePanel
             readOnly={readOnly}
-            comments={commentsApi}
-            highlights={highlights}
-            draftComment={draftComment}
+            annotations={annotationApi}
+            draftAnnotation={draftAnnotation}
             currentPage={currentPage}
-            tab={annotationTab}
-            onTabChange={setAnnotationTab}
+            tab={sidePanelTab}
+            outline={outline}
+            onTabChange={setSidePanelTab}
             onClose={toggleAnnotations}
-            onJumpToHighlight={jumpToAnchor}
-            onJumpToComment={jumpToAnchor}
-            onCancelDraftComment={() => setDraftComment(null)}
+            onJumpToAnnotation={jumpToAnchor}
+            onJumpToOutlineItem={handleJumpToOutlineItem}
+            onCancelDraftAnnotation={() => setDraftAnnotation(null)}
           />
         )}
       </Box>

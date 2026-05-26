@@ -40,7 +40,8 @@ function useLoginState() {
       setAppState(state);
     })();
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // One time load of app state on login page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -94,11 +95,7 @@ export function LoginPage() {
   const auth = useAuth();
   const loginState = useLoginState();
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         username: "",
@@ -117,14 +114,14 @@ export function LoginPage() {
   return (
     <Center h="100vh">
       <Container maxW="md">
-        <Form onSubmit={handleSubmit}>
+        <Form onSubmit={form.handleSubmit}>
           <Card.Root padding="8">
             <Card.Body>
               <Stack gap="6">
                 <Heading size="2xl" mb="4" textAlign="center">
                   Log in to your account
                 </Heading>
-                <FormField
+                <form.Field
                   name="username"
                   children={({
                     state: fieldState,
@@ -147,7 +144,7 @@ export function LoginPage() {
                     </Field.Root>
                   )}
                 />
-                <FormField
+                <form.Field
                   name="password"
                   children={({
                     state: fieldState,
@@ -170,7 +167,7 @@ export function LoginPage() {
                     </Field.Root>
                   )}
                 />
-                <FormError errors={state.errorMap.onSubmit} />
+                <FormError errors={form.state.errorMap.onSubmit} />
               </Stack>
             </Card.Body>
             <Card.Footer>

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from io import BytesIO
 from logging import getLogger
 from pathlib import Path
@@ -17,18 +18,16 @@ from server.infrastructure.pdf import PdfFile
 from server.infrastructure.search import ContentFragment, SearchBackend
 from server.infrastructure.storage import StorageBackend
 from server.models import (
+    ORMAnnotation,
     ORMCollection,
     ORMFile,
-    ORMFileComment,
-    ORMFileHighlight,
     ORMFileState,
     ORMTag,
     ORMUserTagPreference,
 )
 from server.repositories import (
+    AnnotationRepository,
     CollectionRepository,
-    FileCommentRepository,
-    FileHighlightRepository,
     FileRepository,
     FileWithDetails,
     PermissionAssignment,
@@ -49,8 +48,7 @@ class LibraryService:
         search_engine: SearchBackend,
         permission_repo: PermissionRepository,
         storage_backend: StorageBackend,
-        highlight_repo: FileHighlightRepository,
-        comment_repo: FileCommentRepository,
+        annotation_repo: AnnotationRepository,
         user_repo: UserRepository,
     ):
         self._collection_repo = collection_repo
@@ -59,8 +57,7 @@ class LibraryService:
         self._search_engine = search_engine
         self._permission_repo = permission_repo
         self._storage_backend = storage_backend
-        self._highlight_repo = highlight_repo
-        self._comment_repo = comment_repo
+        self._annotation_repo = annotation_repo
         self._user_repo = user_repo
         self._logger = getLogger(__name__)
 
@@ -240,7 +237,11 @@ class LibraryService:
             await self._file_repo.flush()
 
         if current_page is not None:
-            state.current_page = min(current_page, file.page_count)
+            page = min(current_page, file.page_count)
+            if state.current_page != page:
+                state.current_page = page
+                state.last_read_at = datetime.now(UTC)
+
         if scale is not None:
             state.scale = scale
         if is_favorite is not None:
@@ -443,11 +444,10 @@ class LibraryService:
         if not files:
             return []
         file_ids = [f.id for f in files]
-        highlight_labels = await self._highlight_repo.list_distinct_labels(file_ids)
-        comment_labels = await self._comment_repo.list_distinct_labels(file_ids)
-        return sorted({*highlight_labels, *comment_labels})
+        annotation_labels = await self._annotation_repo.list_distinct_labels(file_ids)
+        return sorted(annotation_labels)
 
-    async def list_file_highlights(self, user_id: UUID, file_id: UUID):
+    async def list_annotations(self, user_id: UUID, file_id: UUID):
 
         file = await self._file_repo.get_by_id(file_id)
 
@@ -455,13 +455,14 @@ class LibraryService:
         if not perm or not perm.can_read:
             raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
 
-        return await self._highlight_repo.list_by_file(file_id)
+        return await self._annotation_repo.list_by_file(file_id)
 
-    async def create_highlight(
+    async def create_annotation(
         self,
         user_id: UUID,
         file_id: UUID,
         page: int,
+        body: str,
         color: str,
         excerpt: str,
         rects: list[NormalizedRect],
@@ -474,164 +475,49 @@ class LibraryService:
         if not perm or not perm.can_modify:
             raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
 
-        highlight = ORMFileHighlight(
-            page=page,
-            color=color,
-            excerpt=excerpt,
-            rects=[rect.model_dump() for rect in rects],
-            label=label,
-            file_id=file_id,
-            author_id=user_id,
-        )
-
-        fragments = []
-
-        if highlight.label:
-            fragments.append(
-                ContentFragment(
-                    content=highlight.label,
-                    doc_id=file.id,
-                    entity_type=file.content_type,
-                    fragment_type=FragmentType.LABEL,
-                    source_id=highlight.id,
-                    page_number=highlight.page,
-                )
-            )
-
-        self._highlight_repo.save(highlight)
-        await self._highlight_repo.commit()
-        await self._search_engine.index(fragments)
-
-    async def patch_highlight(
-        self,
-        user_id: UUID,
-        file_id: UUID,
-        highlight_id: UUID,
-        color: str | None = None,
-        label: str | None | UnsetEnum = UNSET,
-    ):
-
-        file = await self._file_repo.get_by_id(file_id)
-
-        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
-            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
-
-        highlight = await self._highlight_repo.get_by_id(highlight_id)
-        if highlight.file_id != file_id:
-            raise InvalidActionError(
-                rule="file_highlight_mismatch", msg="Highlight does not belong to the specified file."
-            )
-        highlight.color = color or highlight.color
-        if label is not UNSET:
-            highlight.label = label
-
-        await self._search_engine.delete_fragment_by_source(highlight.id)
-
-        fragments = []
-        if label and label is not UNSET:
-            fragments.append(
-                ContentFragment(
-                    content=label,
-                    doc_id=file.id,
-                    entity_type=file.content_type,
-                    fragment_type=FragmentType.LABEL,
-                    source_id=highlight.id,
-                    page_number=highlight.page,
-                )
-            )
-
-        await self._search_engine.index(fragments)
-
-        await self._highlight_repo.commit()
-
-    async def delete_highlight(self, user_id: UUID, file_id: UUID, highlight_id: UUID):
-        file = await self._file_repo.get_by_id(file_id)
-
-        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
-            raise InsufficientPermissionError(action="modify", resource="File", identifier=file_id)
-
-        highlight = await self._highlight_repo.get_by_id(highlight_id)
-
-        if highlight.file_id != file_id:
-            raise InvalidActionError(
-                rule="file_highlight_mismatch", msg="Highlight does not belong to the specified file."
-            )
-        await self._highlight_repo.delete(highlight)
-        await self._highlight_repo.commit()
-        await self._search_engine.delete_fragment_by_source(highlight.id)
-
-    async def list_file_comments(self, user_id: UUID, file_id: UUID):
-
-        file = await self._file_repo.get_by_id(file_id)
-
-        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_read:
-            raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
-
-        return await self._comment_repo.list_by_file(file_id)
-
-    async def create_comment(
-        self,
-        user_id: UUID,
-        file_id: UUID,
-        page: int,
-        body: str,
-        excerpt: str,
-        rects: list[NormalizedRect],
-        label: str | None,
-    ):
-
-        file = await self._file_repo.get_by_id(file_id)
-
-        perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
-            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
-
-        comment = ORMFileComment(
+        annotation = ORMAnnotation(
             page=page,
             body=body,
             excerpt=excerpt,
             rects=[rect.model_dump() for rect in rects],
             label=label,
+            color=color,
             file_id=file_id,
             author_id=user_id,
         )
 
-        self._comment_repo.save(comment)
-        await self._comment_repo.commit()
+        self._annotation_repo.save(annotation)
+        await self._annotation_repo.commit()
 
         fragments = [
             ContentFragment(
-                content=comment.body,
+                content=annotation.body,
                 doc_id=file.id,
                 entity_type=file.content_type,
-                fragment_type=FragmentType.COMMENT,
-                source_id=comment.id,
-                page_number=comment.page,
+                fragment_type=FragmentType.ANNOTATION,
+                source_id=annotation.id,
+                page_number=annotation.page,
+                field="body",
+            ),
+            ContentFragment(
+                content=annotation.excerpt,
+                doc_id=file.id,
+                entity_type=file.content_type,
+                fragment_type=FragmentType.ANNOTATION,
+                source_id=annotation.id,
+                page_number=annotation.page,
+                field="excerpt",
             ),
         ]
 
-        if comment.label:
-            fragments.append(
-                ContentFragment(
-                    content=comment.label,
-                    doc_id=file.id,
-                    entity_type=file.content_type,
-                    fragment_type=FragmentType.LABEL,
-                    source_id=comment.id,
-                    page_number=comment.page,
-                )
-            )
-
         await self._search_engine.index(fragments)
 
-    async def patch_comment(
+    async def patch_annotation(
         self,
         user_id: UUID,
         file_id: UUID,
-        comment_id: UUID,
+        annotation_id: UUID,
+        color: str | None = None,
         body: str | None = None,
         label: str | None | UnsetEnum = UNSET,
     ):
@@ -642,56 +528,61 @@ class LibraryService:
         if not perm or not perm.can_modify:
             raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
 
-        comment = await self._comment_repo.get_by_id(comment_id)
-        if comment.file_id != file_id:
-            raise InvalidActionError(rule="file_comment_mismatch", msg="Comment does not belong to the specified file.")
-        comment.body = body or comment.body
+        annotation = await self._annotation_repo.get_by_id(annotation_id)
+        if annotation.file_id != file_id:
+            raise InvalidActionError(
+                rule="file_annotation_mismatch", msg="Annotation does not belong to the specified file."
+            )
+
         if label is not UNSET:
-            comment.label = label
+            annotation.label = label
 
-        await self._comment_repo.commit()
+        annotation.body = body or annotation.body
+        annotation.color = color or annotation.color
 
-        await self._search_engine.delete_fragment_by_source(comment.id)
+        await self._annotation_repo.commit()
+
+        await self._search_engine.delete_fragment_by_source(annotation.id)
 
         fragments = [
             ContentFragment(
-                content=comment.body,
+                content=annotation.body,
                 doc_id=file.id,
                 entity_type=file.content_type,
-                fragment_type=FragmentType.COMMENT,
-                source_id=comment.id,
-                page_number=comment.page,
+                fragment_type=FragmentType.ANNOTATION,
+                source_id=annotation.id,
+                page_number=annotation.page,
+                field="body",
+            ),
+            ContentFragment(
+                content=annotation.excerpt,
+                doc_id=file.id,
+                entity_type=file.content_type,
+                fragment_type=FragmentType.ANNOTATION,
+                source_id=annotation.id,
+                page_number=annotation.page,
+                field="excerpt",
             ),
         ]
 
-        if label and label is not UNSET:
-            fragments.append(
-                ContentFragment(
-                    content=label,
-                    doc_id=file.id,
-                    entity_type=file.content_type,
-                    fragment_type=FragmentType.LABEL,
-                    source_id=comment.id,
-                    page_number=comment.page,
-                )
-            )
-
         await self._search_engine.index(fragments)
 
-    async def delete_comment(self, user_id: UUID, file_id: UUID, comment_id: UUID):
+    async def delete_annotation(self, user_id: UUID, file_id: UUID, annotation_id: UUID):
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
         if not perm or not perm.can_modify:
             raise InsufficientPermissionError(action="modify", resource="File", identifier=file_id)
 
-        comment = await self._comment_repo.get_by_id(comment_id)
+        annotation = await self._annotation_repo.get_by_id(annotation_id)
 
-        if comment.file_id != file_id:
-            raise InvalidActionError(rule="file_comment_mismatch", msg="Comment does not belong to the specified file.")
-        await self._comment_repo.delete(comment)
-        await self._comment_repo.commit()
-        await self._search_engine.delete_fragment_by_source(comment.id)
+        if annotation.file_id != file_id:
+            raise InvalidActionError(
+                rule="file_annotation_mismatch", msg="Annotation does not belong to the specified file."
+            )
+        await self._annotation_repo.delete(annotation)
+        await self._annotation_repo.commit()
+        await self._search_engine.delete_fragment_by_source(annotation.id)
 
     async def get_file(self, user_id: UUID, file_id: UUID) -> FileWithDetails:
 
@@ -717,7 +608,12 @@ class LibraryService:
         description: str | None = None,
     ) -> list[FileWithDetails]:
         files = await self._file_repo.list_visible_to_user(
-            user_id, collection_id=collection_id, is_favorite=is_favorite, tags=tags, name=name, description=description
+            user_id,
+            collection_id=collection_id,
+            is_favorite=is_favorite,
+            tags=tags,
+            name=name,
+            description=description,
         )
         if not files:
             return []

@@ -369,12 +369,7 @@ function CreateNodeDialog(props: {
 
   const label = nodeLabel(type);
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: "",
@@ -389,20 +384,20 @@ function CreateNodeDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title={`New ${label}`}
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
       submitOnEnter
     >
-      <FormField
+      <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} required>
@@ -418,7 +413,7 @@ function CreateNodeDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }
@@ -535,12 +530,7 @@ function EditNodeDialog(props: {
     enabled: open,
   });
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         name: node.name,
@@ -554,20 +544,20 @@ function EditNodeDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title={`Edit ${label}`}
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
       disabled={node.is_read_only_by_current_user}
     >
-      <FormField
+      <form.Field
         name="name"
         validators={{
           onChange: ({ value }) => (!value ? "Name is required" : undefined),
@@ -590,7 +580,7 @@ function EditNodeDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="parent_id"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root
@@ -608,7 +598,7 @@ function EditNodeDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }
@@ -787,11 +777,7 @@ const PERMISSION_OPTIONS = createListCollection({
 function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
   const { collectionId, readOnly } = props;
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-  } = useFormMutation({
+  const { form } = useFormMutation({
     formOptions: {
       defaultValues: {
         email: "",
@@ -804,10 +790,10 @@ function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
   });
 
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onSubmit={form.handleSubmit}>
       <Stack>
         <Group gap={2}>
-          <FormField
+          <form.Field
             name="email"
             children={({ state: fieldState, handleChange, handleBlur }) => (
               <Field.Root
@@ -827,7 +813,7 @@ function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
             )}
           />
 
-          <FormField
+          <form.Field
             name="permission"
             children={({ state: fieldState, handleChange, handleBlur }) => (
               <Select.Root
@@ -869,7 +855,7 @@ function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
             Invite
           </Button>
         </Group>
-        <FormError errors={state.errorMap.onSubmit} />
+        <FormError errors={form.state.errorMap.onSubmit} />
       </Stack>
     </Form>
   );

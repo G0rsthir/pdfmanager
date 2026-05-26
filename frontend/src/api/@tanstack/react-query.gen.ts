@@ -8,18 +8,16 @@ import {
 
 import { client } from "../client.gen";
 import {
+  createAnnotation,
   createAuthToken,
   createCollection,
-  createComment,
-  createHighlight,
   createOidcAuthProvider,
   createSetupUser,
   createUser,
+  deleteAnnotation,
   deleteCollection,
   deleteCollectionPermission,
-  deleteComment,
   deleteFile,
-  deleteHighlight,
   deleteOidcAuthProvider,
   deleteUser,
   getAppState,
@@ -35,11 +33,10 @@ import {
   getOidcAuthProvider,
   inviteToCollection,
   listAnnotationLabels,
+  listAnnotations,
   listAuthProviders,
   listCollectionMoveTargets,
   listCollections,
-  listFileComments,
-  listFileHighlights,
   listFileMoveTargets,
   listFiles,
   listOidcAuthProviders,
@@ -49,9 +46,8 @@ import {
   oidcCallback,
   oidcLogin,
   type Options,
-  patchComment,
+  patchAnnotation,
   patchFileState,
-  patchHighlight,
   refreshAuthToken,
   resetUserPassword,
   revokeToken,
@@ -67,15 +63,13 @@ import {
   uploadFile,
 } from "../sdk.gen";
 import type {
+  CreateAnnotationData,
+  CreateAnnotationError,
   CreateAuthTokenData,
   CreateAuthTokenError,
   CreateAuthTokenResponse,
   CreateCollectionData,
   CreateCollectionError,
-  CreateCommentData,
-  CreateCommentError,
-  CreateHighlightData,
-  CreateHighlightError,
   CreateOidcAuthProviderData,
   CreateOidcAuthProviderError,
   CreateSetupUserData,
@@ -83,16 +77,14 @@ import type {
   CreateSetupUserResponse,
   CreateUserData,
   CreateUserError,
+  DeleteAnnotationData,
+  DeleteAnnotationError,
   DeleteCollectionData,
   DeleteCollectionError,
   DeleteCollectionPermissionData,
   DeleteCollectionPermissionError,
-  DeleteCommentData,
-  DeleteCommentError,
   DeleteFileData,
   DeleteFileError,
-  DeleteHighlightData,
-  DeleteHighlightError,
   DeleteOidcAuthProviderData,
   DeleteOidcAuthProviderError,
   DeleteUserData,
@@ -127,6 +119,9 @@ import type {
   InviteToCollectionError,
   ListAnnotationLabelsData,
   ListAnnotationLabelsResponse,
+  ListAnnotationsData,
+  ListAnnotationsError,
+  ListAnnotationsResponse,
   ListAuthProvidersData,
   ListAuthProvidersResponse,
   ListCollectionMoveTargetsData,
@@ -134,12 +129,6 @@ import type {
   ListCollectionMoveTargetsResponse,
   ListCollectionsData,
   ListCollectionsResponse,
-  ListFileCommentsData,
-  ListFileCommentsError,
-  ListFileCommentsResponse,
-  ListFileHighlightsData,
-  ListFileHighlightsError,
-  ListFileHighlightsResponse,
   ListFileMoveTargetsData,
   ListFileMoveTargetsError,
   ListFileMoveTargetsResponse,
@@ -158,12 +147,10 @@ import type {
   OidcCallbackError,
   OidcLoginData,
   OidcLoginError,
-  PatchCommentData,
-  PatchCommentError,
+  PatchAnnotationData,
+  PatchAnnotationError,
   PatchFileStateData,
   PatchFileStateError,
-  PatchHighlightData,
-  PatchHighlightError,
   RefreshAuthTokenData,
   RefreshAuthTokenResponse,
   ResetUserPasswordData,
@@ -948,24 +935,22 @@ export const listAnnotationLabelsOptions = (
     queryKey: listAnnotationLabelsQueryKey(options),
   });
 
-export const listFileHighlightsQueryKey = (
-  options: Options<ListFileHighlightsData>,
-) => createQueryKey("listFileHighlights", options);
+export const listAnnotationsQueryKey = (
+  options: Options<ListAnnotationsData>,
+) => createQueryKey("listAnnotations", options);
 
 /**
- * List File Highlights
+ * List Annotations
  */
-export const listFileHighlightsOptions = (
-  options: Options<ListFileHighlightsData>,
-) =>
+export const listAnnotationsOptions = (options: Options<ListAnnotationsData>) =>
   queryOptions<
-    ListFileHighlightsResponse,
-    ListFileHighlightsError,
-    ListFileHighlightsResponse,
-    ReturnType<typeof listFileHighlightsQueryKey>
+    ListAnnotationsResponse,
+    ListAnnotationsError,
+    ListAnnotationsResponse,
+    ReturnType<typeof listAnnotationsQueryKey>
   >({
     queryFn: async ({ queryKey, signal }) => {
-      const { data } = await listFileHighlights({
+      const { data } = await listAnnotations({
         ...options,
         ...queryKey[0],
         signal,
@@ -973,26 +958,26 @@ export const listFileHighlightsOptions = (
       });
       return data;
     },
-    queryKey: listFileHighlightsQueryKey(options),
+    queryKey: listAnnotationsQueryKey(options),
   });
 
 /**
- * Create File Highlight
+ * Create Annotation
  */
-export const createHighlightMutation = (
-  options?: Partial<Options<CreateHighlightData>>,
+export const createAnnotationMutation = (
+  options?: Partial<Options<CreateAnnotationData>>,
 ): UseMutationOptions<
   unknown,
-  CreateHighlightError,
-  Options<CreateHighlightData>
+  CreateAnnotationError,
+  Options<CreateAnnotationData>
 > => {
   const mutationOptions: UseMutationOptions<
     unknown,
-    CreateHighlightError,
-    Options<CreateHighlightData>
+    CreateAnnotationError,
+    Options<CreateAnnotationData>
   > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await createHighlight({
+      const { data } = await createAnnotation({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -1004,22 +989,22 @@ export const createHighlightMutation = (
 };
 
 /**
- * Delete File Highlight
+ * Delete  Annotation
  */
-export const deleteHighlightMutation = (
-  options?: Partial<Options<DeleteHighlightData>>,
+export const deleteAnnotationMutation = (
+  options?: Partial<Options<DeleteAnnotationData>>,
 ): UseMutationOptions<
   unknown,
-  DeleteHighlightError,
-  Options<DeleteHighlightData>
+  DeleteAnnotationError,
+  Options<DeleteAnnotationData>
 > => {
   const mutationOptions: UseMutationOptions<
     unknown,
-    DeleteHighlightError,
-    Options<DeleteHighlightData>
+    DeleteAnnotationError,
+    Options<DeleteAnnotationData>
   > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await deleteHighlight({
+      const { data } = await deleteAnnotation({
         ...options,
         ...fnOptions,
         throwOnError: true,
@@ -1031,131 +1016,22 @@ export const deleteHighlightMutation = (
 };
 
 /**
- * Patch File Highlight
+ * Patch Annotation
  */
-export const patchHighlightMutation = (
-  options?: Partial<Options<PatchHighlightData>>,
+export const patchAnnotationMutation = (
+  options?: Partial<Options<PatchAnnotationData>>,
 ): UseMutationOptions<
   unknown,
-  PatchHighlightError,
-  Options<PatchHighlightData>
+  PatchAnnotationError,
+  Options<PatchAnnotationData>
 > => {
   const mutationOptions: UseMutationOptions<
     unknown,
-    PatchHighlightError,
-    Options<PatchHighlightData>
+    PatchAnnotationError,
+    Options<PatchAnnotationData>
   > = {
     mutationFn: async (fnOptions) => {
-      const { data } = await patchHighlight({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-export const listFileCommentsQueryKey = (
-  options: Options<ListFileCommentsData>,
-) => createQueryKey("listFileComments", options);
-
-/**
- * List File Comments
- */
-export const listFileCommentsOptions = (
-  options: Options<ListFileCommentsData>,
-) =>
-  queryOptions<
-    ListFileCommentsResponse,
-    ListFileCommentsError,
-    ListFileCommentsResponse,
-    ReturnType<typeof listFileCommentsQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await listFileComments({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true,
-      });
-      return data;
-    },
-    queryKey: listFileCommentsQueryKey(options),
-  });
-
-/**
- * Create File Comment
- */
-export const createCommentMutation = (
-  options?: Partial<Options<CreateCommentData>>,
-): UseMutationOptions<
-  unknown,
-  CreateCommentError,
-  Options<CreateCommentData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    CreateCommentError,
-    Options<CreateCommentData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await createComment({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * Delete File Comment
- */
-export const deleteCommentMutation = (
-  options?: Partial<Options<DeleteCommentData>>,
-): UseMutationOptions<
-  unknown,
-  DeleteCommentError,
-  Options<DeleteCommentData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    DeleteCommentError,
-    Options<DeleteCommentData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await deleteComment({
-        ...options,
-        ...fnOptions,
-        throwOnError: true,
-      });
-      return data;
-    },
-  };
-  return mutationOptions;
-};
-
-/**
- * Patch File Comment
- */
-export const patchCommentMutation = (
-  options?: Partial<Options<PatchCommentData>>,
-): UseMutationOptions<
-  unknown,
-  PatchCommentError,
-  Options<PatchCommentData>
-> => {
-  const mutationOptions: UseMutationOptions<
-    unknown,
-    PatchCommentError,
-    Options<PatchCommentData>
-  > = {
-    mutationFn: async (fnOptions) => {
-      const { data } = await patchComment({
+      const { data } = await patchAnnotation({
         ...options,
         ...fnOptions,
         throwOnError: true,

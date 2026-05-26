@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import Annotated
 
 from fastapi import APIRouter, Query
@@ -7,7 +6,7 @@ from server.const import ScopesEnum
 from server.dependencies import (
     AccessSecurity,
     LibraryServiceDependency,
-    SearchEngineDependency,
+    SearchServiceDependency,
 )
 from server.routes._assemblers import build_file_response
 from server.schemas.search import FileSearchResponse, SearchFilesQueryParams, SearchHitResponse
@@ -20,63 +19,34 @@ router = APIRouter(prefix="/search")
 async def search_files(
     query: Annotated[SearchFilesQueryParams, Query()],
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
-    search_engine: SearchEngineDependency,
     library_service: LibraryServiceDependency,
+    search_service: SearchServiceDependency,
 ):
-
-    files_with_details = await library_service.list_files(
+    files = await library_service.list_files(
         user_id=access_session.user_id,
         tags=query.tags,
         name=query.name,
         description=query.description,
     )
-
-    if not files_with_details:
+    if not files:
         return []
 
-    file_map = {str(f.file.id): f for f in files_with_details}
-    searches = query.searches()
+    filters = query.filters()
+    if not filters:
+        return [FileSearchResponse(file=build_file_response(f, user_id=access_session.user_id), hits=[]) for f in files]
 
-    if not searches:
-        return [
-            FileSearchResponse(file=build_file_response(f, user_id=access_session.user_id), hits=[])
-            for f in files_with_details
-        ]
+    result = await search_service.search(
+        doc_ids=[f.file.id for f in files],
+        filters=filters,
+    )
 
-    doc_ids = [f.file.id for f in files_with_details]
-    hits_by_file: dict[str, list[SearchHitResponse]] = defaultdict(list)
-    best_rank: dict[str, float] = {}
-    matched_per_filter: list[set[str]] = []
-
-    for q_text, fragment_types in searches:
-        result = await search_engine.search(
-            query=q_text,
-            doc_ids=doc_ids,
-            fragment_types=fragment_types,
-        )
-        ids_here: set[str] = set()
-        for hit in result.hits:
-            hits_by_file[hit.doc_id].append(
-                SearchHitResponse(
-                    snippet=hit.snippet,
-                    page_number=hit.page_number,
-                    fragment_type=hit.fragment_type,
-                    rank=hit.rank,
-                )
-            )
-            if hit.doc_id not in best_rank or hit.rank < best_rank[hit.doc_id]:
-                best_rank[hit.doc_id] = hit.rank
-            ids_here.add(hit.doc_id)
-        matched_per_filter.append(ids_here)
-
-    # AND across filters: file must match every active search
-    matched_ids = sorted(set.intersection(*matched_per_filter), key=lambda fid: best_rank[fid])
-
+    file_map = {f.file.id: f for f in files}
+    ordered_results = sorted(result, key=lambda r: r.best_rank)
     return [
         FileSearchResponse(
-            file=build_file_response(file_map[fid], user_id=access_session.user_id),
-            hits=hits_by_file[fid],
+            file=build_file_response(file_map[r.doc_id], user_id=access_session.user_id),
+            hits=[SearchHitResponse(**h.to_dict()) for h in r.hits],
         )
-        for fid in matched_ids
-        if fid in file_map
+        for r in ordered_results
+        if r.doc_id in file_map
     ]

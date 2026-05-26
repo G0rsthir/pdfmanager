@@ -132,13 +132,7 @@ function UploadFileDialog(props: {
     file: undefined,
   };
 
-  const {
-    Field: FormField,
-    handleSubmit,
-    state,
-    reset,
-    isPending,
-  } = useFormMutation({
+  const { form, isPending } = useFormMutation({
     formOptions: {
       defaultValues: defaultValues,
     },
@@ -156,21 +150,21 @@ function UploadFileDialog(props: {
   });
 
   const handleClose = useCallback(() => {
-    reset();
+    form.reset();
     onClose();
-  }, [onClose, reset]);
+  }, [onClose, form]);
 
   return (
     <FormModal
       open={open}
       close={handleClose}
       title="Upload file"
-      onSubmit={() => handleSubmit()}
+      onSubmit={() => form.handleSubmit()}
       confirmBtnText="Upload"
       isPending={isPending}
       disabled={readOnly}
     >
-      <FormField
+      <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
@@ -184,7 +178,7 @@ function UploadFileDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="description"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
@@ -198,7 +192,7 @@ function UploadFileDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="tags"
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
@@ -211,7 +205,7 @@ function UploadFileDialog(props: {
           </Field.Root>
         )}
       />
-      <FormField
+      <form.Field
         name="file"
         validators={{
           onSubmit: ({ value }) =>
@@ -246,7 +240,7 @@ function UploadFileDialog(props: {
         )}
       />
 
-      <FormError errors={state.errorMap.onSubmit} />
+      <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );
 }

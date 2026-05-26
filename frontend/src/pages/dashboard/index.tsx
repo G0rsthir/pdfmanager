@@ -168,5 +168,5 @@ function isInProgress(f: FileResponse) {
 
 function progressRatio(f: FileResponse) {
   if (!f.page_count) return 0;
-  return f.state.updated_at?.getTime() ?? 0;
+  return f.state.last_read_at?.getTime() ?? 0;
 }

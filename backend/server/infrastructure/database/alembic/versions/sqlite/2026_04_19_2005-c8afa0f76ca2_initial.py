@@ -117,6 +117,7 @@ def upgrade() -> None:
         sa.Column("is_favorite", sa.Boolean(), nullable=False),
         sa.Column("file_id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("last_read_at", DateTimeUTC(timezone=True), nullable=True),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["file_id"], ["files.id"], name=op.f("fk_file_states_file_id_files"), ondelete="CASCADE"
@@ -184,31 +185,11 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "file_highlights",
-        sa.Column("page", sa.Integer(), nullable=False),
-        sa.Column("color", sa.String(), nullable=False),
-        sa.Column("excerpt", sa.String(), nullable=False),
-        sa.Column("rects", sa.JSON(), nullable=False),
-        sa.Column("label", sa.String(), nullable=True),
-        sa.Column("file_id", sa.Uuid(), nullable=False),
-        sa.Column("author_id", sa.Uuid(), nullable=False),
-        sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("created_at", DateTimeUTC(timezone=True), nullable=False),
-        sa.Column("updated_at", DateTimeUTC(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["author_id"], ["users.id"], name=op.f("fk_file_highlights_author_id_users"), ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(
-            ["file_id"], ["files.id"], name=op.f("fk_file_highlights_file_id_files"), ondelete="CASCADE"
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_file_highlights")),
-    )
-
-    op.create_table(
-        "file_comments",
+        "annotations",
         sa.Column("page", sa.Integer(), nullable=False),
         sa.Column("body", sa.String(), nullable=False),
         sa.Column("excerpt", sa.String(), nullable=False),
+        sa.Column("color", sa.String(), nullable=False),
         sa.Column("rects", sa.JSON(), nullable=False),
         sa.Column("label", sa.String(), nullable=True),
         sa.Column("file_id", sa.Uuid(), nullable=False),
@@ -217,12 +198,12 @@ def upgrade() -> None:
         sa.Column("created_at", DateTimeUTC(timezone=True), nullable=False),
         sa.Column("updated_at", DateTimeUTC(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(
-            ["author_id"], ["users.id"], name=op.f("fk_file_comments_author_id_users"), ondelete="SET NULL"
+            ["author_id"], ["users.id"], name=op.f("fk_annotations_author_id_users"), ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(
-            ["file_id"], ["files.id"], name=op.f("fk_file_comments_file_id_files"), ondelete="CASCADE"
+            ["file_id"], ["files.id"], name=op.f("fk_annotations_file_id_files"), ondelete="CASCADE"
         ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_file_comments")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_annotations")),
     )
 
     op.execute(
@@ -233,7 +214,8 @@ def upgrade() -> None:
         entity_type UNINDEXED,
         page_number UNINDEXED,
         fragment_type UNINDEXED,
-        source_id UNINDEXED
+        source_id UNINDEXED,
+        field UNINDEXED   
     )
     """)
     )
@@ -324,6 +306,5 @@ def downgrade() -> None:
     op.drop_table("content_fts_idx")
     op.drop_table("content_fts")
     op.drop_table("content_fts_docsize")
-    op.drop_table("file_highlights")
-    op.drop_table("file_comments")
+    op.drop_table("annotations")
     # ### end Alembic commands ###

@@ -1,25 +1,20 @@
 import {
-  createCommentMutation,
-  createHighlightMutation,
-  deleteCommentMutation,
-  deleteHighlightMutation,
+  createAnnotationMutation,
+  deleteAnnotationMutation,
   getFileDetailsOptions,
-  listFileCommentsOptions,
-  listFileHighlightsOptions,
-  patchCommentMutation,
-  patchHighlightMutation,
+  listAnnotationLabelsOptions,
+  listAnnotationsOptions,
+  patchAnnotationMutation,
 } from "@/api/@tanstack/react-query.gen";
 import { patchFileState } from "@/api/sdk.gen";
 import { parseAPIError } from "@/common/error";
-import { QueryView } from "@/components/ui/feedback";
+import { LoadingError } from "@/components/ui/error";
+import { ContentLoadingOverlay } from "@/components/ui/feedback";
 import { ReactPDFViewer } from "@/components/ui/pdf";
 import type {
-  CommentsApi,
-  CreateComment,
-  CreateHighlight,
-  HighlightsApi,
-  PatchComment,
-  PatchHighlight,
+  AnnotationsApi,
+  CreateAnnotation,
+  PatchAnnotation,
 } from "@/components/ui/pdf/types";
 import { showErrorNotification } from "@/components/ui/toaster";
 import { getAccessToken } from "@/config/api";
@@ -85,13 +80,13 @@ export function FilePage() {
       },
     }),
     refetchOnWindowFocus: false,
+    refetchOnMount: "always",
     meta: {
       skipInvalidation: true,
     },
   });
 
-  const highlights = useHighlights(fileid!);
-  const comments = useComments(fileid!);
+  const annotations = useAnnotations(fileid!);
 
   const handlePageChange = useCallback(
     async (value: number) => {
@@ -115,80 +110,86 @@ export function FilePage() {
 
   const previewPage = searchParams.page ? Number(searchParams.page) : undefined;
 
+  if (query.isError)
+    return <LoadingError>{query.apiError?.message}</LoadingError>;
+
+  if (query.isFetching) return <ContentLoadingOverlay />;
+
+  const file = query.data;
+
   return (
-    <QueryView query={query}>
-      {(file) => {
-        return (
-          <ReactPDFViewer
-            file={docParams}
-            fileName={file.name}
-            initialScaleValue={file.state.scale}
-            intialPage={file.state.current_page}
-            startInPreviewPage={previewPage}
-            comments={comments}
-            highlights={highlights}
-            onPageChange={handlePageChange}
-            onScaleChange={handleScaleChange}
-            readOnly={file.is_read_only_by_current_user}
-          />
-        );
-      }}
-    </QueryView>
+    file && (
+      <ReactPDFViewer
+        file={docParams}
+        fileName={file.name}
+        initialScaleValue={file.state.scale}
+        intialPage={file.state.current_page}
+        startInPreviewPage={previewPage}
+        annotations={annotations}
+        onPageChange={handlePageChange}
+        onScaleChange={handleScaleChange}
+        readOnly={file.is_read_only_by_current_user}
+      />
+    )
   );
 }
 
-function useHighlights(fileId: string): HighlightsApi {
-  const highlightsQ = useAPIQuery({
-    ...listFileHighlightsOptions({
+function useAnnotations(fileId: string): AnnotationsApi {
+  const annotationsQ = useAPIQuery({
+    ...listAnnotationsOptions({
       path: {
         id: fileId,
       },
     }),
   });
 
-  const { mutate: createHighlightRequest } = useAPIMutation({
-    ...createHighlightMutation(),
+  const labelsQ = useAPIQuery({
+    ...listAnnotationLabelsOptions(),
+  });
+
+  const { mutate: createAnnotationRequest } = useAPIMutation({
+    ...createAnnotationMutation(),
     onError(error) {
       showErrorNotification(
-        "Couldn't save highlight",
+        "Couldn't post annotation",
         parseAPIError(error).message,
       );
     },
   });
 
-  const { mutate: patchHighlightRequest } = useAPIMutation({
-    ...patchHighlightMutation(),
+  const { mutate: patchAnnotationRequest } = useAPIMutation({
+    ...patchAnnotationMutation(),
     onError(error) {
       showErrorNotification(
-        "Couldn't update highlight",
+        "Couldn't update annotation",
         parseAPIError(error).message,
       );
     },
   });
 
-  const { mutate: deleteHighlightRequest } = useAPIMutation({
-    ...deleteHighlightMutation(),
+  const { mutate: deleteAnnotationRequest } = useAPIMutation({
+    ...deleteAnnotationMutation(),
     onError(error) {
       showErrorNotification(
-        "Couldn't delete highlight",
+        "Couldn't delete annotation",
         parseAPIError(error).message,
       );
     },
   });
 
-  const createHighlight = useCallback(
-    (input: CreateHighlight) => {
-      createHighlightRequest({
+  const createAnnotation = useCallback(
+    (input: CreateAnnotation) => {
+      createAnnotationRequest({
         path: { id: fileId },
         body: input,
       });
     },
-    [createHighlightRequest, fileId],
+    [createAnnotationRequest, fileId],
   );
 
-  const updateHighlight = useCallback(
-    (id: string, patch: PatchHighlight) => {
-      patchHighlightRequest({
+  const updateAnnotation = useCallback(
+    (id: string, patch: PatchAnnotation) => {
+      patchAnnotationRequest({
         path: {
           file_id: fileId,
           id: id,
@@ -196,103 +197,24 @@ function useHighlights(fileId: string): HighlightsApi {
         body: patch,
       });
     },
-    [fileId, patchHighlightRequest],
+    [fileId, patchAnnotationRequest],
   );
 
-  const deleteHighlight = useCallback(
+  const deleteAnnotation = useCallback(
     (id: string) => {
-      deleteHighlightRequest({
+      deleteAnnotationRequest({
         path: { file_id: fileId, id: id },
       });
     },
-    [deleteHighlightRequest, fileId],
+    [deleteAnnotationRequest, fileId],
   );
 
   return {
-    items: highlightsQ.data ?? [],
-    create: createHighlight,
-    update: updateHighlight,
-    delete: deleteHighlight,
-    error: highlightsQ.apiError,
-  };
-}
-
-function useComments(fileId: string): CommentsApi {
-  const commentsQ = useAPIQuery({
-    ...listFileCommentsOptions({
-      path: {
-        id: fileId,
-      },
-    }),
-  });
-
-  const { mutate: createCommentRequest } = useAPIMutation({
-    ...createCommentMutation(),
-    onError(error) {
-      showErrorNotification(
-        "Couldn't post comment",
-        parseAPIError(error).message,
-      );
-    },
-  });
-
-  const { mutate: patchCommentRequest } = useAPIMutation({
-    ...patchCommentMutation(),
-    onError(error) {
-      showErrorNotification(
-        "Couldn't update comment",
-        parseAPIError(error).message,
-      );
-    },
-  });
-
-  const { mutate: deleteCommentRequest } = useAPIMutation({
-    ...deleteCommentMutation(),
-    onError(error) {
-      showErrorNotification(
-        "Couldn't delete comment",
-        parseAPIError(error).message,
-      );
-    },
-  });
-
-  const createComment = useCallback(
-    (input: CreateComment) => {
-      createCommentRequest({
-        path: { id: fileId },
-        body: input,
-      });
-    },
-    [createCommentRequest, fileId],
-  );
-
-  const updateComment = useCallback(
-    (id: string, patch: PatchComment) => {
-      patchCommentRequest({
-        path: {
-          file_id: fileId,
-          id: id,
-        },
-        body: patch,
-      });
-    },
-    [fileId, patchCommentRequest],
-  );
-
-  const deleteComment = useCallback(
-    (id: string) => {
-      deleteCommentRequest({
-        path: { file_id: fileId, id: id },
-      });
-    },
-    [deleteCommentRequest, fileId],
-  );
-
-  return {
-    items: commentsQ.data ?? [],
-    create: createComment,
-    update: updateComment,
-    delete: deleteComment,
-    error: commentsQ.apiError,
+    items: annotationsQ.data ?? [],
+    create: createAnnotation,
+    update: updateAnnotation,
+    delete: deleteAnnotation,
+    error: annotationsQ.apiError,
+    labels: labelsQ.data,
   };
 }

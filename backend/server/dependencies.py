@@ -11,10 +11,9 @@ from server.const import ScopesEnum
 from server.infrastructure.search import Fts5SearchBackend, SearchBackend
 from server.infrastructure.storage import LocalStorageBackend
 from server.repositories import (
+    AnnotationRepository,
     AuthProviderRepository,
     CollectionRepository,
-    FileCommentRepository,
-    FileHighlightRepository,
     FileRepository,
     PermissionRepository,
     RoleRepository,
@@ -28,6 +27,7 @@ from server.services.auth import AuthService
 from server.services.identity import IdentityService
 from server.services.indexing import IndexingService
 from server.services.library import LibraryService
+from server.services.search import SearchService
 from server.services.token import TokenResponseService
 
 from .schemas.security import AccessSessionContext, RefreshSessionContext
@@ -102,6 +102,14 @@ def get_identity_service(
     )
 
 
+def get_search_service(
+    annotation_repo: AnnotationRepositoryDependency,
+    search_engine: SearchEngineDependency,
+    file_repo: FileRepositoryDependency,
+) -> SearchService:
+    return SearchService(annotation_repo=annotation_repo, engine=search_engine, file_repo=file_repo)
+
+
 def get_library_service(
     request: Request,
     collection_repo: CollectionRepositoryDependency,
@@ -109,8 +117,7 @@ def get_library_service(
     tags_repo: TagRepositoryDependency,
     search_engine: SearchEngineDependency,
     permission_repo: PermissionDependency,
-    highlight_repo: HighlightRepositoryDependency,
-    comment_repo: CommentRepositoryDependency,
+    annotation_repo: AnnotationRepositoryDependency,
     user_repo: UserRepositoryDependency,
 ) -> LibraryService:
     env: AppEnvSettings = request.app.state.env
@@ -123,8 +130,7 @@ def get_library_service(
         search_engine=search_engine,
         permission_repo=permission_repo,
         storage_backend=backend,
-        highlight_repo=highlight_repo,
-        comment_repo=comment_repo,
+        annotation_repo=annotation_repo,
         user_repo=user_repo,
     )
 
@@ -175,16 +181,10 @@ def get_tag_repository(
     return TagRepository(db)
 
 
-def get_highlight_repository(
+def get_annotation_repository(
     db: DBSessionDependency,
-) -> FileHighlightRepository:
-    return FileHighlightRepository(db)
-
-
-def get_comment_repository(
-    db: DBSessionDependency,
-) -> FileCommentRepository:
-    return FileCommentRepository(db)
+) -> AnnotationRepository:
+    return AnnotationRepository(db)
 
 
 def get_file_repository(
@@ -228,8 +228,7 @@ UserRepositoryDependency = Annotated[UserRepository, Depends(get_user_repository
 SessionRepositoryDependency = Annotated[SessionRepository, Depends(get_session_repository)]
 AuthProviderRepositoryDependency = Annotated[AuthProviderRepository, Depends(get_auth_provider_repository)]
 PermissionDependency = Annotated[PermissionRepository, Depends(get_permission_repository)]
-HighlightRepositoryDependency = Annotated[FileHighlightRepository, Depends(get_highlight_repository)]
-CommentRepositoryDependency = Annotated[FileCommentRepository, Depends(get_comment_repository)]
+AnnotationRepositoryDependency = Annotated[AnnotationRepository, Depends(get_annotation_repository)]
 
 AuthServiceDependency = Annotated[
     AuthService,
@@ -245,6 +244,11 @@ LibraryServiceDependency = Annotated[
     Depends(get_library_service),
 ]
 
+
+SearchServiceDependency = Annotated[
+    SearchService,
+    Depends(get_search_service),
+]
 
 SearchEngineDependency = Annotated[
     SearchBackend,

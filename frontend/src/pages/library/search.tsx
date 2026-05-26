@@ -44,7 +44,7 @@ type SearchParamKeys =
   | "name"
   | "description"
   | "label"
-  | "comment";
+  | "annotation";
 
 type SearchParamDef = Record<SearchParamKeys, { type: "array" }>;
 
@@ -54,7 +54,7 @@ const searchParamDef: SearchParamDef = {
   name: { type: "array" },
   description: { type: "array" },
   label: { type: "array" },
-  comment: { type: "array" },
+  annotation: { type: "array" },
 };
 
 function useLibrarySearchParams() {
@@ -137,8 +137,8 @@ function SearchView({
         values: [],
         isSingleUse: true,
       },
-      comment: {
-        label: "Comment",
+      annotation: {
+        label: "Annotation",
         values: [],
         isSingleUse: true,
       },
@@ -224,7 +224,7 @@ function SearchQuery(props: SearchQueryProps) {
         name: searchParams.name?.[0],
         description: searchParams.description?.[0],
         label: searchParams.label?.[0],
-        comment: searchParams.comment?.[0],
+        annotation: searchParams.annotation?.[0],
       },
     }),
   });
@@ -378,26 +378,56 @@ export function SearchFileHitsCard(props: {
   );
 }
 
-// TODO add JSX for fragments
+const FRAGMENT_LABELS: Record<string, string> = {
+  name: "Title",
+  description: "Description",
+  content: "Content",
+  label: "Label",
+  annotation: "Annotation",
+  title: "Title",
+  page: "Page",
+};
+
+function highlightSnippet(snippet: string) {
+  return snippet.split(/(<mark>.*?<\/mark>)/g).map((part, i) =>
+    part.startsWith("<mark>") ? (
+      <Mark variant="subtle" colorPalette="yellow" key={i}>
+        {part.slice(6, -7)}
+      </Mark>
+    ) : (
+      part
+    ),
+  );
+}
+
 function SearchHitItem(props: {
   hit: SearchHitResponse;
   fileId: string;
   folderId: string | null | undefined;
 }) {
   const { hit, fileId, folderId } = props;
-  const parts = hit.snippet.split(/(<mark>.*?<\/mark>)/g);
 
-  const fragment_name =
-    {
-      name: "Title",
-      description: "Description",
-      content: "Content",
-      label: "Label",
-      comment: "Comment",
-      title: "Title",
-      page: "Page",
-      highlight: "Highlight",
-    }[hit.fragment_type] ?? hit.fragment_type;
+  if (hit.fragment_type === "annotation" && hit.annotation) {
+    return (
+      <AnnotationHitItem
+        hit={hit}
+        annotation={hit.annotation}
+        fileId={fileId}
+        folderId={folderId}
+      />
+    );
+  }
+
+  return <GenericHitItem hit={hit} fileId={fileId} folderId={folderId} />;
+}
+
+function GenericHitItem(props: {
+  hit: SearchHitResponse;
+  fileId: string;
+  folderId: string | null | undefined;
+}) {
+  const { hit, fileId, folderId } = props;
+  const fragmentName = FRAGMENT_LABELS[hit.fragment_type] ?? hit.fragment_type;
 
   return (
     <NavLink
@@ -427,23 +457,98 @@ function SearchHitItem(props: {
             {hit.page_number != null ? "PAGE" : "MATCH"}
           </Text>
           <Text textStyle="sm" fontWeight="semibold" lineHeight={1} mt="1">
-            {hit.page_number != null ? hit.page_number : fragment_name}
+            {hit.page_number != null ? hit.page_number : fragmentName}
           </Text>
         </Stack>
 
         <Separator orientation="vertical" height="6" />
 
         <Text textStyle="sm" color="fg.muted" lineClamp={2} flex={1}>
-          {parts.map((part, i) =>
-            part.startsWith("<mark>") ? (
-              <Mark variant="subtle" colorPalette="yellow" key={i}>
-                {part.slice(6, -7)}
-              </Mark>
-            ) : (
-              part
-            ),
-          )}
+          {highlightSnippet(hit.snippet)}
         </Text>
+      </Stack>
+    </NavLink>
+  );
+}
+
+function AnnotationHitItem(props: {
+  hit: SearchHitResponse;
+  annotation: NonNullable<SearchHitResponse["annotation"]>;
+  fileId: string;
+  folderId: string | null | undefined;
+}) {
+  const { hit, annotation, fileId, folderId } = props;
+
+  return (
+    <NavLink
+      to={toFileUrl({
+        folderId,
+        fileId,
+        page: annotation.page,
+      })}
+    >
+      <Stack
+        direction="row"
+        gap={3}
+        p={2.5}
+        align="stretch"
+        rounded="md"
+        bg="bg.subtle"
+        transition="background 0.15s"
+        _hover={{ bg: "bg.muted" }}
+      >
+        <Stack align="center" justify="center" minW="14" gap={0} flexShrink={0}>
+          <Text
+            textStyle="xs"
+            color="fg.muted"
+            letterSpacing="wider"
+            lineHeight={1}
+          >
+            PAGE
+          </Text>
+          <Text textStyle="sm" fontWeight="semibold" lineHeight={1} mt="1">
+            {annotation.page}
+          </Text>
+        </Stack>
+
+        <Separator orientation="vertical" />
+
+        <Stack gap={1.5} flex={1} minW={0}>
+          <Group gap={2} wrap="wrap">
+            <Badge size="xs" variant="subtle" colorPalette="purple">
+              Annotation
+            </Badge>
+            {annotation.label && (
+              <Badge size="xs" variant="surface">
+                {annotation.label}
+              </Badge>
+            )}
+          </Group>
+
+          {annotation.excerpt && (
+            <Text
+              textStyle="xs"
+              color="fg.muted"
+              fontStyle="italic"
+              lineClamp={1}
+              borderLeftWidth="2px"
+              borderColor="border"
+              pl={2}
+            >
+              "
+              {hit.field === "excerpt"
+                ? highlightSnippet(hit.snippet)
+                : annotation.excerpt}
+              "
+            </Text>
+          )}
+
+          <Text textStyle="sm" lineClamp={2}>
+            {hit.field === "body"
+              ? highlightSnippet(hit.snippet)
+              : annotation.body}
+          </Text>
+        </Stack>
       </Stack>
     </NavLink>
   );

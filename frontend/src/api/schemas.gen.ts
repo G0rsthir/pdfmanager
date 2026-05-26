@@ -22,6 +22,82 @@ export const AccessTokenSchema = {
   description: "API access token.",
 } as const;
 
+export const AnnotationResponseSchema = {
+  properties: {
+    page: {
+      type: "integer",
+      title: "Page",
+    },
+    body: {
+      type: "string",
+      title: "Body",
+    },
+    color: {
+      type: "string",
+      title: "Color",
+    },
+    excerpt: {
+      type: "string",
+      title: "Excerpt",
+    },
+    rects: {
+      items: {
+        $ref: "#/components/schemas/NormalizedRect",
+      },
+      type: "array",
+      title: "Rects",
+    },
+    label: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Label",
+      description: "User-set identifier, used to cross-reference.",
+    },
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    author_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Author Id",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    author_name: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Author Name",
+    },
+  },
+  type: "object",
+  required: ["page", "body", "color", "excerpt", "rects", "id", "created_at"],
+  title: "AnnotationResponse",
+} as const;
+
 export const AppStateResponseSchema = {
   properties: {
     is_initial_user_created: {
@@ -494,7 +570,7 @@ export const CollectionWithDetailsResponseSchema = {
   title: "CollectionWithDetailsResponse",
 } as const;
 
-export const CommentResponseSchema = {
+export const CreateAnnotationRequestSchema = {
   properties: {
     page: {
       type: "integer",
@@ -503,142 +579,6 @@ export const CommentResponseSchema = {
     body: {
       type: "string",
       title: "Body",
-    },
-    excerpt: {
-      type: "string",
-      title: "Excerpt",
-    },
-    rects: {
-      items: {
-        $ref: "#/components/schemas/NormalizedRect",
-      },
-      type: "array",
-      title: "Rects",
-    },
-    label: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Label",
-      description: "User-set identifier, used to cross-reference.",
-    },
-    id: {
-      type: "string",
-      format: "uuid",
-      title: "Id",
-    },
-    author_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Author Id",
-    },
-    created_at: {
-      type: "string",
-      format: "date-time",
-      title: "Created At",
-    },
-    author_name: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Author Name",
-    },
-  },
-  type: "object",
-  required: ["page", "body", "excerpt", "rects", "id", "created_at"],
-  title: "CommentResponse",
-} as const;
-
-export const CreateCollectionRequestSchema = {
-  properties: {
-    name: {
-      type: "string",
-      title: "Name",
-    },
-    parent_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Parent Id",
-    },
-    entity_type: {
-      type: "string",
-      enum: ["folder", "group"],
-      title: "Entity Type",
-    },
-  },
-  type: "object",
-  required: ["name", "entity_type"],
-  title: "CreateCollectionRequest",
-} as const;
-
-export const CreateCommentRequestSchema = {
-  properties: {
-    page: {
-      type: "integer",
-      title: "Page",
-    },
-    body: {
-      type: "string",
-      title: "Body",
-    },
-    excerpt: {
-      type: "string",
-      title: "Excerpt",
-    },
-    rects: {
-      items: {
-        $ref: "#/components/schemas/NormalizedRect",
-      },
-      type: "array",
-      title: "Rects",
-    },
-    label: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Label",
-      description: "User-set identifier, used to cross-reference.",
-    },
-  },
-  type: "object",
-  required: ["page", "body", "excerpt", "rects"],
-  title: "CreateCommentRequest",
-} as const;
-
-export const CreateHighlightRequestSchema = {
-  properties: {
-    page: {
-      type: "integer",
-      title: "Page",
     },
     color: {
       type: "string",
@@ -669,8 +609,37 @@ export const CreateHighlightRequestSchema = {
     },
   },
   type: "object",
-  required: ["page", "color", "excerpt", "rects"],
-  title: "CreateHighlightRequest",
+  required: ["page", "body", "color", "excerpt", "rects"],
+  title: "CreateAnnotationRequest",
+} as const;
+
+export const CreateCollectionRequestSchema = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    parent_id: {
+      anyOf: [
+        {
+          type: "string",
+          format: "uuid",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Parent Id",
+    },
+    entity_type: {
+      type: "string",
+      enum: ["folder", "group"],
+      title: "Entity Type",
+    },
+  },
+  type: "object",
+  required: ["name", "entity_type"],
+  title: "CreateCollectionRequest",
 } as const;
 
 export const CredentialsResetSchema = {
@@ -850,7 +819,7 @@ export const FileStateResponseSchema = {
       type: "string",
       title: "Scale",
     },
-    updated_at: {
+    last_read_at: {
       anyOf: [
         {
           type: "string",
@@ -860,7 +829,7 @@ export const FileStateResponseSchema = {
           type: "null",
         },
       ],
-      title: "Updated At",
+      title: "Last Read At",
     },
   },
   type: "object",
@@ -870,7 +839,7 @@ export const FileStateResponseSchema = {
 
 export const FragmentTypeSchema = {
   type: "string",
-  enum: ["title", "description", "page", "comment", "label"],
+  enum: ["title", "description", "page", "annotation"],
   title: "FragmentType",
 } as const;
 
@@ -886,73 +855,6 @@ export const HTTPValidationErrorSchema = {
   },
   type: "object",
   title: "HTTPValidationError",
-} as const;
-
-export const HighlightResponseSchema = {
-  properties: {
-    page: {
-      type: "integer",
-      title: "Page",
-    },
-    color: {
-      type: "string",
-      title: "Color",
-    },
-    excerpt: {
-      type: "string",
-      title: "Excerpt",
-    },
-    rects: {
-      items: {
-        $ref: "#/components/schemas/NormalizedRect",
-      },
-      type: "array",
-      title: "Rects",
-    },
-    label: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Label",
-      description: "User-set identifier, used to cross-reference.",
-    },
-    id: {
-      type: "string",
-      format: "uuid",
-      title: "Id",
-    },
-    author_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Author Id",
-    },
-    author_name: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Author Name",
-    },
-  },
-  type: "object",
-  required: ["page", "color", "excerpt", "rects", "id"],
-  title: "HighlightResponse",
 } as const;
 
 export const InviteToCollectionRequestSchema = {
@@ -1100,7 +1002,7 @@ export const OidcGroupRule_OutputSchema = {
   title: "OidcGroupRule",
 } as const;
 
-export const PatchCommentRequestSchema = {
+export const PatchAnnotationRequestSchema = {
   properties: {
     label: {
       anyOf: [
@@ -1125,9 +1027,20 @@ export const PatchCommentRequestSchema = {
       ],
       title: "Body",
     },
+    color: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Color",
+    },
   },
   type: "object",
-  title: "PatchCommentRequest",
+  title: "PatchAnnotationRequest",
 } as const;
 
 export const PatchFileStateRequestSchema = {
@@ -1169,36 +1082,6 @@ export const PatchFileStateRequestSchema = {
   },
   type: "object",
   title: "PatchFileStateRequest",
-} as const;
-
-export const PatchHighlightRequestSchema = {
-  properties: {
-    label: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Label",
-      description: "User-set identifier, used to cross-reference.",
-    },
-    color: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Color",
-    },
-  },
-  type: "object",
-  title: "PatchHighlightRequest",
 } as const;
 
 export const ResourcePermissionResponseSchema = {
@@ -1319,6 +1202,27 @@ export const SearchHitResponseSchema = {
     rank: {
       type: "number",
       title: "Rank",
+    },
+    annotation: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/AnnotationResponse",
+        },
+        {
+          type: "null",
+        },
+      ],
+    },
+    field: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Field",
     },
   },
   type: "object",
