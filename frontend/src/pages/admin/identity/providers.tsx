@@ -733,6 +733,7 @@ function CreateOidcProviderDialog(props: {
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
       confirmBtnType="adminWrite"
+      submitOnEnter
     >
       <form.Field
         name="name"

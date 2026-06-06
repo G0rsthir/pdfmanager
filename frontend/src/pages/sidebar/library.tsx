@@ -158,7 +158,7 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
       </TreeView.Root>
       {data.length == 0 && (
         <Text textStyle="xs">
-          No collections yet.
+          No folders yet.
           <Link
             variant="underline"
             colorPalette="teal"
@@ -170,7 +170,7 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
           </Link>
         </Text>
       )}
-      <CreateNodeDialog type="group" open={open} onClose={onClose} />
+      <CreateNodeDialog type="folder" open={open} onClose={onClose} />
     </>
   );
 }
