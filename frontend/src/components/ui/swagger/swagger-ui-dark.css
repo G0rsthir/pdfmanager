@@ -1,0 +1,172 @@
+html[class="dark"] {
+  .swagger-ui .opblock-tag {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .opblock .opblock-summary-path {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .opblock .opblock-summary-description {
+    color: var(--chakra-colors-fg-muted);
+  }
+  .swagger-ui .scheme-container {
+    background-color: var(--chakra-colors-bg);
+  }
+  .swagger-ui .info .title {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .opblock-control-arrow {
+    fill: var(--chakra-colors-fg);
+  }
+  .swagger-ui .authorization__btn {
+    fill: var(--chakra-colors-fg);
+  }
+  .swagger-ui .json-schema-2020-12__title {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .json-schema-2020-12-property .json-schema-2020-12__title {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .json-schema-2020-12-accordion__icon--collapsed,
+  .swagger-ui .json-schema-2020-12-accordion__icon--expanded {
+    fill: var(--chakra-colors-fg);
+  }
+  .swagger-ui
+    .json-schema-2020-12-keyword--default
+    .json-schema-2020-12-json-viewer__name,
+  .swagger-ui
+    .json-schema-2020-12-keyword--default
+    .json-schema-2020-12-json-viewer__value {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .json-schema-2020-12-keyword--description {
+    color: var(--chakra-colors-fg-muted);
+  }
+  .swagger-ui .json-schema-2020-12-keyword__name--primary {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui section.models h4 {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui
+    .json-schema-2020-12-keyword--const
+    .json-schema-2020-12-json-viewer__name,
+  .swagger-ui
+    .json-schema-2020-12-keyword--const
+    .json-schema-2020-12-json-viewer__value {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .model-box-control,
+  .swagger-ui .models-control,
+  .swagger-ui .opblock-summary-control {
+    fill: var(--chakra-colors-fg);
+  }
+  .swagger-ui .expand-methods,
+  .swagger-ui .expand-operation {
+    fill: var(--chakra-colors-fg);
+  }
+  .swagger-ui .opblock-description-wrapper,
+  .swagger-ui .opblock-external-docs-wrapper,
+  .swagger-ui .opblock-title_normal {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .opblock-description-wrapper p,
+  .swagger-ui .opblock-external-docs-wrapper p,
+  .swagger-ui .opblock-title_normal p {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .response-col_status {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui table thead tr td,
+  .swagger-ui table thead tr th {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .tab li {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .response-col_links {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .parameter__name {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .parameter__type {
+    color: var(--chakra-colors-fg-muted);
+  }
+  .swagger-ui .prop-format {
+    color: var(--chakra-colors-fg-muted);
+  }
+  .swagger-ui .opblock .opblock-section-header h4 {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .btn {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui button {
+    background-color: unset;
+
+    &:hover {
+      color: var(--chakra-colors-fg);
+    }
+  }
+  .swagger-ui .opblock-summary-control:focus {
+    outline: none;
+  }
+  .swagger-ui .dialog-ux .modal-ux {
+    background-color: var(--chakra-colors-bg);
+    border: none;
+  }
+  .swagger-ui .dialog-ux .modal-ux-header h3,
+  .swagger-ui .dialog-ux .modal-ux-content h4 {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .dialog-ux .modal-ux-content p {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui label {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .dialog-ux .modal-ux-header .close-modal {
+    fill: var(--chakra-colors-fg);
+  }
+  .swagger-ui input[type="email"],
+  .swagger-ui input[type="file"],
+  .swagger-ui input[type="password"],
+  .swagger-ui input[type="search"],
+  .swagger-ui input[type="text"],
+  .swagger-ui textarea {
+    --input-bd: var(--chakra-colors-bg);
+    --input-bg: var(--chakra-colors-bg-subtle);
+    --input-bd-focus: var(--chakra-colors-color-palette-400);
+    background: var(--input-bg);
+    border: var(--chakra-borders-sm) var(--input-bd);
+
+    &:focus {
+      outline: none;
+      --input-bd: var(--input-bd-focus);
+    }
+  }
+  .swagger-ui select {
+    --input-bg: var(--chakra-colors-bg-subtle);
+    background-color: var(--input-bg);
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui input[disabled],
+  .swagger-ui select[disabled],
+  .swagger-ui textarea[disabled] {
+    color: var(--chakra-colors-fg-muted);
+  }
+  .swagger-ui .opblock .opblock-section-header {
+    background: rgb(51, 51, 51);
+  }
+  .info__description.description h2,
+  .info__description.description p {
+    color: var(--chakra-colors-fg);
+  }
+  .swagger-ui .info li {
+    color: var(--chakra-colors-fg);
+  }
+}

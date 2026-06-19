@@ -1,9 +1,13 @@
-from datetime import timedelta
+from datetime import datetime
 from uuid import UUID
 
+from fastapi.encoders import jsonable_encoder
+
+from server.const import RefreshScopeEnum
 from server.schemas.security import AccessSessionContext, Cookie, RefreshSessionContext
+from server.schemas.types import Scopes
+from server.security.loader import AUTH_URL
 from server.security.manager import AuthManager
-from server.security.tokens import create_access_token, create_refresh_cookie, create_refresh_token
 
 
 class TokenResponseService:
@@ -21,30 +25,41 @@ class TokenResponseService:
         self,
         user_id: UUID,
         session_id: UUID,
-        auth_provider_id: UUID,
-        role_id: UUID,
-        expires: timedelta,
-        scopes: list[str],
+        expires_at: datetime,
+        scopes: Scopes | None = None,
     ) -> str:
 
         access_ctx = AccessSessionContext(
-            user_id=user_id, session_id=session_id, auth_provider_id=auth_provider_id, role_id=role_id, scopes=scopes
+            user_id=user_id,
+            session_id=session_id,
+            scopes=scopes,
         )
 
-        return create_access_token(access_manager=self.access_manager, data=access_ctx, expires=expires)
-
-    def issue_refresh_token(self, user_id: UUID, session_id: UUID, auth_provider_id: UUID, expires: timedelta) -> str:
-
-        refresh_ctx = RefreshSessionContext(user_id=user_id, session_id=session_id, auth_provider_id=auth_provider_id)
-
-        return create_refresh_token(refresh_manager=self.refresh_manager, data=refresh_ctx, expires=expires)
-
-    def issue_refresh_cookie(
-        self, user_id: UUID, session_id: UUID, auth_provider_id: UUID, expires: timedelta
-    ) -> Cookie:
-
-        token = self.issue_refresh_token(
-            user_id=user_id, session_id=session_id, auth_provider_id=auth_provider_id, expires=expires
+        return self.access_manager.create_access_token(
+            data=jsonable_encoder(access_ctx.model_dump(exclude_none=True, exclude_defaults=True)),
+            expires_at=expires_at,
         )
 
-        return create_refresh_cookie(cookie_name=self.refresh_cookie_name, token=token, expires=expires)
+    def issue_refresh_token(self, user_id: UUID, session_id: UUID, expires_at: datetime) -> str:
+
+        scopes = Scopes([RefreshScopeEnum.TOKEN_REFRESH])
+
+        refresh_ctx = RefreshSessionContext(user_id=user_id, session_id=session_id, scopes=scopes)
+
+        return self.refresh_manager.create_access_token(
+            data=jsonable_encoder(refresh_ctx.model_dump(exclude_none=True, exclude_defaults=True)),
+            expires_at=expires_at,
+        )
+
+    def issue_refresh_cookie(self, user_id: UUID, session_id: UUID, expires_at: datetime) -> Cookie:
+
+        token = self.issue_refresh_token(user_id=user_id, session_id=session_id, expires_at=expires_at)
+
+        return Cookie(
+            key=self.refresh_cookie_name,
+            value=token,
+            httponly=True,
+            samesite="strict",
+            path=AUTH_URL,
+            expires=expires_at,
+        )

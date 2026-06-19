@@ -6,9 +6,9 @@ Simple PDF manager - nothing more.
 
 ### Features
 
-* Annotations - Comments, highlights, and labels on any page (full-text searchable).
+* Annotations - Comments, highlights, and labels on any page (full-text searchable)
 * Library organization - nested collections/folders, tags, and favorites. File state tracking
-* Local accounts plus SSO via OIDC
+* Authentication - Local accounts plus SSO via OIDC
 * Multi-user - very user has their own library
 * Sharing - Invite other users to any collection (with permission management)
 * Search - file metadata, page content, annotation bodies, and labels

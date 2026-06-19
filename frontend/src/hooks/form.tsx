@@ -1,21 +1,14 @@
 import { showSuccessNotification } from "@/components/ui/toaster";
 import { useAPIMutation } from "@/hooks/query";
 import { useForm } from "@tanstack/react-form";
-import type { UseMutationOptions } from "@tanstack/react-query";
+import type { MutationMeta, UseMutationOptions } from "@tanstack/react-query";
 
 export function useFormMutation<
   TFormValues extends object,
   TMutationData = unknown,
   TMutationError = unknown,
   TMutationVariables = unknown,
->({
-  formOptions,
-  mutationOptions,
-  onMutate,
-  successMessage,
-  onSuccess,
-  resetForm = true,
-}: {
+>(props: {
   formOptions: { defaultValues: TFormValues } & Record<string, unknown>;
   mutationOptions: () => UseMutationOptions<
     TMutationData,
@@ -26,15 +19,26 @@ export function useFormMutation<
   successMessage?: string;
   onSuccess?: () => void;
   resetForm?: boolean;
+  mutationMeta?: MutationMeta;
 }) {
+  const {
+    formOptions,
+    mutationOptions,
+    onMutate,
+    successMessage,
+    onSuccess,
+    resetForm = true,
+    mutationMeta,
+  } = props;
+
   const form = useForm({
     ...formOptions,
     onSubmit: async ({ value }) => {
-      mutate(onMutate(value as TFormValues));
+      mutation.mutate(onMutate(value as TFormValues));
     },
   });
 
-  const { mutate, isPending } = useAPIMutation({
+  const mutation = useAPIMutation({
     ...mutationOptions(),
     onSuccess() {
       if (successMessage) showSuccessNotification(successMessage);
@@ -42,7 +46,8 @@ export function useFormMutation<
       onSuccess?.();
     },
     setErrorMap: form.setErrorMap,
+    meta: mutationMeta,
   });
 
-  return { form, isPending };
+  return { form, mutation };
 }

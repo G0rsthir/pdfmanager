@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import SecretStr
 
-from server.const import ScopesEnum
+from server.const import AccessScopeEnum, RefreshScopeEnum
 from server.dependencies import (
     AccessSecurity,
     AuthProviderRepositoryDependency,
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/auth")
 
 @router.get(path="/session", response_model=UserSessionResponse, operation_id="GetCurrentSession")
 async def get_current_session(
-    auth_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    auth_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     user_repo: UserRepositoryDependency,
 ):
     """
@@ -72,17 +72,14 @@ async def authenticate_with_password(
     access_token = token_service.issue_access_token(
         user_id=result.user_id,
         session_id=result.session_id,
-        auth_provider_id=result.auth_provider_id,
-        role_id=result.role_id,
-        expires=result.session_revalidate_delta,
         scopes=result.scopes,
+        expires_at=result.session_revalidate_at,
     )
 
     cookie = token_service.issue_refresh_cookie(
         user_id=result.user_id,
         session_id=result.session_id,
-        auth_provider_id=result.auth_provider_id,
-        expires=result.session_expires_delta,
+        expires_at=result.session_expires_at,
     )
     response.set_cookie(**cookie.model_dump())
 
@@ -96,7 +93,7 @@ async def authenticate_with_password(
 @router.post("/refresh", response_model=AccessToken, operation_id="RefreshAuthToken")
 async def refresh_token(
     response: Response,
-    refresh_session: Annotated[RefreshSessionContext, RefreshSecurity(scopes=[ScopesEnum.TOKEN_REFRESH])],
+    refresh_session: Annotated[RefreshSessionContext, RefreshSecurity(scopes=[RefreshScopeEnum.TOKEN_REFRESH])],
     token_service: TokenServiceDependency,
     auth_service: AuthServiceDependency,
 ):
@@ -110,18 +107,15 @@ async def refresh_token(
     access_token = token_service.issue_access_token(
         user_id=result.user_id,
         session_id=result.session_id,
-        auth_provider_id=result.auth_provider_id,
-        role_id=result.role_id,
-        expires=result.session_revalidate_delta,
         scopes=result.scopes,
+        expires_at=result.session_revalidate_at,
     )
 
     if result.is_rotated:
         cookie = token_service.issue_refresh_cookie(
             user_id=result.user_id,
             session_id=result.session_id,
-            auth_provider_id=result.auth_provider_id,
-            expires=result.session_expires_delta,
+            expires_at=result.session_expires_at,
         )
         response.set_cookie(**cookie.model_dump())
 
@@ -135,7 +129,7 @@ async def refresh_token(
 @router.delete(path="/token", response_model=RevokeResponse, operation_id="RevokeToken")
 async def revoke_token(
     response: Response,
-    refresh_session: Annotated[RefreshSessionContext, RefreshSecurity(scopes=[ScopesEnum.TOKEN_REFRESH])],
+    refresh_session: Annotated[RefreshSessionContext, RefreshSecurity(scopes=[RefreshScopeEnum.TOKEN_REFRESH])],
     token_service: TokenServiceDependency,
     auth_service: AuthServiceDependency,
     provider_repo: AuthProviderRepositoryDependency,
@@ -144,12 +138,14 @@ async def revoke_token(
     Invalidate the access and refresh tokens
     """
 
+    session = await auth_service.get_session(refresh_session.session_id)
+
     await auth_service.revoke_session(refresh_session.session_id)
 
     response.delete_cookie(token_service.refresh_cookie_name, samesite="strict", path=token_service.token_url)
 
     try:
-        provider = await provider_repo.get_oidc_by_id(refresh_session.auth_provider_id)
+        provider = await provider_repo.get_oidc_by_id(session.auth_provider_id)
     except AuthProviderNotFoundError:
         return RevokeResponse()
 
@@ -220,8 +216,7 @@ async def oidc_callback(
         cookie = token_service.issue_refresh_cookie(
             user_id=result.user_id,
             session_id=result.session_id,
-            auth_provider_id=result.auth_provider_id,
-            expires=result.session_expires_delta,
+            expires_at=result.session_expires_at,
         )
         response.set_cookie(**cookie.model_dump())
         return response

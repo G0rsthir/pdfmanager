@@ -44,6 +44,7 @@ class SearchFilesQueryParams(PaginationQueryParams):
                     query=self.text, fragment_types=[FragmentType.PAGE, FragmentType.TITLE, FragmentType.DESCRIPTION]
                 )
             )
+        # TODO add support for wildcard annotation search, not just text
         if self.annotation:
             out.append(SearchFilter(query=self.annotation, fragment_types=[FragmentType.ANNOTATION]))
 

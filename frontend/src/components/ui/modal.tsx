@@ -1,5 +1,6 @@
+import { useHasScopes } from "@/common/auth/hooks";
+import { AccessScopeEnum } from "@/config/const";
 import { Button, CloseButton, Dialog, Portal, Stack } from "@chakra-ui/react";
-import { AdminWriteButton } from "./button";
 
 export function ConfirmModal(props: {
   open: boolean;
@@ -8,7 +9,7 @@ export function ConfirmModal(props: {
   title: React.ReactNode;
   confirmBtnText?: string;
   confirmBtnPalette?: string;
-  confirmBtnType?: "generic" | "adminWrite";
+  confirmBtnType?: "generic" | "adminWrite" | "userWrite";
   onConfirm: () => void;
   isPending?: boolean;
 }) {
@@ -24,7 +25,13 @@ export function ConfirmModal(props: {
     isPending,
   } = props;
 
-  const ConfirmBtn = confirmBtnType == "adminWrite" ? AdminWriteButton : Button;
+  const haScope = useHasScopes(
+    confirmBtnType == "adminWrite"
+      ? AccessScopeEnum.ADMIN_WRITE
+      : AccessScopeEnum.USER_WRITE,
+  );
+
+  const isDisabled = confirmBtnType != "generic" && !haScope;
 
   return (
     <Dialog.Root
@@ -54,13 +61,14 @@ export function ConfirmModal(props: {
               >
                 Cancel
               </Button>
-              <ConfirmBtn
+              <Button
                 colorPalette={confirmBtnPalette}
                 onClick={onConfirm}
                 loading={isPending}
+                disabled={isDisabled}
               >
                 {confirmBtnText}
-              </ConfirmBtn>
+              </Button>
             </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Positioner>

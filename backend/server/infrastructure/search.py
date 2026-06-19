@@ -45,7 +45,7 @@ class SearchBackend(ABC):
         pass
 
     @abstractmethod
-    async def delete_by_docs(self, doc_id: list[UUID]):
+    async def delete_by_docs(self, doc_ids: list[UUID]):
         pass
 
     @abstractmethod

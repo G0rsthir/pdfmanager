@@ -2,11 +2,12 @@ import {
   updateUserAccountDetailsMutation,
   updateUserPasswordMutation,
 } from "@/api/@tanstack/react-query.gen";
-import { useAuth } from "@/common/auth/hooks";
+import { useAuth, useHasScopes } from "@/common/auth/hooks";
 import { Block, SettingsOption } from "@/components/ui/display";
 import { FormError } from "@/components/ui/error";
 import { Form } from "@/components/ui/form/container";
 import { PasswordInput } from "@/components/ui/password-input";
+import { AccessScopeEnum } from "@/config/const";
 import { useFormMutation } from "@/hooks/form";
 import {
   Alert,
@@ -77,6 +78,10 @@ function EditAccountDetails() {
     },
   });
 
+  const hasScope = useHasScopes(AccessScopeEnum.USER_WRITE);
+
+  const isReadOnly = session?.user.is_external || !hasScope;
+
   return (
     <Form onSubmit={form.handleSubmit}>
       <Stack>
@@ -86,7 +91,7 @@ function EditAccountDetails() {
             <Field.Root
               invalid={!fieldState.meta.isValid}
               required
-              disabled={session?.user.is_external}
+              disabled={isReadOnly}
             >
               <Field.Label>
                 Name <Field.RequiredIndicator />
@@ -106,7 +111,7 @@ function EditAccountDetails() {
             <Field.Root
               invalid={!fieldState.meta.isValid}
               required
-              disabled={session?.user.is_external}
+              disabled={isReadOnly}
             >
               <Field.Label>
                 Email <Field.RequiredIndicator />
@@ -128,7 +133,7 @@ function EditAccountDetails() {
               <>
                 {isDirty && (
                   <Group justifyContent="flex-end">
-                    <Button type="submit" disabled={session?.user.is_external}>
+                    <Button type="submit" disabled={isReadOnly}>
                       Update
                     </Button>
                   </Group>
@@ -160,6 +165,10 @@ function ChangePassword() {
     onSuccess: onClose,
   });
 
+  const hasScope = useHasScopes(AccessScopeEnum.USER_WRITE);
+
+  const isReadOnly = session?.user.is_external || !hasScope;
+
   if (!open)
     return (
       <Group justifyContent="space-between" width="full">
@@ -176,7 +185,7 @@ function ChangePassword() {
           size="xs"
           variant="outline"
           onClick={onOpen}
-          disabled={session?.user.is_external}
+          disabled={isReadOnly}
         >
           Edit
         </Button>

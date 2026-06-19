@@ -31,6 +31,9 @@ class AuthService:
         self.session_repo = session_repo
         self.env = env
 
+    async def get_session(self, session_id: UUID) -> ORMSession:
+        return await self.session_repo.get_by_id(session_id)
+
     async def revoke_session(self, session_id: UUID):
         session = await self.session_repo.get_by_id(session_id)
         session.revoke()
@@ -79,9 +82,9 @@ class AuthService:
 
         session_expires_delta = timedelta(minutes=self.env.REFRESH_JWT_LIFESPAN)
         session_expires_at = datetime.now(UTC) + session_expires_delta
+        session_revalidate_at = datetime.now(UTC) + timedelta(minutes=self.env.ACCESS_JWT_LIFESPAN)
 
-        auth_session = ORMSession(
-            id=uuid4(),
+        auth_session = ORMSession.build_interactive(
             user_id=user.id,
             expires_at=session_expires_at,
             auth_provider_id=provider.id,
@@ -94,10 +97,9 @@ class AuthService:
             session_id=auth_session.id,
             user_id=user.id,
             auth_provider_id=provider.id,
-            role_id=role.id,
-            session_expires_delta=session_expires_delta,
-            session_revalidate_delta=timedelta(minutes=self.env.ACCESS_JWT_LIFESPAN),
-            scopes=role.scopes_list,
+            session_expires_at=session_expires_at,
+            session_revalidate_at=session_revalidate_at,
+            created_at=auth_session.created_at,
         )
 
     async def authenticate_with_local_password(self, data: AuthenticatePasswordRequest) -> AuthResult:
@@ -110,8 +112,6 @@ class AuthService:
 
         provider = await self.provider_repo.get_local_by_id(user.auth_provider_id)
 
-        role = await self.role_repo.get_by_id(user.role_id)
-
         if not provider.can_authenticate():
             raise AuthenticationError("Auth provider is disabled or does not support authentication")
 
@@ -122,9 +122,9 @@ class AuthService:
 
         session_expires_delta = timedelta(minutes=self.env.REFRESH_JWT_LIFESPAN)
         session_expires_at = datetime.now(UTC) + session_expires_delta
+        session_revalidate_at = datetime.now(UTC) + timedelta(minutes=self.env.ACCESS_JWT_LIFESPAN)
 
-        auth_session = ORMSession(
-            id=uuid4(),
+        auth_session = ORMSession.build_interactive(
             user_id=user.id,
             expires_at=session_expires_at,
             auth_provider_id=provider.id,
@@ -137,10 +137,9 @@ class AuthService:
             session_id=auth_session.id,
             user_id=user.id,
             auth_provider_id=provider.id,
-            role_id=role.id,
-            session_expires_delta=session_expires_delta,
-            session_revalidate_delta=timedelta(minutes=self.env.ACCESS_JWT_LIFESPAN),
-            scopes=role.scopes_list,
+            session_expires_at=session_expires_at,
+            session_revalidate_at=session_revalidate_at,
+            created_at=auth_session.created_at,
         )
 
     async def refresh_session(self, data: RefreshSessionRequest) -> RefreshResult:
@@ -157,13 +156,12 @@ class AuthService:
 
         provider = await self.provider_repo.get_by_id(user.auth_provider_id)
 
-        role = await self.role_repo.get_by_id(user.role_id)
-
         if not provider.can_authenticate():
             raise AuthenticationError("Auth provider is disabled or does not support authentication")
 
         session_expires_delta = timedelta(minutes=self.env.REFRESH_JWT_LIFESPAN)
         session_expires_at = datetime.now(UTC) + session_expires_delta
+        session_revalidate_at = datetime.now(UTC) + timedelta(minutes=self.env.ACCESS_JWT_LIFESPAN)
 
         # Check if session needs rotation
         if not session.is_elapsed(percentage=50):
@@ -171,17 +169,15 @@ class AuthService:
                 session_id=session.id,
                 user_id=user.id,
                 auth_provider_id=provider.id,
-                role_id=role.id,
-                session_expires_delta=session.expires_at - datetime.now(UTC),
-                session_revalidate_delta=timedelta(minutes=self.env.ACCESS_JWT_LIFESPAN),
+                session_expires_at=session.expires_at,
+                session_revalidate_at=session_revalidate_at,
                 is_rotated=False,
-                scopes=role.scopes_list,
+                created_at=session.created_at,
             )
 
         session.revoke()
 
-        auth_session = ORMSession(
-            id=uuid4(),
+        auth_session = ORMSession.build_interactive(
             user_id=user.id,
             expires_at=session_expires_at,
             auth_provider_id=provider.id,
@@ -194,9 +190,8 @@ class AuthService:
             session_id=auth_session.id,
             user_id=user.id,
             auth_provider_id=provider.id,
-            role_id=role.id,
-            session_expires_delta=session_expires_delta,
-            session_revalidate_delta=timedelta(minutes=self.env.ACCESS_JWT_LIFESPAN),
+            session_expires_at=session_expires_at,
+            session_revalidate_at=session_revalidate_at,
             is_rotated=True,
-            scopes=role.scopes_list,
+            created_at=auth_session.created_at,
         )

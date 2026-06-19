@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter
 
-from server.const import ScopesEnum
+from server.const import AccessScopeEnum
 from server.dependencies import (
     AccessSecurity,
     IdentityServiceDependency,
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/account")
 @router.put(path="/details", operation_id="UpdateUserAccountDetails")
 async def update_details(
     details_update: DetailsUpdate,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
     """
@@ -38,7 +38,7 @@ async def update_details(
 @router.put(path="/password", operation_id="UpdateUserPassword")
 async def update_password(
     credentials: CredentialsUpdate,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
     """

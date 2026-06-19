@@ -1,7 +1,8 @@
-from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, SecretStr, computed_field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, SecretStr
+
+from server.schemas.types import Scopes
 
 
 class AuthenticateOidcRequest(BaseModel):
@@ -27,23 +28,13 @@ class RefreshSessionRequest(BaseModel):
 
 class AuthResult(BaseModel):
     session_id: UUID
-    session_expires_delta: timedelta
-    session_revalidate_delta: timedelta
+
     user_id: UUID
     auth_provider_id: UUID
-    role_id: UUID
-    created_at: AwareDatetime = Field(default_factory=lambda: datetime.now(UTC))
-    scopes: list[str]
-
-    @computed_field
-    @property
-    def session_expires_at(self) -> AwareDatetime:
-        return self.session_expires_delta + self.created_at
-
-    @computed_field
-    @property
-    def session_revalidate_at(self) -> AwareDatetime:
-        return self.session_revalidate_delta + self.created_at
+    created_at: AwareDatetime
+    scopes: Scopes | None = None
+    session_expires_at: AwareDatetime
+    session_revalidate_at: AwareDatetime
 
 
 class RefreshResult(AuthResult):

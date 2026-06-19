@@ -9,6 +9,7 @@ import {
 import { client } from "../client.gen";
 import {
   createAnnotation,
+  createApiKey,
   createAuthToken,
   createCollection,
   createOidcAuthProvider,
@@ -20,6 +21,7 @@ import {
   deleteFile,
   deleteOidcAuthProvider,
   deleteUser,
+  getApiDocs,
   getAppState,
   getAppStatus,
   getCollection,
@@ -34,6 +36,7 @@ import {
   inviteToCollection,
   listAnnotationLabels,
   listAnnotations,
+  listApiKeys,
   listAuthProviders,
   listCollectionMoveTargets,
   listCollections,
@@ -49,7 +52,9 @@ import {
   patchAnnotation,
   patchFileState,
   refreshAuthToken,
+  resetApiKey,
   resetUserPassword,
+  revokeApiKey,
   revokeToken,
   searchFiles,
   updateCollection,
@@ -65,6 +70,9 @@ import {
 import type {
   CreateAnnotationData,
   CreateAnnotationError,
+  CreateApiKeyData,
+  CreateApiKeyError,
+  CreateApiKeyResponse,
   CreateAuthTokenData,
   CreateAuthTokenError,
   CreateAuthTokenResponse,
@@ -89,6 +97,7 @@ import type {
   DeleteOidcAuthProviderError,
   DeleteUserData,
   DeleteUserError,
+  GetApiDocsData,
   GetAppStateData,
   GetAppStateResponse,
   GetAppStatusData,
@@ -122,6 +131,8 @@ import type {
   ListAnnotationsData,
   ListAnnotationsError,
   ListAnnotationsResponse,
+  ListApiKeysData,
+  ListApiKeysResponse,
   ListAuthProvidersData,
   ListAuthProvidersResponse,
   ListCollectionMoveTargetsData,
@@ -153,8 +164,13 @@ import type {
   PatchFileStateError,
   RefreshAuthTokenData,
   RefreshAuthTokenResponse,
+  ResetApiKeyData,
+  ResetApiKeyError,
+  ResetApiKeyResponse,
   ResetUserPasswordData,
   ResetUserPasswordError,
+  RevokeApiKeyData,
+  RevokeApiKeyError,
   RevokeTokenData,
   RevokeTokenResponse,
   SearchFilesData,
@@ -1585,6 +1601,139 @@ export const updateOidcAuthProviderMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await updateOidcAuthProvider({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+export const getApiDocsQueryKey = (options?: Options<GetApiDocsData>) =>
+  createQueryKey("getApiDocs", options);
+
+/**
+ * Get Api Docs
+ *
+ * Get API documentation in OpenAPI format.
+ */
+export const getApiDocsOptions = (options?: Options<GetApiDocsData>) =>
+  queryOptions<
+    unknown,
+    DefaultError,
+    unknown,
+    ReturnType<typeof getApiDocsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getApiDocs({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getApiDocsQueryKey(options),
+  });
+
+export const listApiKeysQueryKey = (options?: Options<ListApiKeysData>) =>
+  createQueryKey("listApiKeys", options);
+
+/**
+ * List Api Keys
+ */
+export const listApiKeysOptions = (options?: Options<ListApiKeysData>) =>
+  queryOptions<
+    ListApiKeysResponse,
+    DefaultError,
+    ListApiKeysResponse,
+    ReturnType<typeof listApiKeysQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listApiKeys({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listApiKeysQueryKey(options),
+  });
+
+/**
+ * Create Api Key
+ */
+export const createApiKeyMutation = (
+  options?: Partial<Options<CreateApiKeyData>>,
+): UseMutationOptions<
+  CreateApiKeyResponse,
+  CreateApiKeyError,
+  Options<CreateApiKeyData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    CreateApiKeyResponse,
+    CreateApiKeyError,
+    Options<CreateApiKeyData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await createApiKey({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Revoke Api Key
+ */
+export const revokeApiKeyMutation = (
+  options?: Partial<Options<RevokeApiKeyData>>,
+): UseMutationOptions<
+  unknown,
+  RevokeApiKeyError,
+  Options<RevokeApiKeyData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    RevokeApiKeyError,
+    Options<RevokeApiKeyData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await revokeApiKey({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Reset Api Key
+ */
+export const resetApiKeyMutation = (
+  options?: Partial<Options<ResetApiKeyData>>,
+): UseMutationOptions<
+  ResetApiKeyResponse,
+  ResetApiKeyError,
+  Options<ResetApiKeyData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ResetApiKeyResponse,
+    ResetApiKeyError,
+    Options<ResetApiKeyData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await resetApiKey({
         ...options,
         ...fnOptions,
         throwOnError: true,

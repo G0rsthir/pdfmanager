@@ -29,7 +29,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuCheck, LuFile, LuTag } from "react-icons/lu";
-import { Empty } from "./shared/common";
+import { Empty } from "../shared/common";
 import { SearchTag } from "./shared/file";
 
 export function TagsPage() {

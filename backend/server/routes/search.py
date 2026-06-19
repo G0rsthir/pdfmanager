@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from server.const import ScopesEnum
+from server.const import AccessScopeEnum
 from server.dependencies import (
     AccessSecurity,
     LibraryServiceDependency,
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/search")
 @router.get(path="/files", response_model=list[FileSearchResponse], operation_id="SearchFiles")
 async def search_files(
     query: Annotated[SearchFilesQueryParams, Query()],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
     search_service: SearchServiceDependency,
 ):

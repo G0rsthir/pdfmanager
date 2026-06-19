@@ -25,7 +25,7 @@ import {
 import { useCallback } from "react";
 import { LuFileText, LuHardDriveUpload, LuUpload } from "react-icons/lu";
 import { useParams } from "react-router";
-import { Empty } from "./shared/common";
+import { Empty } from "../shared/common";
 import { FileTagsInput } from "./shared/file";
 import { FileList, LayoutSwitch } from "./shared/layout";
 
@@ -132,7 +132,7 @@ function UploadFileDialog(props: {
     file: undefined,
   };
 
-  const { form, isPending } = useFormMutation({
+  const { form, mutation } = useFormMutation({
     formOptions: {
       defaultValues: defaultValues,
     },
@@ -161,7 +161,7 @@ function UploadFileDialog(props: {
       title="Upload file"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Upload"
-      isPending={isPending}
+      isPending={mutation.isPending}
       disabled={readOnly}
     >
       <form.Field

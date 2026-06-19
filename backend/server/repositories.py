@@ -7,7 +7,7 @@ from sqlalchemy import and_, delete, exists, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server import models
-from server.const import RESOURCE_PERMISSIONS
+from server.const import RESOURCE_PERMISSIONS, SessionTypeEnum
 from server.exceptions import (
     AnnotationNotFoundError,
     AuthProviderNotFoundError,
@@ -37,6 +37,9 @@ class UserRepository(Repository):
         if not record:
             raise UserNotFoundError(user_id)
         return record
+
+    async def get_by_id_or_none(self, user_id: UUID):
+        return await self.session.get(models.ORMUser, user_id)
 
     async def get_by_email(self, email: str) -> models.ORMUser | None:
         record = await self.session.scalar(
@@ -94,6 +97,14 @@ class RoleRepository(Repository):
         records = await self.session.scalars(select(models.ORMUserRole))
         return list(records.all())
 
+    async def get_by_user_id(self, user_id: UUID) -> models.ORMUserRole | None:
+        stmt = (
+            select(models.ORMUserRole)
+            .join(models.ORMUser, models.ORMUser.role_id == models.ORMUserRole.id)
+            .where(models.ORMUser.id == user_id)
+        )
+        return await self.session.scalar(stmt)
+
 
 class AuthProviderRepository(Repository):
     async def get_by_id(self, provider_id: UUID):
@@ -146,10 +157,13 @@ class AuthProviderRepository(Repository):
 
 class SessionRepository(Repository):
     async def get_by_id(self, session_id: UUID):
-        record = await self.session.get_one(models.ORMSession, session_id)
+        record = await self.session.get(models.ORMSession, session_id)
         if not record:
             raise SessionNotFoundError(session_id)
         return record
+
+    async def get_by_id_or_none(self, session_id: UUID):
+        return await self.session.get(models.ORMSession, session_id)
 
     async def revoke_by_id(self, session_id: UUID):
         session_record = await self.session.get(models.ORMSession, session_id)
@@ -166,6 +180,17 @@ class SessionRepository(Repository):
 
     def create(self, session: models.ORMSession) -> None:
         self.session.add(session)
+
+    async def get_list(
+        self, include_revoked: bool = False, session_type: list[SessionTypeEnum] | None = None
+    ) -> list[models.ORMSession]:
+        stmt = select(models.ORMSession)
+        if not include_revoked:
+            stmt = stmt.where(~models.ORMSession.is_revoked)
+        if session_type is not None:
+            stmt = stmt.where(models.ORMSession.session_type.in_(session_type))
+        records = await self.session.scalars(stmt)
+        return list(records.all())
 
 
 @dataclass(kw_only=True)

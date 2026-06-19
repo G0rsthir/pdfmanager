@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Path, Request
 
-from server.const import ScopesEnum
+from server.const import AccessScopeEnum
 from server.dependencies import (
     AccessSecurity,
     AuthProviderRepositoryDependency,
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/identity")
 
 @router.get(path="/roles", response_model=list[RoleResponse], operation_id="ListRoles")
 async def list_roles(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
     role_repo: RoleRepositoryDependency,
 ):
     return await role_repo.get_list()
@@ -39,7 +39,7 @@ async def list_roles(
 
 @router.get(path="/users", response_model=list[UserResponse], operation_id="ListUsers")
 async def list_users(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
     user_repo: UserRepositoryDependency,
 ):
     return await user_repo.get_list()
@@ -48,7 +48,7 @@ async def list_users(
 @router.post(path="/users", operation_id="CreateUser")
 async def create_user(
     data: UserCreateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
 
@@ -64,9 +64,12 @@ async def create_user(
 async def update_user(
     user_id: Annotated[UUID, Path(alias="id")],
     data: UserUpdateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
+
+    # TODO Also revoke user sessions
+
     try:
         await identity_service.update_user(user_id=user_id, data=data)
     except InvalidActionError as e:
@@ -81,7 +84,7 @@ async def update_user(
 async def reset_user_password(
     user_id: Annotated[UUID, Path(alias="id")],
     credentials: CredentialsReset,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
 
@@ -95,7 +98,7 @@ async def reset_user_password(
 @router.delete(path="/users/{id}", operation_id="DeleteUser")
 async def delete_user(
     user_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
     identity_service: IdentityServiceDependency,
     library_service: LibraryServiceDependency,
 ):
@@ -107,7 +110,7 @@ async def delete_user(
 # Currently, openapi-ts does not support discriminators
 @router.get(path="/auth_providers", response_model=list[AuthProviderResponse], operation_id="ListAuthProviders")
 async def list_providers(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
     provider_repo: AuthProviderRepositoryDependency,
 ):
     return await provider_repo.get_list()
@@ -117,7 +120,7 @@ async def list_providers(
     path="/auth_providers/oidc", response_model=list[AuthProviderOidcResponse], operation_id="ListOidcAuthProviders"
 )
 async def list_oidc_providers(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
     provider_repo: AuthProviderRepositoryDependency,
     request: Request,
 ):
@@ -130,7 +133,7 @@ async def list_oidc_providers(
 )
 async def get_oidc_provider(
     provider_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
     provider_repo: AuthProviderRepositoryDependency,
     request: Request,
 ):
@@ -141,7 +144,7 @@ async def get_oidc_provider(
 @router.post(path="/auth_providers/oidc", operation_id="CreateOidcAuthProvider")
 async def create_provider_oidc(
     data: AuthProviderOidcCreateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
 
@@ -157,7 +160,7 @@ async def create_provider_oidc(
 async def update_provider_oidc(
     provider_id: Annotated[UUID, Path(alias="id")],
     data: AuthProviderOidcUpdateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
 
@@ -172,7 +175,7 @@ async def update_provider_oidc(
 @router.delete(path="/auth_providers/oidc/{id}", operation_id="DeleteOidcAuthProvider")
 async def delete_oidc_provider(
     provider_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
     provider_repo: AuthProviderRepositoryDependency,
 ):
 

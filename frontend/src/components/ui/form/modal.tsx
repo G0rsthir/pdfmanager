@@ -1,5 +1,6 @@
+import { useHasScopes } from "@/common/auth/hooks";
+import { AccessScopeEnum } from "@/config/const";
 import { Button, CloseButton, Dialog, Portal, Stack } from "@chakra-ui/react";
-import { AdminWriteButton } from "../button";
 
 export function FormModal(props: {
   open: boolean;
@@ -7,7 +8,7 @@ export function FormModal(props: {
   children: React.ReactNode;
   title: React.ReactNode;
   confirmBtnText?: string;
-  confirmBtnType?: "generic" | "adminWrite";
+  confirmBtnType?: "generic" | "adminWrite" | "userWrite";
   confirmBtnPalette?: string;
   onSubmit: () => void;
   isPending?: boolean;
@@ -28,7 +29,13 @@ export function FormModal(props: {
     close,
   } = props;
 
-  const ConfirmBtn = confirmBtnType == "adminWrite" ? AdminWriteButton : Button;
+  const haScope = useHasScopes(
+    confirmBtnType == "adminWrite"
+      ? AccessScopeEnum.ADMIN_WRITE
+      : AccessScopeEnum.USER_WRITE,
+  );
+
+  const isDisabled = disabled || (confirmBtnType != "generic" && !haScope);
 
   return (
     <Dialog.Root
@@ -48,7 +55,7 @@ export function FormModal(props: {
                 !e.shiftKey &&
                 !(e.target instanceof HTMLTextAreaElement) &&
                 !isPending &&
-                !disabled
+                !isDisabled
               ) {
                 e.preventDefault();
                 onSubmit();
@@ -72,14 +79,14 @@ export function FormModal(props: {
               >
                 Cancel
               </Button>
-              <ConfirmBtn
-                disabled={disabled}
+              <Button
+                disabled={isDisabled}
                 colorPalette={confirmBtnPalette}
                 onClick={onSubmit}
                 loading={isPending}
               >
                 {confirmBtnText}
-              </ConfirmBtn>
+              </Button>
             </Dialog.Footer>
           </Dialog.Content>
         </Dialog.Positioner>

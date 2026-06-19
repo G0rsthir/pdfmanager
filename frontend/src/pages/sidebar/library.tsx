@@ -395,6 +395,7 @@ function CreateNodeDialog(props: {
       title={`New ${label}`}
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
+      confirmBtnType="userWrite"
       submitOnEnter
     >
       <form.Field

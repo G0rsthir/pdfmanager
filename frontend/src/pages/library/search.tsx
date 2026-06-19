@@ -34,7 +34,7 @@ import {
 import { useCallback, useMemo } from "react";
 import { LuCompass, LuFileText, LuSearch } from "react-icons/lu";
 import { NavLink } from "react-router";
-import { Empty } from "./shared/common";
+import { Empty } from "../shared/common";
 import { FavoriteButton, FileCardActions } from "./shared/file";
 import { toFileUrl } from "./shared/path";
 

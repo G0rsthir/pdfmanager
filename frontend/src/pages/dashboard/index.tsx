@@ -18,8 +18,8 @@ import {
 } from "@chakra-ui/react";
 import { LuBookOpen, LuFile, LuTag } from "react-icons/lu";
 import { NavLink } from "react-router";
-import { Empty } from "../library/shared/common";
 import { FileCard } from "../library/shared/file";
+import { Empty } from "../shared/common";
 
 export function DashboardPage() {
   return (

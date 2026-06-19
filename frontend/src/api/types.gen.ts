@@ -73,6 +73,89 @@ export type AnnotationResponse = {
 };
 
 /**
+ * ApiKeyCreateRequest
+ */
+export type ApiKeyCreateRequest = {
+  /**
+   * Description
+   */
+  description: string;
+  /**
+   * Expires At
+   */
+  expires_at: Date;
+  /**
+   * User Id
+   */
+  user_id: string;
+  scopes: Scopes;
+};
+
+/**
+ * ApiKeyCreateResultResponse
+ */
+export type ApiKeyCreateResultResponse = {
+  /**
+   * Token
+   */
+  token: string;
+  /**
+   * Expires At
+   */
+  expires_at: Date;
+  /**
+   * User Id
+   */
+  user_id: string;
+};
+
+/**
+ * ApiKeyResetRequest
+ */
+export type ApiKeyResetRequest = {
+  /**
+   * Expires At
+   */
+  expires_at: Date;
+};
+
+/**
+ * ApiKeyResponse
+ */
+export type ApiKeyResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Description
+   */
+  description: string;
+  /**
+   * Expires At
+   */
+  expires_at: Date;
+  /**
+   * Is Revoked
+   */
+  is_revoked: boolean;
+  /**
+   * User Id
+   */
+  user_id: string;
+  scopes: Scopes;
+  user?: UserSummaryResponse | null;
+  /**
+   * Scopes Str
+   */
+  readonly scopes_str: string;
+  /**
+   * Is Expired
+   */
+  readonly is_expired: boolean;
+};
+
+/**
  * AppStateResponse
  */
 export type AppStateResponse = {
@@ -571,6 +654,7 @@ export const FragmentType = {
   DESCRIPTION: "description",
   PAGE: "page",
   ANNOTATION: "annotation",
+  LABEL: "label",
 } as const;
 
 /**
@@ -791,15 +875,17 @@ export type RoleResponse = {
    * Entity Type
    */
   entity_type: string;
+  scopes: Scopes;
   /**
-   * Scopes
+   * Scopes Str
    */
-  scopes: string;
-  /**
-   * Scope List
-   */
-  readonly scope_list: Array<string>;
+  readonly scopes_str: string;
 };
+
+/**
+ * Scopes
+ */
+export type Scopes = Array<string>;
 
 /**
  * SearchHitResponse
@@ -1099,6 +1185,34 @@ export type ValidationError = {
 };
 
 /**
+ * ApiKeyResponse
+ */
+export type ApiKeyResponseWritable = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Description
+   */
+  description: string;
+  /**
+   * Expires At
+   */
+  expires_at: Date;
+  /**
+   * Is Revoked
+   */
+  is_revoked: boolean;
+  /**
+   * User Id
+   */
+  user_id: string;
+  scopes: Scopes;
+  user?: UserSummaryResponse | null;
+};
+
+/**
  * AppStateResponse
  */
 export type AppStateResponseWritable = {
@@ -1315,10 +1429,7 @@ export type RoleResponseWritable = {
    * Entity Type
    */
   entity_type: string;
-  /**
-   * Scopes
-   */
-  scopes: string;
+  scopes: Scopes;
 };
 
 /**
@@ -2835,3 +2946,121 @@ export type UpdateOidcAuthProviderResponses = {
    */
   200: unknown;
 };
+
+export type GetApiDocsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/general/api/docs";
+};
+
+export type GetApiDocsResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ListApiKeysData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/general/api/keys";
+};
+
+export type ListApiKeysResponses = {
+  /**
+   * Response Listapikeys
+   *
+   * Successful Response
+   */
+  200: Array<ApiKeyResponse>;
+};
+
+export type ListApiKeysResponse =
+  ListApiKeysResponses[keyof ListApiKeysResponses];
+
+export type CreateApiKeyData = {
+  body: ApiKeyCreateRequest;
+  path?: never;
+  query?: never;
+  url: "/api/v1/general/api/keys";
+};
+
+export type CreateApiKeyErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type CreateApiKeyError = CreateApiKeyErrors[keyof CreateApiKeyErrors];
+
+export type CreateApiKeyResponses = {
+  /**
+   * Successful Response
+   */
+  200: ApiKeyCreateResultResponse;
+};
+
+export type CreateApiKeyResponse =
+  CreateApiKeyResponses[keyof CreateApiKeyResponses];
+
+export type RevokeApiKeyData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/general/api/keys/{id}";
+};
+
+export type RevokeApiKeyErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type RevokeApiKeyError = RevokeApiKeyErrors[keyof RevokeApiKeyErrors];
+
+export type RevokeApiKeyResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ResetApiKeyData = {
+  body: ApiKeyResetRequest;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/general/api/keys/{id}/reset";
+};
+
+export type ResetApiKeyErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ResetApiKeyError = ResetApiKeyErrors[keyof ResetApiKeyErrors];
+
+export type ResetApiKeyResponses = {
+  /**
+   * Successful Response
+   */
+  200: ApiKeyCreateResultResponse;
+};
+
+export type ResetApiKeyResponse =
+  ResetApiKeyResponses[keyof ResetApiKeyResponses];

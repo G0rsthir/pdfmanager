@@ -7,7 +7,8 @@ from fastapi import Depends, Request, Security
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.const import ScopesEnum
+from server.const import AccessScopeEnum, RefreshScopeEnum
+from server.exceptions import InsufficientPermissionsException
 from server.infrastructure.search import Fts5SearchBackend, SearchBackend
 from server.infrastructure.storage import LocalStorageBackend
 from server.repositories import (
@@ -23,6 +24,8 @@ from server.repositories import (
 )
 from server.runtime import RuntimeContainer
 from server.security.loader import AUTH_TOKEN_URL
+from server.security.permissions import PermissionResolver
+from server.services.api_keys import ApiKeyService
 from server.services.auth import AuthService
 from server.services.identity import IdentityService
 from server.services.indexing import IndexingService
@@ -40,16 +43,21 @@ class AccessManagerDependency(OAuth2PasswordBearer):
         super().__init__(tokenUrl=AUTH_TOKEN_URL, auto_error=False)
         self.permissions = {}
 
-    async def __call__(self, request: Request, scopes: SecurityScopes) -> AccessSessionContext:
+    async def __call__(self, request: Request, scopes: SecurityScopes) -> AccessSessionContext:  # type: ignore
         manager: AuthManager[AccessSessionContext] = request.app.state.access_manager
-        return await manager(request=request, security_scopes=scopes)
+        context = await manager(request=request)
+
+        resolver: PermissionResolver = request.app.state.permission_resolver
+        if not await resolver.has_scope(context, scopes.scopes):
+            raise InsufficientPermissionsException
+        return context
 
 
 class RefreshManagerDependency(OAuth2PasswordBearer):
     def __init__(self):
         super().__init__(tokenUrl=AUTH_TOKEN_URL, auto_error=False)
 
-    async def __call__(self, request: Request, scopes: SecurityScopes) -> RefreshSessionContext:
+    async def __call__(self, request: Request, scopes: SecurityScopes) -> RefreshSessionContext:  # type: ignore
         manager: AuthManager[RefreshSessionContext] = request.app.state.refresh_manager
         return await manager(request=request, security_scopes=scopes)
 
@@ -59,11 +67,11 @@ _access_manager_dependency = AccessManagerDependency()
 _refresh_manager_dependency = RefreshManagerDependency()
 
 
-def AccessSecurity(*, scopes: list[ScopesEnum] | None = None):
+def AccessSecurity(*, scopes: list[AccessScopeEnum] | None = None):
     return Security(_access_manager_dependency, scopes=scopes)
 
 
-def RefreshSecurity(*, scopes: list[ScopesEnum] | None = None):
+def RefreshSecurity(*, scopes: list[RefreshScopeEnum] | None = None):
     return Security(_refresh_manager_dependency, scopes=scopes)
 
 
@@ -99,6 +107,16 @@ def get_identity_service(
         user_repo=user_repo,
         role_repo=role_repo,
         provider_repo=auth_provider_repo,
+    )
+
+
+def get_api_key_service(
+    user_repo: UserRepositoryDependency,
+    session_repo: SessionRepositoryDependency,
+) -> ApiKeyService:
+    return ApiKeyService(
+        user_repo=user_repo,
+        session_repo=session_repo,
     )
 
 
@@ -249,6 +267,12 @@ SearchServiceDependency = Annotated[
     SearchService,
     Depends(get_search_service),
 ]
+
+ApiKeyServiceDependency = Annotated[
+    ApiKeyService,
+    Depends(get_api_key_service),
+]
+
 
 SearchEngineDependency = Annotated[
     SearchBackend,

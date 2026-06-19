@@ -178,7 +178,7 @@ class AuthManager[T](OAuth2PasswordBearer):
         self,
         *,
         data: dict,
-        expires: timedelta | None = None,
+        expires_at: datetime | None = None,
         scopes: Collection[str] | None = None,
     ) -> str:
         """
@@ -186,8 +186,7 @@ class AuthManager[T](OAuth2PasswordBearer):
 
         Args:
             data (dict): The data which should be stored in the token
-            expires (datetime.timedelta):  An optional timedelta in which the token expires.
-                Defaults to 15 minutes
+            expires_at (datetime | None): An optional datetime in which the token expires.
             scopes (Collection): Optional scopes the token user has access to.
 
         Returns:
@@ -197,12 +196,10 @@ class AuthManager[T](OAuth2PasswordBearer):
 
         to_encode = data.copy()
 
-        if expires:
-            expires_in = datetime.now(UTC) + expires
-        else:
-            expires_in = datetime.now(UTC) + self.default_expiry
+        if expires_at is None:
+            expires_at = datetime.now(UTC) + self.default_expiry
 
-        to_encode.update({"exp": expires_in})
+        to_encode.update({"exp": expires_at})
 
         if scopes is not None:
             unique_scopes = set(scopes)

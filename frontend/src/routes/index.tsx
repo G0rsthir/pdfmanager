@@ -1,15 +1,17 @@
 import { StateLoader } from "@/common/state/loader";
 import { Block } from "@/components/ui/display";
-import { ScopesEnum } from "@/config/const";
+import { AccessScopeEnum } from "@/config/const";
 import { CurrentUserAccountPage } from "@/pages/account";
-import { DashboardPage } from "@/pages/dashboard";
 import { AuthProvidersPage } from "@/pages/admin/identity/providers";
 import { RolesPage } from "@/pages/admin/identity/roles";
 import { UsersPage } from "@/pages/admin/identity/users";
 import { AdminLayout } from "@/pages/admin/layout";
+import APIDocumentationPage from "@/pages/admin/tools/apiDocs";
+import { ApiKeysPage } from "@/pages/admin/tools/apiKeys";
 import { SessionExpiredPage } from "@/pages/auth/expired";
 import { LoginPage } from "@/pages/auth/login";
 import { LogoutPage } from "@/pages/auth/logout";
+import { DashboardPage } from "@/pages/dashboard";
 import { Error404Page } from "@/pages/error/404";
 import { Error500Page } from "@/pages/error/500";
 import { DynamicErrorPage } from "@/pages/error/dynamic";
@@ -111,7 +113,7 @@ const router = createBrowserRouter([
           {
             path: "admin",
             element: (
-              <AuthGuard scopes={[ScopesEnum.ADMIN_READ]}>
+              <AuthGuard scopes={[AccessScopeEnum.ADMIN_READ]}>
                 <AdminLayout />
               </AuthGuard>
             ),
@@ -131,6 +133,14 @@ const router = createBrowserRouter([
               {
                 path: "providers",
                 element: <AuthProvidersPage />,
+              },
+              {
+                path: "api-docs",
+                element: <APIDocumentationPage />,
+              },
+              {
+                path: "api-keys",
+                element: <ApiKeysPage />,
               },
             ],
           },

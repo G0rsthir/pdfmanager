@@ -98,6 +98,129 @@ export const AnnotationResponseSchema = {
   title: "AnnotationResponse",
 } as const;
 
+export const ApiKeyCreateRequestSchema = {
+  properties: {
+    description: {
+      type: "string",
+      title: "Description",
+    },
+    expires_at: {
+      type: "string",
+      format: "date-time",
+      title: "Expires At",
+    },
+    user_id: {
+      type: "string",
+      format: "uuid",
+      title: "User Id",
+    },
+    scopes: {
+      $ref: "#/components/schemas/Scopes",
+    },
+  },
+  type: "object",
+  required: ["description", "expires_at", "user_id", "scopes"],
+  title: "ApiKeyCreateRequest",
+} as const;
+
+export const ApiKeyCreateResultResponseSchema = {
+  properties: {
+    token: {
+      type: "string",
+      title: "Token",
+    },
+    expires_at: {
+      type: "string",
+      format: "date-time",
+      title: "Expires At",
+    },
+    user_id: {
+      type: "string",
+      format: "uuid",
+      title: "User Id",
+    },
+  },
+  type: "object",
+  required: ["token", "expires_at", "user_id"],
+  title: "ApiKeyCreateResultResponse",
+} as const;
+
+export const ApiKeyResetRequestSchema = {
+  properties: {
+    expires_at: {
+      type: "string",
+      format: "date-time",
+      title: "Expires At",
+    },
+  },
+  type: "object",
+  required: ["expires_at"],
+  title: "ApiKeyResetRequest",
+} as const;
+
+export const ApiKeyResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    description: {
+      type: "string",
+      title: "Description",
+    },
+    expires_at: {
+      type: "string",
+      format: "date-time",
+      title: "Expires At",
+    },
+    is_revoked: {
+      type: "boolean",
+      title: "Is Revoked",
+    },
+    user_id: {
+      type: "string",
+      format: "uuid",
+      title: "User Id",
+    },
+    scopes: {
+      $ref: "#/components/schemas/Scopes",
+    },
+    user: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/UserSummaryResponse",
+        },
+        {
+          type: "null",
+        },
+      ],
+    },
+    scopes_str: {
+      type: "string",
+      title: "Scopes Str",
+      readOnly: true,
+    },
+    is_expired: {
+      type: "boolean",
+      title: "Is Expired",
+      readOnly: true,
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "description",
+    "expires_at",
+    "is_revoked",
+    "user_id",
+    "scopes",
+    "scopes_str",
+    "is_expired",
+  ],
+  title: "ApiKeyResponse",
+} as const;
+
 export const AppStateResponseSchema = {
   properties: {
     is_initial_user_created: {
@@ -839,7 +962,7 @@ export const FileStateResponseSchema = {
 
 export const FragmentTypeSchema = {
   type: "string",
-  enum: ["title", "description", "page", "annotation"],
+  enum: ["title", "description", "page", "annotation", "label"],
   title: "FragmentType",
 } as const;
 
@@ -1154,15 +1277,11 @@ export const RoleResponseSchema = {
       title: "Entity Type",
     },
     scopes: {
-      type: "string",
-      title: "Scopes",
+      $ref: "#/components/schemas/Scopes",
     },
-    scope_list: {
-      items: {
-        type: "string",
-      },
-      type: "array",
-      title: "Scope List",
+    scopes_str: {
+      type: "string",
+      title: "Scopes Str",
       readOnly: true,
     },
   },
@@ -1174,9 +1293,17 @@ export const RoleResponseSchema = {
     "is_protected",
     "entity_type",
     "scopes",
-    "scope_list",
+    "scopes_str",
   ],
   title: "RoleResponse",
+} as const;
+
+export const ScopesSchema = {
+  items: {
+    type: "string",
+  },
+  type: "array",
+  title: "Scopes",
 } as const;
 
 export const SearchHitResponseSchema = {
@@ -1586,6 +1713,57 @@ export const ValidationErrorSchema = {
   title: "ValidationError",
 } as const;
 
+export const ApiKeyResponseWritableSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    description: {
+      type: "string",
+      title: "Description",
+    },
+    expires_at: {
+      type: "string",
+      format: "date-time",
+      title: "Expires At",
+    },
+    is_revoked: {
+      type: "boolean",
+      title: "Is Revoked",
+    },
+    user_id: {
+      type: "string",
+      format: "uuid",
+      title: "User Id",
+    },
+    scopes: {
+      $ref: "#/components/schemas/Scopes",
+    },
+    user: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/UserSummaryResponse",
+        },
+        {
+          type: "null",
+        },
+      ],
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "description",
+    "expires_at",
+    "is_revoked",
+    "user_id",
+    "scopes",
+  ],
+  title: "ApiKeyResponse",
+} as const;
+
 export const AppStateResponseWritableSchema = {
   properties: {
     is_initial_user_created: {
@@ -1914,8 +2092,7 @@ export const RoleResponseWritableSchema = {
       title: "Entity Type",
     },
     scopes: {
-      type: "string",
-      title: "Scopes",
+      $ref: "#/components/schemas/Scopes",
     },
   },
   type: "object",

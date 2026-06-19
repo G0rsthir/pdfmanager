@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, PlainSerializer, SecretStr, StrictStr, computed_field
 
-from server.schemas.types import MaskedStr
+from server.schemas.types import MaskedStr, Scopes
 
 
 class SetupUser(BaseModel):
@@ -27,16 +27,12 @@ class RoleResponse(BaseModel):
     description: str
     is_protected: bool
     entity_type: str
-    scopes: str
+    scopes: Scopes
 
     @computed_field
     @property
-    def scope_list(self) -> list[str]:
-        return self.scopes.split(" ")
-
-    @scope_list.setter
-    def scope_list(self, scopes: list[str]):
-        self.scopes = " ".join(scopes)
+    def scopes_str(self) -> str:
+        return self.scopes.to_str()
 
 
 class AuthProviderResponse(BaseModel):

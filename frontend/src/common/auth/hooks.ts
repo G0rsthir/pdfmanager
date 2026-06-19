@@ -1,6 +1,7 @@
 import { useGlobalStore } from "@/store";
 import { useShallow } from "zustand/shallow";
 
+import type { AccessScope } from "@/config/const";
 import {
   loadSession,
   logout,
@@ -23,4 +24,12 @@ export function useAuth() {
     loadSession,
     logout,
   };
+}
+
+export function useHasScopes(...scopes: AccessScope[]) {
+  const { session } = useAuth();
+
+  return (
+    scopes.every((scope) => session?.user.role.scopes.includes(scope)) ?? false
+  );
 }

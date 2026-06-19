@@ -1,11 +1,13 @@
 from datetime import UTC, datetime
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from server.const import SessionTypeEnum
 from server.infrastructure.database.base import AuditMixin, Base, DateTimeUTC
+from server.schemas.types import Scopes
 
 
 class ORMUserRole(Base):
@@ -24,10 +26,6 @@ class ORMUserRole(Base):
             f"ORMUserRole(id={self.id}, name={self.name}, description='{self.description}',"
             f"is_protected='{self.is_protected}', scopes='{self.scopes}')"
         )
-
-    @property
-    def scopes_list(self) -> list[str]:
-        return [scope.strip() for scope in self.scopes.split(" ") if scope.strip()]
 
 
 class ORMAuthProvider(Base):
@@ -129,6 +127,7 @@ class ORMUser(Base):
 
     # Relationships
     role_id: Mapped[UUID] = mapped_column(ForeignKey("roles.id"))
+    # TODO do i need this?
     role: Mapped["ORMUserRole"] = relationship(lazy="joined")
     auth_provider: Mapped["ORMAuthProvider"] = relationship(lazy="joined")
     auth_provider_id: Mapped[UUID] = mapped_column(ForeignKey("auth_providers.id", ondelete="CASCADE"))
@@ -277,22 +276,35 @@ class ORMUserTagPreference(Base):
 class ORMSession(Base):
     __tablename__ = "sessions"
 
+    session_type: Mapped[str]
     expires_at: Mapped[datetime] = mapped_column(type_=DateTimeUTC(timezone=True))
     is_revoked: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTimeUTC(timezone=True),
         default=lambda: datetime.now(UTC),
     )
+    revoked_at: Mapped[datetime | None] = mapped_column(type_=DateTimeUTC(timezone=True), default=None, nullable=True)
+
+    description: Mapped[str | None] = mapped_column(default=None, nullable=True)
+    scopes: Mapped[str | None] = mapped_column(default=None, nullable=True)
 
     # Classification
     entity_type: Mapped[str] = mapped_column(default="session", server_default="session")
 
     # Relationships
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-    auth_provider_id: Mapped[UUID | None] = mapped_column(ForeignKey("auth_providers.id", ondelete="SET NULL"))
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    auth_provider_id: Mapped[UUID] = mapped_column(ForeignKey("auth_providers.id", ondelete="CASCADE"))
 
     def __repr__(self):
-        return f"ORMSession(id={self.id}, user_id={self.user_id}, is_valid={self.is_revoked} )"
+        return f"ORMSession(id={self.id}, user_id={self.user_id}, is_valid={self.is_revoked}, session_type='{self.session_type}')"
+
+    @property
+    def is_service(self) -> bool:
+        return self.session_type == SessionTypeEnum.SERVICE
+
+    @property
+    def is_interactive(self) -> bool:
+        return self.session_type == SessionTypeEnum.INTERACTIVE
 
     @property
     def is_expired(self) -> bool:
@@ -317,3 +329,39 @@ class ORMSession(Base):
     @property
     def is_valid(self) -> bool:
         return not (self.is_revoked or self.is_expired)
+
+    @classmethod
+    def build_interactive(cls, *, user_id: UUID, auth_provider_id: UUID, expires_at: datetime):
+        if expires_at < datetime.now(UTC):
+            raise ValueError("Expiration date must be in the future")
+
+        return cls(
+            id=uuid4(),
+            user_id=user_id,
+            auth_provider_id=auth_provider_id,
+            expires_at=expires_at,
+            session_type=SessionTypeEnum.INTERACTIVE,
+        )
+
+    @classmethod
+    def build_service(
+        cls,
+        *,
+        user_id: UUID,
+        auth_provider_id: UUID,
+        expires_at: datetime,
+        scopes: Scopes,
+        description: str | None = None,
+    ):
+        if expires_at < datetime.now(UTC):
+            raise ValueError("Expiration date must be in the future")
+
+        return cls(
+            id=uuid4(),
+            user_id=user_id,
+            auth_provider_id=auth_provider_id,
+            expires_at=expires_at,
+            session_type=SessionTypeEnum.SERVICE,
+            description=description,
+            scopes=scopes.to_str(),
+        )

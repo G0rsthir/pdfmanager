@@ -1,6 +1,12 @@
 import { ReactNavLink } from "@/components/ui/navlink";
 import { Box, Flex, Heading, Separator, Stack, Text } from "@chakra-ui/react";
-import { LuKeyRound, LuShieldCheck, LuUsers } from "react-icons/lu";
+import {
+  LuFingerprint,
+  LuKeyRound,
+  LuNavigation,
+  LuShieldCheck,
+  LuUsers,
+} from "react-icons/lu";
 import { Outlet } from "react-router";
 
 export function AdminLayout() {
@@ -26,6 +32,21 @@ export function AdminLayout() {
           <ReactNavLink
             label="Auth Providers"
             to="/admin/providers"
+            icon={<LuFingerprint />}
+          />
+          <Separator />
+          <Text color="fg.muted" letterSpacing="wider" px={2} pt={2}>
+            API
+          </Text>
+
+          <ReactNavLink
+            label="Docs"
+            to="/admin/api-docs"
+            icon={<LuNavigation />}
+          />
+          <ReactNavLink
+            label="Keys"
+            to="/admin/api-keys"
             icon={<LuKeyRound />}
           />
         </Stack>

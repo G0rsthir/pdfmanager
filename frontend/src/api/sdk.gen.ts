@@ -9,20 +9,26 @@ import {
 } from "./client";
 import { client } from "./client.gen";
 import {
+  createApiKeyResponseTransformer,
   createAuthTokenResponseTransformer,
   getCollectionResponseTransformer,
   getFileDetailsResponseTransformer,
   getFileStateResponseTransformer,
   getLibraryTreeResponseTransformer,
   listAnnotationsResponseTransformer,
+  listApiKeysResponseTransformer,
   listFilesResponseTransformer,
   refreshAuthTokenResponseTransformer,
+  resetApiKeyResponseTransformer,
   searchFilesResponseTransformer,
 } from "./transformers.gen";
 import type {
   CreateAnnotationData,
   CreateAnnotationErrors,
   CreateAnnotationResponses,
+  CreateApiKeyData,
+  CreateApiKeyErrors,
+  CreateApiKeyResponses,
   CreateAuthTokenData,
   CreateAuthTokenErrors,
   CreateAuthTokenResponses,
@@ -56,6 +62,8 @@ import type {
   DeleteUserData,
   DeleteUserErrors,
   DeleteUserResponses,
+  GetApiDocsData,
+  GetApiDocsResponses,
   GetAppStateData,
   GetAppStateResponses,
   GetAppStatusData,
@@ -93,6 +101,8 @@ import type {
   ListAnnotationsData,
   ListAnnotationsErrors,
   ListAnnotationsResponses,
+  ListApiKeysData,
+  ListApiKeysResponses,
   ListAuthProvidersData,
   ListAuthProvidersResponses,
   ListCollectionMoveTargetsData,
@@ -127,9 +137,15 @@ import type {
   PatchFileStateResponses,
   RefreshAuthTokenData,
   RefreshAuthTokenResponses,
+  ResetApiKeyData,
+  ResetApiKeyErrors,
+  ResetApiKeyResponses,
   ResetUserPasswordData,
   ResetUserPasswordErrors,
   ResetUserPasswordResponses,
+  RevokeApiKeyData,
+  RevokeApiKeyErrors,
+  RevokeApiKeyResponses,
   RevokeTokenData,
   RevokeTokenResponses,
   SearchFilesData,
@@ -1080,6 +1096,91 @@ export const updateOidcAuthProvider = <ThrowOnError extends boolean = false>(
   >({
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/identity/auth_providers/oidc/{id}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Get Api Docs
+ *
+ * Get API documentation in OpenAPI format.
+ */
+export const getApiDocs = <ThrowOnError extends boolean = false>(
+  options?: Options<GetApiDocsData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<GetApiDocsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/general/api/docs",
+    ...options,
+  });
+
+/**
+ * List Api Keys
+ */
+export const listApiKeys = <ThrowOnError extends boolean = false>(
+  options?: Options<ListApiKeysData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<ListApiKeysResponses, unknown, ThrowOnError>({
+    responseTransformer: listApiKeysResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/general/api/keys",
+    ...options,
+  });
+
+/**
+ * Create Api Key
+ */
+export const createApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<CreateApiKeyData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    CreateApiKeyResponses,
+    CreateApiKeyErrors,
+    ThrowOnError
+  >({
+    responseTransformer: createApiKeyResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/general/api/keys",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Revoke Api Key
+ */
+export const revokeApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<RevokeApiKeyData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    RevokeApiKeyResponses,
+    RevokeApiKeyErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/general/api/keys/{id}",
+    ...options,
+  });
+
+/**
+ * Reset Api Key
+ */
+export const resetApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<ResetApiKeyData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ResetApiKeyResponses,
+    ResetApiKeyErrors,
+    ThrowOnError
+  >({
+    responseTransformer: resetApiKeyResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/general/api/keys/{id}/reset",
     ...options,
     headers: {
       "Content-Type": "application/json",

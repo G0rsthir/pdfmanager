@@ -34,12 +34,20 @@ class TagEnum(StrEnum):
     SEARCH = "search"
 
 
-class ScopesEnum(StrEnum):
+class RefreshScopeEnum(StrEnum):
     TOKEN_REFRESH = "token:refresh"
+
+
+class AccessScopeEnum(StrEnum):
     ADMIN_READ = "admin:read"
     ADMIN_WRITE = "admin:write"
     USER_READ = "user:read"
     USER_WRITE = "user:write"
+
+
+class SessionTypeEnum(StrEnum):
+    INTERACTIVE = "interactive"
+    SERVICE = "service"
 
 
 class RolesEnum(StrEnum):

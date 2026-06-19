@@ -1,7 +1,7 @@
 import { listRolesOptions } from "@/api/@tanstack/react-query.gen";
 import type { RoleResponse } from "@/api/types.gen";
 import { QueryView } from "@/components/ui/feedback";
-import { ScopesEnum } from "@/config/const";
+import { AccessScopeEnum } from "@/config/const";
 import { useAPIQuery } from "@/hooks/query";
 import { Card, Group, Heading, Stack, Tag, Text, Wrap } from "@chakra-ui/react";
 import { LuCheck, LuX } from "react-icons/lu";
@@ -46,7 +46,7 @@ function RoleCard({ role }: { role: RoleResponse }) {
               {role.description}
             </Text>
           </Group>
-          <ScopesList scopeList={role.scope_list} />
+          <ScopesList scopeList={role.scopes} />
         </Stack>
       </Card.Body>
     </Card.Root>
@@ -54,7 +54,7 @@ function RoleCard({ role }: { role: RoleResponse }) {
 }
 
 function ScopesList({ scopeList }: { scopeList: string[] }) {
-  const allScopes = Object.values(ScopesEnum);
+  const allScopes = Object.values(AccessScopeEnum);
 
   return (
     <Wrap gap={4}>

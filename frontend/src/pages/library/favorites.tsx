@@ -4,7 +4,7 @@ import { QueryView } from "@/components/ui/feedback";
 import { useAPIQuery } from "@/hooks/query";
 import { Group, Heading, Stack } from "@chakra-ui/react";
 import { LuStar } from "react-icons/lu";
-import { Empty } from "./shared/common";
+import { Empty } from "../shared/common";
 import { FileList, LayoutSwitch } from "./shared/layout";
 
 export function FavoritesPage() {

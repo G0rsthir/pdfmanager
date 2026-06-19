@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Path, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse as FastAPIFileResponse
 
-from server.const import UNSET, ScopesEnum
+from server.const import UNSET, AccessScopeEnum
 from server.dependencies import (
     AccessSecurity,
     FileRepositoryDependency,
@@ -44,7 +44,7 @@ router = APIRouter(prefix="/library")
 
 @router.get(path="/collections", operation_id="ListCollections", response_model=list[CollectionResponse])
 async def list_collections(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -68,7 +68,7 @@ async def list_collections(
 )
 async def list_collection_move_targets(
     collection_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
     targets = await library_service.list_move_targets_for_collection(
@@ -80,7 +80,7 @@ async def list_collection_move_targets(
 @router.post(path="/collections", operation_id="CreateCollection")
 async def create_collection(
     data: CreateCollectionRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -90,7 +90,7 @@ async def create_collection(
 @router.get(path="/collections/{id}", operation_id="GetCollection", response_model=CollectionWithDetailsResponse)
 async def get_collection(
     collection_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
     user_repo: UserRepositoryDependency,
     permissions: PermissionDependency,
@@ -128,7 +128,7 @@ async def get_collection(
 )
 async def get_collection_permissions(
     collection_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -161,7 +161,7 @@ async def get_collection_permissions(
 async def invite_to_collection(
     collection_id: Annotated[UUID, Path(alias="id")],
     data: InviteToCollectionRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -182,7 +182,7 @@ async def invite_to_collection(
 async def delete_collection_permission(
     collection_id: Annotated[UUID, Path()],
     permission_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -198,7 +198,7 @@ async def update_collection_permission(
     collection_id: Annotated[UUID, Path()],
     permission_id: Annotated[UUID, Path(alias="id")],
     data: UpdateCollectionPermissionRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -214,7 +214,7 @@ async def update_collection_permission(
 async def update_collection(
     collection_id: Annotated[UUID, Path(alias="id")],
     data: UpdateCollectionRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
     try:
@@ -230,7 +230,7 @@ async def update_collection(
 @router.delete(path="/collections/{id}", operation_id="DeleteCollection")
 async def delete_collection(
     collection_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -244,7 +244,7 @@ async def delete_collection(
 )
 async def list_file_move_targets(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
     targets = await library_service.list_move_targets_for_file(user_id=access_session.user_id, source_id=file_id)
@@ -254,7 +254,7 @@ async def list_file_move_targets(
 @router.delete(path="/files/{id}", operation_id="DeleteFile")
 async def delete_file(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -265,7 +265,7 @@ async def delete_file(
 async def update_file(
     file_id: Annotated[UUID, Path(alias="id")],
     data: UpdateFileRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
     await library_service.update_file(
@@ -281,7 +281,7 @@ async def update_file(
 @router.get(path="/files/{id}/state", response_model=list[FileStateResponse], operation_id="GetFileState")
 async def get_file_state(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     file_repo: FileRepositoryDependency,
 ):
 
@@ -297,7 +297,7 @@ async def get_file_state(
 async def patch_file_state(
     file_id: Annotated[UUID, Path(alias="id")],
     data: PatchFileStateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -312,7 +312,7 @@ async def patch_file_state(
 
 @router.get(path="/tree", operation_id="GetLibraryTree", response_model=list[LibraryTreeNode])
 async def get_library_tree(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -322,7 +322,7 @@ async def get_library_tree(
 @router.get(path="/files", operation_id="ListFiles", response_model=list[FileResponse])
 async def list_files(
     query: Annotated[ListFilesQueryParams, Query()],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
     files = await library_service.list_files(
@@ -343,7 +343,7 @@ async def upload_file(
     description: Annotated[str | None, Form(default_factory=lambda: None)],
     collection_id: Annotated[UUID, Form()],
     tags: Annotated[list[str], Form(default_factory=list)],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
     background_tasks: BackgroundTasks,
     request: Request,
@@ -376,7 +376,7 @@ async def upload_file(
 @router.get(path="/files/{id}", operation_id="GetFileDetails", response_model=FileResponse)
 async def get_file_details(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -388,7 +388,7 @@ async def get_file_details(
 @router.get(path="/files/{id}/download", response_class=FastAPIFileResponse, operation_id="GetFile")
 async def download_file(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
     view = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
@@ -399,7 +399,7 @@ async def download_file(
 
 @router.get(path="/files/annotations/labels", response_model=list[str], operation_id="ListAnnotationLabels")
 async def list_annotation_labels(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -410,7 +410,7 @@ async def list_annotation_labels(
 @router.get(path="/files/{id}/annotations", response_model=list[AnnotationResponse], operation_id="ListAnnotations")
 async def list_annotations(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
     user_repo: UserRepositoryDependency,
 ):
@@ -430,7 +430,7 @@ async def list_annotations(
 async def create_annotation(
     file_id: Annotated[UUID, Path(alias="id")],
     data: CreateAnnotationRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -451,7 +451,7 @@ async def patch_annotation(
     file_id: Annotated[UUID, Path()],
     annotation_id: Annotated[UUID, Path(alias="id")],
     data: PatchAnnotationRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -471,7 +471,7 @@ async def patch_annotation(
 async def delete__annotation(
     file_id: Annotated[UUID, Path()],
     annotation_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -483,7 +483,7 @@ async def delete__annotation(
 @router.get(path="/files/{id}/thumbnail", response_class=FastAPIFileResponse, operation_id="GetFileThumbnail")
 async def get_file_thumbnail(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
     view = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
@@ -497,7 +497,7 @@ async def get_file_thumbnail(
 
 @router.get(path="/tags", operation_id="ListTags", response_model=list[TagWithDetailsResponse])
 async def list_tags(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -512,7 +512,7 @@ async def list_tags(
 async def update_tag(
     tag_id: Annotated[UUID, Path(alias="id")],
     data: UpdateTagRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[ScopesEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
 ):
 
