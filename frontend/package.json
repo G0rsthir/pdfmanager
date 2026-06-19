@@ -21,7 +21,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-icons": "^5.6.0",
-    "react-router": "^7.17.0",
+    "react-router": "^7.18.0",
     "swagger-ui-react": "^5.32.6",
     "zod": "^4.3.6",
     "zustand": "^5.0.14"
@@ -29,22 +29,22 @@
   "devDependencies": {
     "@chakra-ui/cli": "^3.34.0",
     "@eslint/js": "^10.0.1",
-    "@hey-api/openapi-ts": "^0.97.3",
+    "@hey-api/openapi-ts": "^0.98.2",
     "@rolldown/plugin-babel": "^0.2.3",
     "@tanstack/eslint-plugin-query": "^5.100.14",
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.4",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/swagger-ui-react": "^5.18.0",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "^10.4.1",
+    "eslint": "^10.5.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "eslint-plugin-react-x": "^5.8.16",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "eslint-plugin-react-x": "^5.9.0",
     "globals": "^17.6.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.61.0",
+    "typescript-eslint": "^8.61.1",
     "vite": "^8.0.16"
   }
 }
