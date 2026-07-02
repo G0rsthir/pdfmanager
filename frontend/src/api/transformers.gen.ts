@@ -3,7 +3,7 @@
 import type {
   CreateApiKeyResponse,
   CreateAuthTokenResponse,
-  GetCollectionResponse,
+  GetCollectionFilesResponse,
   GetFileDetailsResponse,
   GetFileStateResponse,
   GetLibraryTreeResponse,
@@ -42,23 +42,17 @@ const fileStateResponseSchemaResponseTransformer = (data: any) => {
 };
 
 const fileResponseSchemaResponseTransformer = (data: any) => {
+  if (data.published) {
+    data.published = new Date(data.published);
+  }
   data.state = fileStateResponseSchemaResponseTransformer(data.state);
   return data;
 };
 
-const collectionWithDetailsResponseSchemaResponseTransformer = (data: any) => {
-  if (data.files) {
-    data.files = data.files.map((item: any) =>
-      fileResponseSchemaResponseTransformer(item),
-    );
-  }
-  return data;
-};
-
-export const getCollectionResponseTransformer = async (
+export const getCollectionFilesResponseTransformer = async (
   data: any,
-): Promise<GetCollectionResponse> => {
-  data = collectionWithDetailsResponseSchemaResponseTransformer(data);
+): Promise<GetCollectionFilesResponse> => {
+  data = data.map((item: any) => fileResponseSchemaResponseTransformer(item));
   return data;
 };
 

@@ -1,5 +1,6 @@
 import {
   deleteFileMutation,
+  listAuthorsOptions,
   listCollectionsOptions,
   listFileMoveTargetsOptions,
   listTagsOptions,
@@ -20,6 +21,9 @@ import {
 import { useFileThumbnail } from "@/hooks/asset";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
+import { useSearchParamMulti } from "@/hooks/url";
+import { TokensInput } from "@/pages/shared/input";
+import { DateSelect } from "@/pages/shared/selects";
 import {
   Badge,
   Box,
@@ -32,110 +36,21 @@ import {
   Image,
   Input,
   Menu,
+  parseDate,
   Portal,
   Skeleton,
-  Span,
   Stack,
-  TagsInput,
+  Tabs,
   Text,
   useCombobox,
   useFilter,
   useListCollection,
-  useTagsInput,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuFileText, LuStar } from "react-icons/lu";
 import { NavLink } from "react-router";
 import { toFileUrl } from "./path";
-
-interface FileTagsInputProps {
-  onValueChange: (values: string[]) => void;
-  defaultValue: string[];
-  onBlur: () => void;
-}
-
-export function FileTagsInput(props: FileTagsInputProps) {
-  const { contains } = useFilter({ sensitivity: "base" });
-
-  const { collection, filter, set } = useListCollection<string>({
-    initialItems: [],
-    filter: contains,
-  });
-
-  const query = useAPIQuery({
-    ...listTagsOptions(),
-  });
-
-  useEffect(() => {
-    if (query.isSuccess) set(query.data.map((item) => item.name));
-  }, [query.data, query.isSuccess, set]);
-
-  const uid = useId();
-  const controlRef = useRef<HTMLDivElement | null>(null);
-
-  const tags = useTagsInput({
-    ids: { input: `input_${uid}`, control: `control_${uid}` },
-    defaultValue: props.defaultValue,
-    onValueChange(details) {
-      props.onValueChange(details.value);
-    },
-  });
-
-  const comobobox = useCombobox({
-    ids: { input: `input_${uid}`, control: `control_${uid}` },
-    collection,
-    onInputValueChange(e) {
-      filter(e.inputValue);
-    },
-    value: [],
-    allowCustomValue: true,
-    onValueChange: (e) => tags.addValue(e.value[0]),
-    selectionBehavior: "clear",
-    openOnClick: true,
-  });
-
-  return (
-    <Combobox.RootProvider value={comobobox}>
-      <TagsInput.RootProvider value={tags}>
-        <TagsInput.Label>Tags</TagsInput.Label>
-
-        <TagsInput.Control ref={controlRef} bg="bg.subtle">
-          {tags.value.map((tag, index) => (
-            <TagsInput.Item key={index} index={index} value={tag}>
-              <TagsInput.ItemPreview>
-                <TagsInput.ItemText>{tag}</TagsInput.ItemText>
-                <TagsInput.ItemDeleteTrigger />
-              </TagsInput.ItemPreview>
-            </TagsInput.Item>
-          ))}
-
-          <Combobox.Input unstyled asChild>
-            <TagsInput.Input
-              placeholder="Add or create tag..."
-              onBlur={props.onBlur}
-            />
-          </Combobox.Input>
-        </TagsInput.Control>
-        <Span textStyle="xs" color="fg.muted" ms="auto">
-          Press Enter or Return to add tag
-        </Span>
-        <Combobox.Positioner>
-          <Combobox.Content maxH="300px" overflowY="auto">
-            {collection.items
-              .filter((item) => !tags.value.includes(item))
-              .map((item) => (
-                <Combobox.Item item={item} key={item}>
-                  <Combobox.ItemText>{item}</Combobox.ItemText>
-                  <Combobox.ItemIndicator />
-                </Combobox.Item>
-              ))}
-          </Combobox.Content>
-        </Combobox.Positioner>
-      </TagsInput.RootProvider>
-    </Combobox.RootProvider>
-  );
-}
 
 interface FileFolderSelectProps {
   onValueChange: (values: string) => void;
@@ -237,8 +152,9 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
 export function FileRow(props: {
   file: FileResponse;
   includeReadDate?: boolean;
+  tagType?: "search" | "filter";
 }) {
-  const { file, includeReadDate = true } = props;
+  const { file, includeReadDate = true, tagType = "search" } = props;
 
   return (
     <Card.Root
@@ -294,9 +210,13 @@ export function FileRow(props: {
           <GridItem colSpan={2} justifyContent="space-between">
             <Group justifyContent="space-between" grow>
               <Group gap={2}>
-                {file.tags?.map((tag) => (
-                  <SearchTag key={tag.id} tag={tag} />
-                ))}
+                {file.tags?.map((tag) =>
+                  tagType == "search" ? (
+                    <SearchTag key={tag.id} tag={tag} />
+                  ) : (
+                    <FilterTag key={tag.id} tag={tag} />
+                  ),
+                )}
               </Group>
               <Group gap={3} justifyContent="end">
                 {includeReadDate && file.state.last_read_at && (
@@ -325,8 +245,9 @@ export function FileRow(props: {
 export function FileCard(props: {
   file: FileResponse;
   includeReadDate?: boolean;
+  tagType?: "search" | "filter";
 }) {
-  const { file, includeReadDate = true } = props;
+  const { file, includeReadDate = true, tagType = "search" } = props;
 
   const fileUrl = toFileUrl({
     folderId: file.collection_id,
@@ -397,9 +318,13 @@ export function FileCard(props: {
 
               {file.tags && file.tags.length > 0 && (
                 <Group gap={2} overflow="auto" h="2.0rem" align="start">
-                  {file.tags.map((tag) => (
-                    <SearchTag key={tag.id} tag={tag} />
-                  ))}
+                  {file.tags.map((tag) =>
+                    tagType == "search" ? (
+                      <SearchTag key={tag.id} tag={tag} />
+                    ) : (
+                      <FilterTag key={tag.id} tag={tag} />
+                    ),
+                  )}
                 </Group>
               )}
               <Group gap={3} justify="end" mt="auto">
@@ -433,6 +358,30 @@ export function SearchTag({ tag }: { tag: TagResponse }) {
         {tag.name}
       </Badge>
     </NavLink>
+  );
+}
+
+export function FilterTag({ tag }: { tag: TagResponse }) {
+  const [searchParams, setSearchParams] = useSearchParamMulti({
+    tag: { type: "array" },
+  });
+
+  return (
+    <Badge
+      onClick={() =>
+        setSearchParams({ tag: [...new Set([...searchParams.tag, tag.name])] })
+      }
+      key={tag.id}
+      size="sm"
+      colorPalette={tag.color}
+      transition="background 0.15s, color 0.15s"
+      _hover={{
+        bg: "colorPalette.solid",
+        color: "colorPalette.contrast",
+      }}
+    >
+      {tag.name}
+    </Badge>
   );
 }
 
@@ -546,10 +495,20 @@ function EditFileDialog(props: {
         collection_id: file.collection_id ?? "",
         description: file.description ?? "",
         tags: file.tags?.map((item) => item.name),
+        authors: file.authors?.map((item) => item.name),
+        published: file.published
+          ? [parseDate(file.published.toISOString().slice(0, 10))]
+          : undefined,
       },
     },
     mutationOptions: updateFileMutation,
-    onMutate: (value) => ({ body: value, path: { id: file.id } }),
+    onMutate: (value) => ({
+      body: {
+        ...value,
+        published: value.published?.[0]?.toDate("UTC"),
+      },
+      path: { id: file.id },
+    }),
     successMessage: "File updated successfully",
     onSuccess: onClose,
   });
@@ -568,6 +527,14 @@ function EditFileDialog(props: {
     onClose();
   }, [onClose, form]);
 
+  const listTagsQ = useAPIQuery({
+    ...listTagsOptions(),
+  });
+
+  const listAuthorsQ = useAPIQuery({
+    ...listAuthorsOptions(),
+  });
+
   return (
     <FormModal
       open={open}
@@ -577,81 +544,148 @@ function EditFileDialog(props: {
       confirmBtnText="Update"
       disabled={file.is_read_only_by_current_user}
     >
-      <form.Field
-        name="name"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={file.is_read_only_by_current_user}
-          >
-            <Field.Label>
-              Name <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
+      <Tabs.Root defaultValue="details" variant="line">
+        <Tabs.List mb={1}>
+          <Tabs.Trigger value="details">Details</Tabs.Trigger>
+          <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
+        </Tabs.List>
+
+        <Tabs.Content value="details" px={0}>
+          <Stack gap={4}>
+            <form.Field
+              name="name"
+              children={({ state: fieldState, handleChange, handleBlur }) => (
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  required
+                  disabled={file.is_read_only_by_current_user}
+                >
+                  <Field.Label>
+                    Name <Field.RequiredIndicator />
+                  </Field.Label>
+                  <Input
+                    value={fieldState.value}
+                    onChange={(e) => handleChange(e.target.value)}
+                    onBlur={handleBlur}
+                  />
+                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+                </Field.Root>
+              )}
             />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
-        )}
-      />
-      <form.Field
-        name="description"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            disabled={file.is_read_only_by_current_user}
-          >
-            <Field.Label>Description</Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
+            <form.Field
+              name="description"
+              children={({ state: fieldState, handleChange, handleBlur }) => (
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  disabled={file.is_read_only_by_current_user}
+                >
+                  <Field.Label>Description</Field.Label>
+                  <Input
+                    value={fieldState.value}
+                    onChange={(e) => handleChange(e.target.value)}
+                    onBlur={handleBlur}
+                  />
+                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+                </Field.Root>
+              )}
             />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
-        )}
-      />
-      <form.Field
-        name="collection_id"
-        validators={{
-          onChange: ({ value }) => (!value ? "Folder is required" : undefined),
-        }}
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={file.is_read_only_by_current_user}
-          >
-            <FileFolderSelect
-              defaultValue={fieldState.value ?? ""}
-              allowedFolderIds={moveTargetsQ.data?.map((c) => c.id)}
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              required
+            <form.Field
+              name="collection_id"
+              validators={{
+                onChange: ({ value }) =>
+                  !value ? "Folder is required" : undefined,
+              }}
+              children={({ state: fieldState, handleChange, handleBlur }) => (
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  required
+                  disabled={file.is_read_only_by_current_user}
+                >
+                  <FileFolderSelect
+                    defaultValue={fieldState.value ?? ""}
+                    allowedFolderIds={moveTargetsQ.data?.map((c) => c.id)}
+                    onValueChange={handleChange}
+                    onBlur={handleBlur}
+                    required
+                  />
+                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+                </Field.Root>
+              )}
             />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
-        )}
-      />
-      <form.Field
-        name="tags"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            disabled={file.is_read_only_by_current_user}
-          >
-            <FileTagsInput
-              defaultValue={fieldState.value ?? []}
-              onValueChange={handleChange}
-              onBlur={handleBlur}
+            <form.Field
+              name="tags"
+              children={({ state: fieldState, handleChange, handleBlur }) => (
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  disabled={file.is_read_only_by_current_user}
+                >
+                  <Field.Label>Tags</Field.Label>
+                  <TokensInput
+                    defaultValue={fieldState.value ?? []}
+                    onValueChange={handleChange}
+                    onBlur={handleBlur}
+                    suggestions={listTagsQ.data?.map((item) => item.name)}
+                    description="Press Enter or Return to add tag"
+                  />
+                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+                </Field.Root>
+              )}
             />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
-        )}
-      />
+          </Stack>
+        </Tabs.Content>
+
+        <Tabs.Content value="metadata" px={0}>
+          <Stack gap={4}>
+            <form.Field
+              name="authors"
+              children={({ state: fieldState, handleChange, handleBlur }) => (
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  disabled={file.is_read_only_by_current_user}
+                >
+                  <Field.Label>Authors</Field.Label>
+                  <TokensInput
+                    defaultValue={fieldState.value ?? []}
+                    onValueChange={handleChange}
+                    onBlur={handleBlur}
+                    description="Press Enter or Return to add author"
+                    suggestions={listAuthorsQ.data?.map((item) => item.name)}
+                  />
+                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+                </Field.Root>
+              )}
+            />
+            <form.Field
+              name="published"
+              children={({ state: fieldState, handleChange, handleBlur }) => (
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  disabled={file.is_read_only_by_current_user}
+                >
+                  <Field.Label>Published</Field.Label>
+                  <Field.Context>
+                    {(ctx) => (
+                      <DateSelect
+                        onValueChange={(details) => handleChange(details.value)}
+                        onBlur={handleBlur}
+                        required
+                        value={fieldState.value}
+                        invalid={ctx.invalid}
+                        ids={{
+                          label: () => ctx.ids.label,
+                          input: () => ctx.ids.control,
+                        }}
+                      />
+                    )}
+                  </Field.Context>
+                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+                </Field.Root>
+              )}
+            />
+          </Stack>
+        </Tabs.Content>
+      </Tabs.Root>
+
       <FormError errors={form.state.errorMap.onSubmit} />
     </FormModal>
   );

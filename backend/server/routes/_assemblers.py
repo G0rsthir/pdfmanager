@@ -7,6 +7,7 @@ from server.repositories import FileWithDetails
 from server.schemas.identity import AuthProviderOidcResponse, UserSummaryResponse
 from server.schemas.library import (
     AnnotationResponse,
+    AuthorResponse,
     FileResponse,
     FileStateResponse,
     TagResponse,
@@ -36,6 +37,7 @@ def build_file_response(file_details: FileWithDetails, user_id: UUID) -> FileRes
         if file_details.state
         else FileStateResponse.with_defaults(),
         tags=[TagResponse.model_validate(tag) for tag in file_details.tags],
+        authors=[AuthorResponse.model_validate(author) for author in file_details.authors],
         target_permission=permission,
     )
 

@@ -65,9 +65,11 @@ export function LayoutSwitch({ layoutKey }: { layoutKey: string }) {
 export function FileList({
   files,
   layoutKey,
+  tagType,
 }: {
   files: FileResponse[];
   layoutKey: string;
+  tagType?: "search" | "filter";
 }) {
   const [layout] = useLibraryLayout(layoutKey);
 
@@ -77,7 +79,7 @@ export function FileList({
     return (
       <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
         {files.map((file) => (
-          <FileCard file={file} key={file.id} />
+          <FileCard file={file} key={file.id} tagType={tagType} />
         ))}
       </SimpleGrid>
     );
@@ -86,7 +88,7 @@ export function FileList({
   return (
     <Stack gap={4}>
       {files.map((file) => (
-        <FileRow file={file} key={file.id} />
+        <FileRow file={file} key={file.id} tagType={tagType} />
       ))}
     </Stack>
   );

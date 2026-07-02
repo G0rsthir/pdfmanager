@@ -197,3 +197,33 @@ export function ScopeSelect(props: ScopeSelectProps) {
     </Select.Root>
   );
 }
+
+export function DateSelect(props: DatePickerRootProps) {
+  return (
+    <DatePicker.Root {...props}>
+      <DatePicker.Control>
+        <DatePicker.Input />
+        <DatePicker.IndicatorGroup>
+          <DatePicker.Trigger>
+            <LuCalendar />
+          </DatePicker.Trigger>
+        </DatePicker.IndicatorGroup>
+      </DatePicker.Control>
+      <Portal>
+        <DatePicker.Positioner>
+          <DatePicker.Content maxW="100dvw">
+            <DatePicker.View view="day">
+              <HStack>
+                <DatePicker.RangeText ps="4" />
+                <Spacer />
+                <DatePicker.PrevTrigger />
+                <DatePicker.NextTrigger />
+              </HStack>
+              <DatePicker.DayTable />
+            </DatePicker.View>
+          </DatePicker.Content>
+        </DatePicker.Positioner>
+      </Portal>
+    </DatePicker.Root>
+  );
+}

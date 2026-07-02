@@ -13,6 +13,7 @@ from server.infrastructure.search import Fts5SearchBackend, SearchBackend
 from server.infrastructure.storage import LocalStorageBackend
 from server.repositories import (
     AnnotationRepository,
+    AuthorRepository,
     AuthProviderRepository,
     CollectionRepository,
     FileRepository,
@@ -137,6 +138,7 @@ def get_library_service(
     permission_repo: PermissionDependency,
     annotation_repo: AnnotationRepositoryDependency,
     user_repo: UserRepositoryDependency,
+    authors_repo: AuthorRepositoryDependency,
 ) -> LibraryService:
     env: AppEnvSettings = request.app.state.env
     backend = LocalStorageBackend(env.STORAGE_DIR)
@@ -150,6 +152,7 @@ def get_library_service(
         storage_backend=backend,
         annotation_repo=annotation_repo,
         user_repo=user_repo,
+        authors_repo=authors_repo,
     )
 
 
@@ -205,6 +208,12 @@ def get_annotation_repository(
     return AnnotationRepository(db)
 
 
+def get_author_repository(
+    db: DBSessionDependency,
+) -> AuthorRepository:
+    return AuthorRepository(db)
+
+
 def get_file_repository(
     db: DBSessionDependency,
 ) -> FileRepository:
@@ -247,6 +256,7 @@ SessionRepositoryDependency = Annotated[SessionRepository, Depends(get_session_r
 AuthProviderRepositoryDependency = Annotated[AuthProviderRepository, Depends(get_auth_provider_repository)]
 PermissionDependency = Annotated[PermissionRepository, Depends(get_permission_repository)]
 AnnotationRepositoryDependency = Annotated[AnnotationRepository, Depends(get_annotation_repository)]
+AuthorRepositoryDependency = Annotated[AuthorRepository, Depends(get_author_repository)]
 
 AuthServiceDependency = Annotated[
     AuthService,

@@ -221,7 +221,7 @@ export function ApiKeyResultDialog({
                 <Alert.Root status="success">
                   <Alert.Indicator />
                   <Alert.Title>
-                    Please copy this key now — you won't be able to view it
+                    Please copy this key now - you won't be able to view it
                     again.
                   </Alert.Title>
                 </Alert.Root>

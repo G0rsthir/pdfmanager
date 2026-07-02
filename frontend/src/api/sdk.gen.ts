@@ -11,7 +11,7 @@ import { client } from "./client.gen";
 import {
   createApiKeyResponseTransformer,
   createAuthTokenResponseTransformer,
-  getCollectionResponseTransformer,
+  getCollectionFilesResponseTransformer,
   getFileDetailsResponseTransformer,
   getFileStateResponseTransformer,
   getLibraryTreeResponseTransformer,
@@ -70,6 +70,9 @@ import type {
   GetAppStatusResponses,
   GetCollectionData,
   GetCollectionErrors,
+  GetCollectionFilesData,
+  GetCollectionFilesErrors,
+  GetCollectionFilesResponses,
   GetCollectionPermissionsData,
   GetCollectionPermissionsErrors,
   GetCollectionPermissionsResponses,
@@ -103,6 +106,8 @@ import type {
   ListAnnotationsResponses,
   ListApiKeysData,
   ListApiKeysResponses,
+  ListAuthorsData,
+  ListAuthorsResponses,
   ListAuthProvidersData,
   ListAuthProvidersResponses,
   ListCollectionMoveTargetsData,
@@ -378,7 +383,6 @@ export const getCollection = <ThrowOnError extends boolean = false>(
     GetCollectionErrors,
     ThrowOnError
   >({
-    responseTransformer: getCollectionResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/library/collections/{id}",
     ...options,
@@ -402,6 +406,23 @@ export const updateCollection = <ThrowOnError extends boolean = false>(
       "Content-Type": "application/json",
       ...options.headers,
     },
+  });
+
+/**
+ * Get Collection Files
+ */
+export const getCollectionFiles = <ThrowOnError extends boolean = false>(
+  options: Options<GetCollectionFilesData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetCollectionFilesResponses,
+    GetCollectionFilesErrors,
+    ThrowOnError
+  >({
+    responseTransformer: getCollectionFilesResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/collections/{id}/files",
+    ...options,
   });
 
 /**
@@ -790,6 +811,18 @@ export const updateTag = <ThrowOnError extends boolean = false>(
       "Content-Type": "application/json",
       ...options.headers,
     },
+  });
+
+/**
+ * List Authors
+ */
+export const listAuthors = <ThrowOnError extends boolean = false>(
+  options?: Options<ListAuthorsData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<ListAuthorsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/library/authors",
+    ...options,
   });
 
 /**

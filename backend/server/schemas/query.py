@@ -56,3 +56,10 @@ class PaginatedResponse[DataT](BaseModel):
             page_count=page_count if page_count > 0 else 1,
             page_index=query.page_index,
         )
+
+
+class CollectionFilesQueryParams(BaseModel):
+    tags: list[str] | None = None
+    authors: list[str] | None = None
+    name: str | None = None
+    description: str | None = None

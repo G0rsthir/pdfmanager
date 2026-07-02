@@ -7,6 +7,7 @@ import { persist } from "zustand/middleware";
 export interface State {
   session?: UserSessionResponse;
   appState?: AppStateResponse;
+  pinnedOverviewNodes: string[];
   expandedLibraryNodes: string[];
   primaryColor: string;
   defaultLibraryLayout: LibraryLayout;
@@ -17,6 +18,7 @@ export interface Actions {
   updateSession: (session: State["session"]) => void;
   updateAppState: (appState: State["appState"]) => void;
   setExpandedLibraryNodes: (value: State["expandedLibraryNodes"]) => void;
+  setPinnedOverviewNodes: (value: State["pinnedOverviewNodes"]) => void;
   updatePrimaryColor: (color: string) => void;
   setDefaultLibraryLayout: (layout: LibraryLayout) => void;
   setLibraryLayout: (key: string, layout: LibraryLayout) => void;
@@ -30,12 +32,14 @@ export const useGlobalStore = create<State & Actions>()(
     (set, _get) => ({
       session: undefined,
       appState: undefined,
+      pinnedOverviewNodes: [],
       expandedLibraryNodes: [],
       primaryColor: "blue",
       defaultLibraryLayout: "list",
       libraryLayouts: {},
 
       setExpandedLibraryNodes: (value) => set({ expandedLibraryNodes: value }),
+      setPinnedOverviewNodes: (value) => set({ pinnedOverviewNodes: value }),
 
       updateSession: (session: State["session"]) => set({ session: session }),
 
@@ -59,6 +63,7 @@ export const useGlobalStore = create<State & Actions>()(
         primaryColor: state.primaryColor,
         defaultLibraryLayout: state.defaultLibraryLayout,
         libraryLayouts: state.libraryLayouts,
+        pinnedOverviewNodes: state.pinnedOverviewNodes,
       }),
     },
   ),

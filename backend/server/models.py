@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -127,7 +127,6 @@ class ORMUser(Base):
 
     # Relationships
     role_id: Mapped[UUID] = mapped_column(ForeignKey("roles.id"))
-    # TODO do i need this?
     role: Mapped["ORMUserRole"] = relationship(lazy="joined")
     auth_provider: Mapped["ORMAuthProvider"] = relationship(lazy="joined")
     auth_provider_id: Mapped[UUID] = mapped_column(ForeignKey("auth_providers.id", ondelete="CASCADE"))
@@ -182,6 +181,7 @@ class ORMFile(Base):
     file_size: Mapped[int]
     file_hash: Mapped[str | None]
     page_count: Mapped[int] = mapped_column(default=1)
+    published: Mapped[date | None] = mapped_column(default=None)
 
     # # Relationships
     collection_id: Mapped[UUID] = mapped_column(ForeignKey("collections.id", ondelete="CASCADE"))
@@ -189,6 +189,19 @@ class ORMFile(Base):
     @property
     def is_pdf(self) -> bool:
         return self.content_type == "application/pdf"
+
+
+class ORMAuthor(Base):
+    __tablename__ = "authors"
+
+    name: Mapped[str] = mapped_column(unique=True)
+
+
+class ORMFileAuthor(Base):
+    __tablename__ = "file_authors"
+
+    file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"), primary_key=True)
+    author_id: Mapped[UUID] = mapped_column(ForeignKey("authors.id", ondelete="CASCADE"), primary_key=True)
 
 
 class ORMFileState(Base, AuditMixin):

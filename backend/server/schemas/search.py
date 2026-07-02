@@ -30,6 +30,7 @@ class FileSearchResult:
 
 class SearchFilesQueryParams(PaginationQueryParams):
     tags: list[str] | None = None
+    authors: list[str] | None = None
     name: str | None = None
     description: str | None = None
     text: str | None = None

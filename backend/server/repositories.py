@@ -199,6 +199,7 @@ class FileWithDetails:
     state: models.ORMFileState | None
     tags: list[PersonalizedTag]
     permissions: list[models.ORMResourcePermission]
+    authors: list[models.ORMAuthor]
 
     def get_effective_permission(self, user_id: UUID) -> RESOURCE_PERMISSIONS | None:
         direct = next((p for p in self.permissions if p.user_id == user_id), None)
@@ -310,6 +311,7 @@ class FileRepository(Repository):
         collection_id: UUID | None = None,
         is_favorite: bool | None = None,
         tags: list[str] | None = None,
+        authors: list[str] | None = None,
         name: str | None = None,
         description: str | None = None,
     ) -> list[models.ORMFile]:
@@ -357,6 +359,17 @@ class FileRepository(Repository):
                         models.ORMFileTag.file_id == models.ORMFile.id,
                         models.ORMFileTag.tag_id == models.ORMTag.id,
                         models.ORMTag.name == tag,
+                    )
+                )
+
+        if authors:
+            unique_authors = set(authors)
+            for author in unique_authors:
+                stmt = stmt.where(
+                    exists().where(
+                        models.ORMFileAuthor.file_id == models.ORMFile.id,
+                        models.ORMFileAuthor.author_id == models.ORMAuthor.id,
+                        models.ORMAuthor.name == author,
                     )
                 )
 
@@ -582,6 +595,77 @@ class TagRepository(Repository):
 
         stmt = delete(models.ORMTag).where(~has_files, ~has_prefs)
         await self.session.execute(stmt)
+
+
+class AuthorRepository(Repository):
+    def save(self, author: models.ORMAuthor) -> None:
+        self.session.add(author)
+
+    async def get_by_names(self, names: list[str]) -> list[models.ORMAuthor]:
+        if not names:
+            return []
+
+        records = await self.session.scalars(
+            select(models.ORMAuthor).where(func.lower(models.ORMAuthor.name).in_([n.lower() for n in names]))
+        )
+        return list(records.all())
+
+    async def get_by_file(self, file_id: UUID) -> list[models.ORMAuthor]:
+        stmt = (
+            select(models.ORMAuthor)
+            .join(models.ORMFileAuthor, models.ORMAuthor.id == models.ORMFileAuthor.author_id)
+            .where(models.ORMFileAuthor.file_id == file_id)
+        )
+        records = await self.session.scalars(stmt)
+        return list(records.all())
+
+    async def list_by_files(self, file_ids: list[UUID]) -> dict[UUID, list[models.ORMAuthor]]:
+        if not file_ids:
+            return {}
+
+        stmt = (
+            select(models.ORMFileAuthor.file_id, models.ORMAuthor)
+            .join(models.ORMAuthor, models.ORMAuthor.id == models.ORMFileAuthor.author_id)
+            .where(models.ORMFileAuthor.file_id.in_(file_ids))
+        )
+
+        rows = await self.session.execute(stmt)
+
+        result: dict[UUID, list[models.ORMAuthor]] = {}
+        for file_id, author in rows:
+            result.setdefault(file_id, []).append(author)
+        return result
+
+    async def replace_file_authors(self, file_id: UUID, authors: list[UUID] | list[models.ORMAuthor]):
+        await self.session.execute(delete(models.ORMFileAuthor).where(models.ORMFileAuthor.file_id == file_id))
+
+        for author in authors:
+            if isinstance(author, models.ORMAuthor):
+                author = author.id
+            self.session.add(models.ORMFileAuthor(file_id=file_id, author_id=author))
+
+    async def delete_orphaned(self):
+        """
+        Delete authors with no file assignments.
+        """
+        has_files = exists().where(models.ORMFileAuthor.author_id == models.ORMAuthor.id)
+
+        stmt = delete(models.ORMAuthor).where(~has_files)
+        await self.session.execute(stmt)
+
+    async def list_distinct_by_files(self, file_ids: list[UUID]) -> list[models.ORMAuthor]:
+        if not file_ids:
+            return []
+
+        stmt = (
+            select(models.ORMAuthor)
+            .join(models.ORMFileAuthor, models.ORMAuthor.id == models.ORMFileAuthor.author_id)
+            .where(models.ORMFileAuthor.file_id.in_(file_ids))
+            .distinct()
+            .order_by(models.ORMAuthor.name)
+        )
+        records = await self.session.scalars(stmt)
+        return list(records.all())
 
 
 @dataclass

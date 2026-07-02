@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from io import BytesIO
 from logging import getLogger
 from pathlib import Path
@@ -19,6 +19,7 @@ from server.infrastructure.search import ContentFragment, SearchBackend
 from server.infrastructure.storage import StorageBackend
 from server.models import (
     ORMAnnotation,
+    ORMAuthor,
     ORMCollection,
     ORMFile,
     ORMFileState,
@@ -27,6 +28,7 @@ from server.models import (
 )
 from server.repositories import (
     AnnotationRepository,
+    AuthorRepository,
     CollectionRepository,
     FileRepository,
     FileWithDetails,
@@ -50,6 +52,7 @@ class LibraryService:
         storage_backend: StorageBackend,
         annotation_repo: AnnotationRepository,
         user_repo: UserRepository,
+        authors_repo: AuthorRepository,
     ):
         self._collection_repo = collection_repo
         self._file_repo = file_repo
@@ -59,6 +62,7 @@ class LibraryService:
         self._storage_backend = storage_backend
         self._annotation_repo = annotation_repo
         self._user_repo = user_repo
+        self._authors_repo = authors_repo
         self._logger = getLogger(__name__)
 
     async def get_collection(self, user_id: UUID, collection_id: UUID):
@@ -215,6 +219,25 @@ class LibraryService:
         await self._tags_repo.flush()
         return tags
 
+    async def resolve_authors(self, names: list[str]) -> list[ORMAuthor]:
+        if not names:
+            return []
+
+        normalized = {name.strip().lower() for name in names if name.strip()}
+        existing = await self._authors_repo.get_by_names(list(normalized))
+        existing_by_name = {t.name.lower(): t for t in existing}
+
+        authors: list[ORMAuthor] = []
+        for name in normalized:
+            author = existing_by_name.get(name)
+            if not author:
+                author = ORMAuthor(name=name)
+                self._authors_repo.save(author)
+            authors.append(author)
+
+        await self._authors_repo.flush()
+        return authors
+
     async def update_file_state(
         self,
         file_id: UUID,
@@ -256,6 +279,8 @@ class LibraryService:
         name: str,
         tags: list[str],
         collection_id: UUID,
+        authors: list[str],
+        published: date | None = None,
         description: str | None = None,
     ):
 
@@ -308,17 +333,21 @@ class LibraryService:
         resolved_tags = await self.resolve_tags(tags)
         await self._tags_repo.replace_file_tags(file_id=file_id, tags=resolved_tags)
 
+        resolved_authors = await self.resolve_authors(authors)
+        await self._authors_repo.replace_file_authors(file_id=file_id, authors=resolved_authors)
+
         file.collection_id = collection_id
+        file.published = published
 
         await self._file_repo.commit()
 
     async def upload_pdf_file(
         self,
         file: UploadFile,
-        name: str,
         collection_id: UUID,
         user_id: UUID,
         tags: list[str],
+        name: str | None = None,
         description: str | None = None,
     ) -> ORMFile:
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
@@ -339,13 +368,13 @@ class LibraryService:
             await self._search_engine.index(
                 [
                     ContentFragment(
-                        content=name,
+                        content=file_record.name,
                         doc_id=file_record.id,
                         entity_type=file_record.content_type,
                         fragment_type=FragmentType.TITLE,
                     ),
                     ContentFragment(
-                        content=description or "",
+                        content=file_record.description or "",
                         doc_id=file_record.id,
                         entity_type=file_record.content_type,
                         fragment_type=FragmentType.DESCRIPTION,
@@ -379,24 +408,34 @@ class LibraryService:
                 scope=f"thumbnails/{str(user_id)}", filename=thumb_name, data=BytesIO(thumb_img.image_bytes)
             )
 
-        return PdfStorageFile(
-            **stored_file.to_dict(),
-            page_count=pfg_file.page_count,
-            thumbnail=thumb.storage_key,
-        )
+            return PdfStorageFile(
+                **stored_file.to_dict(),
+                page_count=pfg_file.page_count,
+                thumbnail=thumb.storage_key,
+                metadata=pfg_file.metadata(),
+            )
 
     async def _create_file_record(
         self,
         file: PdfStorageFile,
-        name: str,
         collection_id: UUID,
         tags: list[str],
+        authors: list[str] | None = None,
+        name: str | None = None,
         description: str | None = None,
+        published: date | None = None,
     ):
 
+        meta = file.metadata
+        resolved_name = name or meta.title or Path(file.original_name).stem
+        resolved_description = description or meta.description
+        resolved_authors = authors or meta.authors
+        resolved_published = published or meta.published
+        resolved_tags = tags or meta.subjects
+
         file_record = ORMFile(
-            name=name,
-            description=description,
+            name=resolved_name,
+            description=resolved_description,
             collection_id=collection_id,
             storage_key=file.storage_key,
             file_size=file.size,
@@ -404,14 +443,19 @@ class LibraryService:
             page_count=file.page_count,
             thumbnail=file.thumbnail,
             content_type=file.content_type,
+            published=resolved_published,
         )
 
         self._file_repo.save(file_record)
         await self._file_repo.flush()
 
         await self._tags_repo.delete_orphaned()
-        resolved_tags = await self.resolve_tags(tags)
-        await self._tags_repo.replace_file_tags(file_id=file_record.id, tags=resolved_tags)
+        tag_records = await self.resolve_tags(resolved_tags)
+        await self._tags_repo.replace_file_tags(file_id=file_record.id, tags=tag_records)
+
+        await self._authors_repo.delete_orphaned()
+        author_records = await self.resolve_authors(resolved_authors)
+        await self._authors_repo.replace_file_authors(file_id=file_record.id, authors=author_records)
 
         await self._file_repo.commit()
 
@@ -456,6 +500,11 @@ class LibraryService:
             raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
 
         return await self._annotation_repo.list_by_file(file_id)
+
+    async def list_authors_visible_to_user(self, user_id: UUID) -> list[ORMAuthor]:
+        files = await self._file_repo.list_visible_to_user(user_id)
+
+        return await self._authors_repo.list_distinct_by_files([f.id for f in files])
 
     async def create_annotation(
         self,
@@ -596,7 +645,15 @@ class LibraryService:
 
         tags_by_file = await self._tags_repo.list_personalized_by_files([file.id], user_id)
 
-        return FileWithDetails(file=file, state=state, tags=tags_by_file.get(file.id, []), permissions=[perm])
+        authors_by_file = await self._authors_repo.list_by_files([file.id])
+
+        return FileWithDetails(
+            file=file,
+            state=state,
+            tags=tags_by_file.get(file.id, []),
+            permissions=[perm],
+            authors=authors_by_file.get(file.id, []),
+        )
 
     async def list_files(
         self,
@@ -604,6 +661,7 @@ class LibraryService:
         collection_id: UUID | None = None,
         is_favorite: bool | None = None,
         tags: list[str] | None = None,
+        authors: list[str] | None = None,
         name: str | None = None,
         description: str | None = None,
     ) -> list[FileWithDetails]:
@@ -614,6 +672,7 @@ class LibraryService:
             tags=tags,
             name=name,
             description=description,
+            authors=authors,
         )
         if not files:
             return []
@@ -621,9 +680,16 @@ class LibraryService:
         states = await self._file_repo.list_states(file_ids, user_id)
         states = {state.file_id: state for state in states}
         tags_by_file = await self._tags_repo.list_personalized_by_files(file_ids, user_id)
+        authors_by_file = await self._authors_repo.list_by_files(file_ids)
 
         return [
-            FileWithDetails(file=f, state=states.get(f.id), tags=tags_by_file.get(f.id, []), permissions=[])
+            FileWithDetails(
+                file=f,
+                state=states.get(f.id),
+                tags=tags_by_file.get(f.id, []),
+                permissions=[],
+                authors=authors_by_file.get(f.id, []),
+            )
             for f in files
         ]
 

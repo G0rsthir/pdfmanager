@@ -10,6 +10,7 @@ import {
   Stack,
   Text,
   type BoxProps,
+  type InputProps,
 } from "@chakra-ui/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LuSearch, LuX } from "react-icons/lu";
@@ -126,6 +127,10 @@ export function SearchBar(props: {
   defaultValues?: SearchTokenData[];
   value?: SearchTokenData[];
   onSearch: (tokens: SearchTokenData[]) => void;
+  size?: InputProps["size"];
+  width?: InputProps["width"];
+  /** Allow free-text tokens. When false, only `key:value` filters commit. */
+  allowText?: boolean;
 }) {
   const {
     keys,
@@ -133,6 +138,9 @@ export function SearchBar(props: {
     value,
     placeholder = "Search files...",
     onSearch,
+    size = "sm",
+    width,
+    allowText = false,
   } = props;
 
   const keyNames = useMemo(() => Object.keys(keys), [keys]);
@@ -180,15 +188,16 @@ export function SearchBar(props: {
   const commitToken = useCallback(
     (text?: string) => {
       const token = parseTokenFromInput(text ?? input, keys);
-      if (token) {
-        inputRef.current?.blur();
-        setPopoverOpen(false);
-        const next = [...tokens, token];
-        setTokens(next);
-        setInput("");
-      }
+      if (!token) return;
+      if (!allowText && token.type == "text") return;
+
+      inputRef.current?.blur();
+      setPopoverOpen(false);
+      const next = [...tokens, token];
+      setTokens(next);
+      setInput("");
     },
-    [input, tokens, keys, setTokens],
+    [input, tokens, keys, setTokens, allowText],
   );
 
   const removeLastToken = useCallback(() => {
@@ -303,6 +312,7 @@ export function SearchBar(props: {
           px={3}
           py={1.5}
           cursor="text"
+          width={width}
           onClick={() => inputRef.current?.focus()}
           _focusWithin={{
             borderColor: "colorPalette.500",
@@ -325,7 +335,7 @@ export function SearchBar(props: {
             variant="flushed"
             borderBottom="none"
             _focus={{ boxShadow: "none" }}
-            size="sm"
+            size={size}
             flex="1"
             minW="120px"
             placeholder={tokens.length == 0 ? placeholder : ""}

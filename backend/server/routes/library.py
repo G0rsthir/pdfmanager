@@ -19,6 +19,7 @@ from server.schemas.identity import UserSummaryResponse
 from server.schemas.library import (
     AnnotationResponse,
     AssignmentResponse,
+    AuthorResponse,
     CollectionResponse,
     CollectionWithDetailsResponse,
     CreateAnnotationRequest,
@@ -37,6 +38,7 @@ from server.schemas.library import (
     UpdateFileRequest,
     UpdateTagRequest,
 )
+from server.schemas.query import CollectionFilesQueryParams
 from server.schemas.security import AccessSessionContext
 
 router = APIRouter(prefix="/library")
@@ -97,7 +99,6 @@ async def get_collection(
 ):
 
     collection = await library_service.get_collection(user_id=access_session.user_id, collection_id=collection_id)
-    files = await library_service.list_files(user_id=access_session.user_id, collection_id=collection_id)
 
     perm = await permissions.get_effective_for_collection(collection_id, access_session.user_id)
     perm = perm.permission if perm else None
@@ -115,10 +116,31 @@ async def get_collection(
         name=collection.name,
         parent_id=collection.parent_id,
         entity_type=collection.entity_type,
-        files=[build_file_response(file, user_id=access_session.user_id) for file in files],
         target_permission=perm,
         owner=UserSummaryResponse.model_validate(owner),
     )
+
+
+@router.get(path="/collections/{id}/files", operation_id="GetCollectionFiles", response_model=list[FileResponse])
+async def get_collection_files(
+    collection_id: Annotated[UUID, Path(alias="id")],
+    query: Annotated[CollectionFilesQueryParams, Query()],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    collection = await library_service.get_collection(user_id=access_session.user_id, collection_id=collection_id)
+
+    files = await library_service.list_files(
+        user_id=access_session.user_id,
+        collection_id=collection.id,
+        tags=query.tags,
+        authors=query.authors,
+        description=query.description,
+        name=query.name,
+    )
+
+    return [build_file_response(file, user_id=access_session.user_id) for file in files]
 
 
 @router.get(
@@ -275,6 +297,8 @@ async def update_file(
         description=data.description,
         tags=data.tags,
         collection_id=data.collection_id,
+        authors=data.authors,
+        published=data.published,
     )
 
 
@@ -339,7 +363,7 @@ async def list_files(
 @router.post(path="/files/upload", operation_id="UploadFile")
 async def upload_file(
     file: UploadFile,
-    name: Annotated[str, Form()],
+    name: Annotated[str | None, Form(default_factory=lambda: None)],
     description: Annotated[str | None, Form(default_factory=lambda: None)],
     collection_id: Annotated[UUID, Form()],
     tags: Annotated[list[str], Form(default_factory=list)],
@@ -522,3 +546,12 @@ async def update_tag(
         if e.rule != "tag_name_exists":
             raise
         raise FieldError(field="name", msg="Tag already exists") from e
+
+
+@router.get(path="/authors", operation_id="ListAuthors", response_model=list[AuthorResponse])
+async def list_authors(
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
+    library_service: LibraryServiceDependency,
+):
+
+    return await library_service.list_authors_visible_to_user(user_id=access_session.user_id)

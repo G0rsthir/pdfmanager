@@ -27,6 +27,7 @@ async def search_files(
         tags=query.tags,
         name=query.name,
         description=query.description,
+        authors=query.authors,
     )
     if not files:
         return []

@@ -25,6 +25,7 @@ import {
   getAppState,
   getAppStatus,
   getCollection,
+  getCollectionFiles,
   getCollectionPermissions,
   getCurrentSession,
   getFile,
@@ -37,6 +38,7 @@ import {
   listAnnotationLabels,
   listAnnotations,
   listApiKeys,
+  listAuthors,
   listAuthProviders,
   listCollectionMoveTargets,
   listCollections,
@@ -103,6 +105,9 @@ import type {
   GetAppStatusData,
   GetCollectionData,
   GetCollectionError,
+  GetCollectionFilesData,
+  GetCollectionFilesError,
+  GetCollectionFilesResponse,
   GetCollectionPermissionsData,
   GetCollectionPermissionsError,
   GetCollectionPermissionsResponse,
@@ -133,6 +138,8 @@ import type {
   ListAnnotationsResponse,
   ListApiKeysData,
   ListApiKeysResponse,
+  ListAuthorsData,
+  ListAuthorsResponse,
   ListAuthProvidersData,
   ListAuthProvidersResponse,
   ListCollectionMoveTargetsData,
@@ -564,6 +571,34 @@ export const updateCollectionMutation = (
   };
   return mutationOptions;
 };
+
+export const getCollectionFilesQueryKey = (
+  options: Options<GetCollectionFilesData>,
+) => createQueryKey("getCollectionFiles", options);
+
+/**
+ * Get Collection Files
+ */
+export const getCollectionFilesOptions = (
+  options: Options<GetCollectionFilesData>,
+) =>
+  queryOptions<
+    GetCollectionFilesResponse,
+    GetCollectionFilesError,
+    GetCollectionFilesResponse,
+    ReturnType<typeof getCollectionFilesQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getCollectionFiles({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getCollectionFilesQueryKey(options),
+  });
 
 export const getCollectionPermissionsQueryKey = (
   options: Options<GetCollectionPermissionsData>,
@@ -1133,6 +1168,31 @@ export const updateTagMutation = (
   };
   return mutationOptions;
 };
+
+export const listAuthorsQueryKey = (options?: Options<ListAuthorsData>) =>
+  createQueryKey("listAuthors", options);
+
+/**
+ * List Authors
+ */
+export const listAuthorsOptions = (options?: Options<ListAuthorsData>) =>
+  queryOptions<
+    ListAuthorsResponse,
+    DefaultError,
+    ListAuthorsResponse,
+    ReturnType<typeof listAuthorsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listAuthors({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listAuthorsQueryKey(options),
+  });
 
 export const searchFilesQueryKey = (options?: Options<SearchFilesData>) =>
   createQueryKey("searchFiles", options);

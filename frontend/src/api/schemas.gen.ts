@@ -500,6 +500,23 @@ export const AuthProviderResponseSchema = {
     "Generic response model for authentication providers.\n\nSpecific provider types may have additional parameters, but all share these common parameters.",
 } as const;
 
+export const AuthorResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["id", "name"],
+  title: "AuthorResponse",
+} as const;
+
 export const Body_CreateAuthTokenSchema = {
   properties: {
     grant_type: {
@@ -658,13 +675,6 @@ export const CollectionWithDetailsResponseSchema = {
       type: "string",
       enum: ["folder", "group"],
       title: "Entity Type",
-    },
-    files: {
-      items: {
-        $ref: "#/components/schemas/FileResponse",
-      },
-      type: "array",
-      title: "Files",
     },
     owner: {
       $ref: "#/components/schemas/UserSummaryResponse",
@@ -873,6 +883,25 @@ export const FileResponseSchema = {
       },
       type: "array",
       title: "Tags",
+    },
+    authors: {
+      items: {
+        $ref: "#/components/schemas/AuthorResponse",
+      },
+      type: "array",
+      title: "Authors",
+    },
+    published: {
+      anyOf: [
+        {
+          type: "string",
+          format: "date",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Published",
     },
     state: {
       $ref: "#/components/schemas/FileStateResponse",
@@ -1509,6 +1538,25 @@ export const UpdateFileRequestSchema = {
       format: "uuid",
       title: "Collection Id",
     },
+    authors: {
+      items: {
+        type: "string",
+      },
+      type: "array",
+      title: "Authors",
+    },
+    published: {
+      anyOf: [
+        {
+          type: "string",
+          format: "date",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Published",
+    },
   },
   type: "object",
   required: ["name", "collection_id"],
@@ -1911,13 +1959,6 @@ export const CollectionWithDetailsResponseWritableSchema = {
       enum: ["folder", "group"],
       title: "Entity Type",
     },
-    files: {
-      items: {
-        $ref: "#/components/schemas/FileResponseWritable",
-      },
-      type: "array",
-      title: "Files",
-    },
     owner: {
       $ref: "#/components/schemas/UserSummaryResponse",
     },
@@ -1971,6 +2012,25 @@ export const FileResponseWritableSchema = {
       },
       type: "array",
       title: "Tags",
+    },
+    authors: {
+      items: {
+        $ref: "#/components/schemas/AuthorResponse",
+      },
+      type: "array",
+      title: "Authors",
+    },
+    published: {
+      anyOf: [
+        {
+          type: "string",
+          format: "date",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Published",
     },
     state: {
       $ref: "#/components/schemas/FileStateResponse",

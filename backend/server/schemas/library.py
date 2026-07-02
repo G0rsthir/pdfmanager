@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 from uuid import UUID
 
@@ -52,8 +53,6 @@ class CollectionResponse(BaseModel):
 class CollectionWithDetailsResponse(CollectionResponse):
     model_config = ConfigDict(from_attributes=True)
 
-    files: list[FileResponse] = Field(default_factory=list)
-
     owner: UserSummaryResponse
 
     # Helpful for permission calculation, but not part of the actual response
@@ -89,6 +88,9 @@ class FileResponse(BaseModel):
     description: str | None = None
     page_count: int
     tags: list[TagResponse] = Field(default_factory=list)
+
+    authors: list[AuthorResponse] = Field(default_factory=list)
+    published: date | None = None
 
     state: FileStateResponse
 
@@ -138,6 +140,8 @@ class UpdateFileRequest(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     tags: list[str] = Field(default_factory=list)
     collection_id: UUID
+    authors: list[str] = Field(default_factory=list)
+    published: date | None = None
 
 
 class LibraryTreeNode(BaseModel):
@@ -190,6 +194,13 @@ class TagResponse(BaseModel):
     id: UUID
     name: str
     color: str
+
+
+class AuthorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
 
 
 class TagWithDetailsResponse(TagResponse):

@@ -354,6 +354,20 @@ export type AuthProviderResponse = {
 };
 
 /**
+ * AuthorResponse
+ */
+export type AuthorResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+};
+
+/**
  * Body_CreateAuthToken
  */
 export type BodyCreateAuthToken = {
@@ -451,10 +465,6 @@ export type CollectionWithDetailsResponse = {
    * Entity Type
    */
   entity_type: "folder" | "group";
-  /**
-   * Files
-   */
-  files?: Array<FileResponse>;
   owner: UserSummaryResponse;
   /**
    * Is Shared With Current User
@@ -596,6 +606,14 @@ export type FileResponse = {
    * Tags
    */
   tags?: Array<TagResponse>;
+  /**
+   * Authors
+   */
+  authors?: Array<AuthorResponse>;
+  /**
+   * Published
+   */
+  published?: Date | null;
   state: FileStateResponse;
   /**
    * Tags Name List
@@ -1029,6 +1047,14 @@ export type UpdateFileRequest = {
    * Collection Id
    */
   collection_id: string;
+  /**
+   * Authors
+   */
+  authors?: Array<string>;
+  /**
+   * Published
+   */
+  published?: Date | null;
 };
 
 /**
@@ -1308,10 +1334,6 @@ export type CollectionWithDetailsResponseWritable = {
    * Entity Type
    */
   entity_type: "folder" | "group";
-  /**
-   * Files
-   */
-  files?: Array<FileResponseWritable>;
   owner: UserSummaryResponse;
 };
 
@@ -1343,6 +1365,14 @@ export type FileResponseWritable = {
    * Tags
    */
   tags?: Array<TagResponse>;
+  /**
+   * Authors
+   */
+  authors?: Array<AuthorResponse>;
+  /**
+   * Published
+   */
+  published?: Date | null;
   state: FileStateResponse;
 };
 
@@ -1831,6 +1861,57 @@ export type UpdateCollectionResponses = {
    */
   200: unknown;
 };
+
+export type GetCollectionFilesData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: {
+    /**
+     * Tags
+     */
+    tags?: Array<string> | null;
+    /**
+     * Authors
+     */
+    authors?: Array<string> | null;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+  };
+  url: "/api/v1/library/collections/{id}/files";
+};
+
+export type GetCollectionFilesErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetCollectionFilesError =
+  GetCollectionFilesErrors[keyof GetCollectionFilesErrors];
+
+export type GetCollectionFilesResponses = {
+  /**
+   * Response Getcollectionfiles
+   *
+   * Successful Response
+   */
+  200: Array<FileResponse>;
+};
+
+export type GetCollectionFilesResponse =
+  GetCollectionFilesResponses[keyof GetCollectionFilesResponses];
 
 export type GetCollectionPermissionsData = {
   body?: never;
@@ -2480,6 +2561,25 @@ export type UpdateTagResponses = {
   200: unknown;
 };
 
+export type ListAuthorsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/authors";
+};
+
+export type ListAuthorsResponses = {
+  /**
+   * Response Listauthors
+   *
+   * Successful Response
+   */
+  200: Array<AuthorResponse>;
+};
+
+export type ListAuthorsResponse =
+  ListAuthorsResponses[keyof ListAuthorsResponses];
+
 export type SearchFilesData = {
   body?: never;
   path?: never;
@@ -2500,6 +2600,10 @@ export type SearchFilesData = {
      * Tags
      */
     tags?: Array<string> | null;
+    /**
+     * Authors
+     */
+    authors?: Array<string> | null;
     /**
      * Name
      */

@@ -1,22 +1,18 @@
 import {
   listAnnotationLabelsOptions,
+  listAuthorsOptions,
   listTagsOptions,
   searchFilesOptions,
 } from "@/api/@tanstack/react-query.gen";
 import type {
+  AuthorResponse,
   FileSearchResponse,
   SearchHitResponse,
   TagResponse,
 } from "@/api/types.gen";
 import { MultiQueryView, QueryView } from "@/components/ui/feedback";
-import {
-  SearchBar,
-  type SearchKeyDef,
-  type SearchTokenData,
-} from "@/components/ui/searchBar";
-import { showErrorNotification } from "@/components/ui/toaster";
+import { SearchBar } from "@/components/ui/searchBar";
 import { useAPIQuery } from "@/hooks/query";
-import { useSearchParamMulti, type ParamState } from "@/hooks/url";
 import {
   Badge,
   Box,
@@ -31,11 +27,16 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { LuCompass, LuFileText, LuSearch } from "react-icons/lu";
 import { NavLink } from "react-router";
 import { Empty } from "../shared/common";
-import { FavoriteButton, FileCardActions } from "./shared/file";
+import {
+  useUrlSearchBar,
+  type SearchFilterDef,
+  type UrlSearchParamState,
+} from "../shared/smartSearchBar/hooks";
+import { FavoriteButton, FileCardActions, FilterTag } from "./shared/file";
 import { toFileUrl } from "./shared/path";
 
 type SearchParamKeys =
@@ -44,51 +45,8 @@ type SearchParamKeys =
   | "name"
   | "description"
   | "label"
-  | "annotation";
-
-type SearchParamDef = Record<SearchParamKeys, { type: "array" }>;
-
-const searchParamDef: SearchParamDef = {
-  tag: { type: "array" },
-  text: { type: "array" },
-  name: { type: "array" },
-  description: { type: "array" },
-  label: { type: "array" },
-  annotation: { type: "array" },
-};
-
-function useLibrarySearchParams() {
-  const [searchParams, setSearchParams] = useSearchParamMulti(searchParamDef);
-
-  const tokens = useMemo(() => {
-    return Object.entries(
-      searchParams as unknown as Record<string, string[]>,
-    ).flatMap(([key, val]): SearchTokenData[] => {
-      if (key == "text")
-        return val.map((item) => ({ type: "text", value: item }));
-
-      return val.map((item) => ({ type: "filter", key, value: item }));
-    });
-  }, [searchParams]);
-
-  const setTokens = useCallback(
-    (tokens: SearchTokenData[]) => {
-      const values: Record<string, string[]> = Object.fromEntries(
-        Object.keys(searchParamDef).map((k) => [k, []]),
-      );
-
-      for (const token of tokens) {
-        const key = token.key ?? token.type;
-        if (key in values) values[key].push(token.value);
-        else values[key] = [token.value];
-      }
-      setSearchParams(values);
-    },
-    [setSearchParams],
-  );
-
-  return { searchParams, tokens, setTokens };
-}
+  | "annotation"
+  | "author";
 
 export function SearchPage() {
   const tagsQ = useAPIQuery({
@@ -99,33 +57,35 @@ export function SearchPage() {
     ...listAnnotationLabelsOptions(),
   });
 
+  const authorsQ = useAPIQuery({
+    ...listAuthorsOptions(),
+  });
+
   return (
-    <MultiQueryView queries={[tagsQ, labelsQ]}>
-      {(data) => <SearchView tags={data[0]} labels={data[1]} />}
+    <MultiQueryView queries={[tagsQ, labelsQ, authorsQ]}>
+      {(data) => (
+        <SearchView tags={data[0]} labels={data[1]} authors={data[2]} />
+      )}
     </MultiQueryView>
   );
 }
 
-type SearchFilterKeyDef = SearchKeyDef & { isSingleUse?: boolean };
-
-function SearchView({
-  tags,
-  labels,
-}: {
+function SearchView(props: {
   tags: TagResponse[];
   labels: string[];
+  authors: AuthorResponse[];
 }) {
-  const {
-    tokens,
-    setTokens: setTokensRaw,
-    searchParams,
-  } = useLibrarySearchParams();
+  const { tags, labels, authors } = props;
 
-  const allKeys: Record<string, SearchFilterKeyDef> = useMemo(
+  const allKeys: Record<SearchParamKeys, SearchFilterDef> = useMemo(
     () => ({
       tag: {
         label: "Tag",
         values: tags.map((item) => item.name),
+      },
+      author: {
+        label: "Author",
+        values: authors.map((item) => item.name),
       },
       name: {
         label: "Name",
@@ -153,41 +113,12 @@ function SearchView({
         isSingleUse: true,
       },
     }),
-    [tags, labels],
+    [tags, labels, authors],
   );
 
-  const activeKeys = useMemo(() => {
-    const usedKeys = new Set(tokens.map((t) => t.key ?? t.type));
-    return Object.fromEntries(
-      Object.entries(allKeys).filter(
-        ([key, def]) => !def.isSingleUse || !usedKeys.has(key),
-      ),
-    );
-  }, [allKeys, tokens]);
-
-  const setSafeTokens = useCallback(
-    (next: SearchTokenData[]) => {
-      const seen = new Set<string>();
-      let blocked = false;
-      const filtered = next.filter((t) => {
-        const key = t.key ?? t.type;
-        const def = allKeys[key];
-        if (def?.isSingleUse) {
-          if (seen.has(key)) {
-            blocked = true;
-            return false;
-          }
-          seen.add(key);
-        }
-        return true;
-      });
-      if (blocked) {
-        showErrorNotification("This filter can only be used once");
-      }
-      setTokensRaw(filtered);
-    },
-    [allKeys, setTokensRaw],
-  );
+  const { activeKeys, setSafeTokens, tokens, searchParams } = useUrlSearchBar({
+    items: allKeys,
+  });
 
   return (
     <Stack gap={6}>
@@ -210,7 +141,7 @@ function SearchView({
 }
 
 interface SearchQueryProps {
-  searchParams: ParamState<SearchParamDef>;
+  searchParams: UrlSearchParamState<SearchParamKeys>;
 }
 
 function SearchQuery(props: SearchQueryProps) {
@@ -225,6 +156,7 @@ function SearchQuery(props: SearchQueryProps) {
         description: searchParams.description?.[0],
         label: searchParams.label?.[0],
         annotation: searchParams.annotation?.[0],
+        authors: searchParams.author,
       },
     }),
   });
@@ -551,29 +483,5 @@ function AnnotationHitItem(props: {
         </Stack>
       </Stack>
     </NavLink>
-  );
-}
-
-export function FilterTag({ tag }: { tag: TagResponse }) {
-  const [searchParams, setSearchParams] = useSearchParamMulti({
-    tag: { type: "array" },
-  });
-
-  return (
-    <Badge
-      onClick={() =>
-        setSearchParams({ tag: [...new Set([...searchParams.tag, tag.name])] })
-      }
-      key={tag.id}
-      size="sm"
-      colorPalette={tag.color}
-      transition="background 0.15s, color 0.15s"
-      _hover={{
-        bg: "colorPalette.solid",
-        color: "colorPalette.contrast",
-      }}
-    >
-      {tag.name}
-    </Badge>
   );
 }
