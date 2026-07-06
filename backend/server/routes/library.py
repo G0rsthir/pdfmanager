@@ -385,7 +385,7 @@ async def upload_file(
     except DuplicateResourceError as e:
         raise FieldError(
             field="file",
-            msg="File already exists. This can happen if you try to upload the same file multiple times.",
+            msg="File already exists. This can happen if you try to upload the same file multiple times",
         ) from e
 
     async def index_file_pages(service):

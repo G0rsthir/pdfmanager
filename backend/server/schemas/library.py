@@ -266,11 +266,11 @@ class CreateAnnotationRequest(BaseModel):
     color: str
     excerpt: str
     rects: list[NormalizedRect]
-    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
+    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference")
 
 
 class PatchAnnotationRequest(BaseModel):
-    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference.")
+    label: str | None = Field(default=None, description="User-set identifier, used to cross-reference")
     body: str | None = None
     color: str | None = None
 

@@ -46,7 +46,9 @@ class DatabaseConfigurationBase(ABC):
 
     @abstractmethod
     def engine(self) -> AsyncEngine:
-        """Returns a SQLAlchemy engine"""
+        """
+        Returns a SQLAlchemy engine.
+        """
         pass
 
     @abstractmethod
@@ -67,7 +69,9 @@ class DatabaseConfigurationBase(ABC):
 
 class SQLiteConfiguration(DatabaseConfigurationBase):
     def engine(self) -> AsyncEngine:
-        """Returns a SQLAlchemy engine"""
+        """
+        Returns a SQLAlchemy engine.
+        """
         global ENGINES
         engine = ENGINES.get(self.connection_url)
         if engine:
@@ -93,7 +97,7 @@ class SQLiteConfiguration(DatabaseConfigurationBase):
 
     def setup_sqlite(self, dbapi_connection, connection_record):
         """
-        Sets SQLite settings when a new database connection is created
+        Sets SQLite settings when a new database connection is created.
         """
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")

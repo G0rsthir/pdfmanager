@@ -67,7 +67,12 @@ ignore = [
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.pytest]
+testpaths = ["tests"]
+pythonpath = ["."]
+
 [dependency-groups]
 dev = [
-    "ruff (>=0.15.20,<0.16.0)"
+    "ruff (>=0.15.20,<0.16.0)",
+    "pytest (>=9.1.1,<10.0.0)"
 ]

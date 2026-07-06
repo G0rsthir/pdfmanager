@@ -1,6 +1,6 @@
 services:
   app:
-    restart: always
+    restart: unless-stopped
     #build: .
     image: ghcr.io/g0rsthir/pdfmanager:latest
     volumes:

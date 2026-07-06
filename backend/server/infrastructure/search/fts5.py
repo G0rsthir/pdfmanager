@@ -1,78 +1,45 @@
-import re
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.const import FragmentType
-from server.infrastructure.utils import Entity
+from server.infrastructure.search.interface import ContentFragment, SearchBackend, SearchHit, SearchResults
+from server.infrastructure.search.query import TextQuery, parse_query
+
+NO_MATCH = '""'
 
 
-@dataclass(kw_only=True)
-class ContentFragment:
-    content: str
-    doc_id: UUID
-    entity_type: str
-    fragment_type: FragmentType
-    page_number: int | None = None
-    source_id: UUID | None = None
-    field: str | None = None
+def _normalize_score(weighted_rank: float) -> float:
+    r = max(0.0, -weighted_rank)
+    return r / (1.0 + r)
 
 
-@dataclass(kw_only=True)
-class SearchHit(Entity):
-    doc_id: UUID
-    snippet: str
-    rank: float
-    entity_type: str
-    fragment_type: FragmentType
-    page_number: int | None = None
-    source_id: UUID | None = None
-    field: str | None = None
+def _quote(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
 
 
-@dataclass(kw_only=True)
-class SearchResults:
-    hits: list[SearchHit]
-    total: int
+def compile_fts5(query: TextQuery) -> str:
+    positives: list[str] = []
+    negatives: list[str] = []
 
+    for t in query.terms:
+        piece = _quote(t.value)
+        #  phrase-prefix ("a b"*) is unsupported
+        if t.prefix and not t.is_phrase:
+            piece += "*"
+        (negatives if t.negate else positives).append(piece)
 
-class SearchBackend(ABC):
-    @abstractmethod
-    async def index(self, fragments: list[ContentFragment]):
-        pass
+    if not positives:
+        # FTS5 needs at least one positive term
+        return NO_MATCH
 
-    @abstractmethod
-    async def delete_by_docs(self, doc_ids: list[UUID]):
-        pass
+    expr = " ".join(positives)
 
-    @abstractmethod
-    async def delete_fragments(self, doc_id: UUID, fragment_type: FragmentType):
-        pass
+    for n in negatives:
+        expr += f" NOT {n}"
 
-    @abstractmethod
-    async def delete_fragment_by_source(self, source_id: UUID):
-        pass
-
-    @abstractmethod
-    async def search(
-        self,
-        query: str,
-        doc_ids: list[UUID],
-        fragment_types: list[FragmentType] | None = None,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> SearchResults:
-        pass
-
-
-def _to_fts_match(q: str) -> str:
-    tokens = re.findall(r"\w+", q, flags=re.UNICODE)
-    if not tokens:
-        return '""'
-    return " ".join(f'"{t}"*' for t in tokens)
+    return expr
 
 
 class Fts5SearchBackend(SearchBackend):
@@ -145,16 +112,18 @@ class Fts5SearchBackend(SearchBackend):
         limit: int = 20,
         offset: int = 0,
     ) -> SearchResults:
-        where = ["content_fts MATCH :query"]
-        params = {"query": _to_fts_match(query), "limit": limit, "offset": offset}
-        binds: list = []
-
-        if not doc_ids:
+        match = compile_fts5(parse_query(query))
+        if not doc_ids or match == NO_MATCH:
             return SearchResults(hits=[], total=0)
 
-        where.append("doc_id IN :doc_ids")
-        params["doc_ids"] = [str(d) for d in doc_ids]
-        binds.append(bindparam("doc_ids", expanding=True))
+        where = ["content_fts MATCH :query", "doc_id IN :doc_ids"]
+        params = {
+            "query": match,
+            "doc_ids": [str(d) for d in doc_ids],
+            "limit": limit,
+            "offset": offset,
+        }
+        binds: list = [bindparam("doc_ids", expanding=True)]
 
         if fragment_types:
             where.append("fragment_type IN :fragment_types")
@@ -190,7 +159,7 @@ class Fts5SearchBackend(SearchBackend):
                     page_number=row.page_number,
                     fragment_type=row.fragment_type,
                     snippet=row.snippet,
-                    rank=row.weighted_rank,
+                    score=_normalize_score(row.weighted_rank),
                     source_id=UUID(row.source_id) if row.source_id else None,
                     field=row.field,
                 )

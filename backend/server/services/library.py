@@ -177,7 +177,7 @@ class LibraryService:
 
         if parent.entity_type != "group":
             raise InvalidActionError(
-                rule="collection_parent_must_be_group", msg="Collection can only be moved into groups."
+                rule="collection_parent_must_be_group", msg="Collection can only be moved into groups"
             )
 
         parent_perm = await self._permission_repo.get_effective_for_collection(parent_id, user_id)
@@ -580,7 +580,7 @@ class LibraryService:
         annotation = await self._annotation_repo.get_by_id(annotation_id)
         if annotation.file_id != file_id:
             raise InvalidActionError(
-                rule="file_annotation_mismatch", msg="Annotation does not belong to the specified file."
+                rule="file_annotation_mismatch", msg="Annotation does not belong to the specified file"
             )
 
         if label is not UNSET:
@@ -627,7 +627,7 @@ class LibraryService:
 
         if annotation.file_id != file_id:
             raise InvalidActionError(
-                rule="file_annotation_mismatch", msg="Annotation does not belong to the specified file."
+                rule="file_annotation_mismatch", msg="Annotation does not belong to the specified file"
             )
         await self._annotation_repo.delete(annotation)
         await self._annotation_repo.commit()
@@ -716,7 +716,7 @@ class LibraryService:
             parent = nodes.get(n.parent_id) if n.parent_id else None
 
             # Calculate permissions for the current user on this node,
-            # which will be helpful for frontend rendering and permission checks.
+            # which will be helpful for frontend rendering and permission checks
             relevant_grants = grants.get(n.id, [])
             n.target_permission = next((g.permission for g in relevant_grants if g.user_id == user_id), None)
             n.target_permission_count = len(relevant_grants)
@@ -779,13 +779,13 @@ class LibraryService:
         if not assignment or assignment.resource_id != collection_id:
             raise InvalidActionError(
                 rule="permission_assignment_mismatch",
-                msg="Permission assignment does not belong to the specified collection.",
+                msg="Permission assignment does not belong to the specified collection",
             )
 
         if assignment.is_owner:
             raise InvalidActionError(
                 rule="delete_owner_permission",
-                msg="Owner permissions cannot be deleted.",
+                msg="Owner permissions cannot be deleted",
             )
 
         await self._permission_repo.delete(assignment)
@@ -807,13 +807,13 @@ class LibraryService:
         if not assignment or assignment.resource_id != collection_id:
             raise InvalidActionError(
                 rule="permission_assignment_mismatch",
-                msg="Permission assignment does not belong to the specified collection.",
+                msg="Permission assignment does not belong to the specified collection",
             )
 
         if assignment.is_owner:
             raise InvalidActionError(
                 rule="update_owner_permission",
-                msg="Owner permissions cannot be modified.",
+                msg="Owner permissions cannot be modified",
             )
 
         assignment.permission = permission
@@ -840,7 +840,7 @@ class LibraryService:
         if user.id == user_id:
             raise InvalidActionError(
                 rule="invite_self",
-                msg="Users cannot invite themselves to collections.",
+                msg="Users cannot invite themselves to collections",
             )
 
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user.id)
@@ -848,7 +848,7 @@ class LibraryService:
         if perm and perm.is_owner:
             raise InvalidActionError(
                 rule="invite_owner",
-                msg="User is already an owner of the collection.",
+                msg="User is already an owner of the collection",
             )
 
         await self._permission_repo.grant(resource_id=collection_id, user_id=user.id, permission=permission)

@@ -129,6 +129,7 @@ class LocalStorageBackend(StorageBackend):
             try:
                 await self.delete(loc)
             except Exception as exc:
+                # TODO -format
                 self._logger.warning("storage cleanup failed for %s: %s", loc, exc)
 
     @asynccontextmanager

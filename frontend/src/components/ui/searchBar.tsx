@@ -18,6 +18,10 @@ import { LuSearch, LuX } from "react-icons/lu";
 export interface SearchKeyDef {
   label: string;
   values: string[];
+  /**
+   * Optional, non-clickable help text
+   */
+  note?: React.ReactNode;
 }
 
 export interface SearchTokenData {
@@ -129,7 +133,7 @@ export function SearchBar(props: {
   onSearch: (tokens: SearchTokenData[]) => void;
   size?: InputProps["size"];
   width?: InputProps["width"];
-  /** Allow free-text tokens. When false, only `key:value` filters commit. */
+  /** Allow free-text tokens. When false, only 'key:value' filters commit. */
   allowText?: boolean;
 }) {
   const {
@@ -183,6 +187,12 @@ export function SearchBar(props: {
   const suggestions = useMemo(
     () => getSuggestions(ctx, keyNames, keys),
     [ctx, keyNames, keys],
+  );
+
+  // Non-clickable instructions for the key whose value is being typed.
+  const note = useMemo(
+    () => (ctx.mode == "value" ? keys[ctx.key]?.note : undefined),
+    [ctx, keys],
   );
 
   const commitToken = useCallback(
@@ -295,7 +305,7 @@ export function SearchBar(props: {
 
   return (
     <Popover.Root
-      open={popoverOpen && suggestions.length > 0}
+      open={popoverOpen && (suggestions.length > 0 || note !== undefined)}
       autoFocus={false}
       closeOnInteractOutside
       positioning={{ sameWidth: true, placement: "bottom-start" }}
@@ -409,6 +419,22 @@ export function SearchBar(props: {
                 </Flex>
               ))}
             </Stack>
+
+            {/* Non-clickable instructions footer. */}
+            {note && (
+              <Flex
+                px={3}
+                py={2}
+                gap={2}
+                align="end"
+                color="fg.muted"
+                justifyContent="end"
+                borderTopWidth={suggestions.length > 0 ? "1px" : undefined}
+                borderColor="border"
+              >
+                {note}
+              </Flex>
+            )}
           </Popover.Content>
         </Popover.Positioner>
       </Portal>

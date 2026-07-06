@@ -73,16 +73,16 @@ class ApiKeyService:
         user = await self._user_repo.get_by_id(token.user_id)
 
         if not user.can_authenticate():
-            raise AuthenticationError("Cannot reset an API key for an disabled user.")
+            raise AuthenticationError("Cannot reset an API key for an disabled user")
 
         if not token.is_service:
-            raise AuthenticationError("Cannot reset a non-service API key.")
+            raise AuthenticationError("Cannot reset a non-service API key")
 
         if token.is_revoked:
-            raise AuthenticationError("Cannot reset a revoked API key.")
+            raise AuthenticationError("Cannot reset a revoked API key")
 
         if token.scopes is None:
-            raise ValueError("Cannot reset an API key with no scopes.")
+            raise ValueError("Cannot reset an API key with no scopes")
 
         scopes = Scopes.from_str(token.scopes)
 

@@ -316,14 +316,14 @@ class FileRepository(Repository):
         description: str | None = None,
     ) -> list[models.ORMFile]:
 
-        # Resources the user has ANY direct grant on (collections or files).
+        # Resources the user has ANY direct grant on (collections or files)
         granted = (
             select(models.ORMResourcePermission.resource_id)
             .where(models.ORMResourcePermission.user_id == user_id)
             .scalar_subquery()
         )
 
-        # All collection IDs visible to the user (granted + descendants).
+        # All collection IDs visible to the user (granted + descendants)
         visible = (
             select(models.ORMCollection.id)
             .where(models.ORMCollection.id.in_(granted))
@@ -333,7 +333,7 @@ class FileRepository(Repository):
             select(models.ORMCollection.id).join(visible, models.ORMCollection.parent_id == visible.c.id)
         )
 
-        # File is visible if its collection is visible OR the file itself is granted.
+        # File is visible if its collection is visible OR the file itself is granted
         stmt = select(models.ORMFile).where(
             or_(
                 models.ORMFile.collection_id.in_(select(visible.c.id)),
@@ -588,7 +588,7 @@ class TagRepository(Repository):
 
     async def delete_orphaned(self):
         """
-        Delete tags with no file assignments and no user preferences.
+        Delete tags with no file assignments and no user preferences
         """
         has_files = exists().where(models.ORMFileTag.tag_id == models.ORMTag.id)
         has_prefs = exists().where(models.ORMUserTagPreference.tag_id == models.ORMTag.id)
@@ -713,7 +713,7 @@ class PermissionRepository(Repository):
             ).join(anc, models.ORMCollection.id == anc.c.parent_id)
         )
 
-        # Rank by ancestor depth. Only carry the keys we need to re-join.
+        # Rank by ancestor depth. Only carry the keys we need to re-join
         ranked = (
             select(
                 models.ORMResourcePermission.user_id.label("user_id"),
@@ -730,7 +730,7 @@ class PermissionRepository(Repository):
             .subquery()
         )
 
-        # Re-select ORM entities by joining the ranked subquery back to the tables.
+        # Re-select ORM entities by joining the ranked subquery back to the tables
         stmt = (
             select(
                 models.ORMResourcePermission,

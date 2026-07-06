@@ -8,7 +8,7 @@ from server.infrastructure.database.interface import get_database_interface
 from server.settings import AppEnvSettings
 
 # this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# access to the values within the .ini file in use
 config = context.config
 
 settings = AppEnvSettings()
@@ -95,9 +95,9 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """In this scenario, we need to create an Engine
+    """
+    In this scenario, we need to create an Engine
     and associate a connection with the context.
-
     """
     engine = db_interface.engine()
 
@@ -108,7 +108,9 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
+    """
+    Run migrations in 'online' mode.
+    """
     try:
         asyncio.get_running_loop()
         raise AssertionError(

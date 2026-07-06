@@ -266,7 +266,7 @@ class IdentityService:
             if not provider.is_valid:
                 raise InvalidActionError(
                     rule="invalid_provider_configuration",
-                    msg="Provider configuration is invalid. Please fill in all required fields before enabling auto login.",
+                    msg="Provider configuration is invalid. Please fill in all required fields before enabling auto login",
                 )
 
             # Only one provider can have auto_login enabled, so we need to disable it for all other providers

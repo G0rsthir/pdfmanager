@@ -47,7 +47,7 @@ class MigrationRunner:
 
                 if not db_name:
                     raise ConfigurationError(
-                        f"Database name is missing, but it is required to proceed with the operation. Value: `{db_name}`"
+                        f"Database name is missing, but it is required to proceed with the operation. Value: '{db_name}'"
                     )
                 db_file_path = Path(db_name).resolve()
                 self.logger.info(f"Creating database backup: `{db_file_path}.bak`")
@@ -55,9 +55,9 @@ class MigrationRunner:
                     try:
                         self.run_upgrade(revision)
                     except Exception:
-                        self.logger.error("Upgrade failed, the database has been restored to its previous state.")
+                        self.logger.error("Upgrade failed, the database has been restored to its previous state")
                         raise
             case _:
                 self.logger.warning(f"Non-SQLite database detected: {dialect.name}")
-                self.logger.warning("Proceeding without backup.")
+                self.logger.warning("Proceeding without backup")
                 self.run_upgrade(revision)

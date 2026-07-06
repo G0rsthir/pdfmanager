@@ -3,3 +3,5 @@ storage/
 .venv/
 __pycache__
 test.py
+.pytest_cache
+.ruff_cache

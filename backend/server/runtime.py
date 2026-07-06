@@ -48,8 +48,8 @@ def maybe_run_migrations(migrations: MigrationRunner):
 
 def validate_server_startup(env: AppEnvSettings):
     if not env.ACCESS_JWT_SECRET:
-        raise ConfigurationError("APP_ACCESS_JWT_SECRET is not configured. Set this environment variable.")
+        raise ConfigurationError("APP_ACCESS_JWT_SECRET is not configured. Set this environment variable")
     if not env.REFRESH_JWT_SECRET:
-        raise ConfigurationError("APP_REFRESH_JWT_SECRET is not configured. Set this environment variable.")
+        raise ConfigurationError("APP_REFRESH_JWT_SECRET is not configured. Set this environment variable")
 
     Path(env.STORAGE_DIR).mkdir(parents=True, exist_ok=True)

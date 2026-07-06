@@ -36,6 +36,7 @@ import {
   type SearchFilterDef,
   type UrlSearchParamState,
 } from "../shared/smartSearchBar/hooks";
+import { TextNote } from "../shared/smartSearchBar/params";
 import { FavoriteButton, FileCardActions, FilterTag } from "./shared/file";
 import { toFileUrl } from "./shared/path";
 
@@ -101,6 +102,7 @@ function SearchView(props: {
         label: "Annotation",
         values: [],
         isSingleUse: true,
+        note: <TextNote />,
       },
       label: {
         label: "Annotation Label",
@@ -111,6 +113,7 @@ function SearchView(props: {
         label: "This little action gonna cost you 51 years. Full text search",
         values: [],
         isSingleUse: true,
+        note: <TextNote />,
       },
     }),
     [tags, labels, authors],
@@ -126,7 +129,12 @@ function SearchView(props: {
         Search
       </Heading>
 
-      <SearchBar keys={activeKeys} value={tokens} onSearch={setSafeTokens} />
+      <SearchBar
+        keys={activeKeys}
+        value={tokens}
+        onSearch={setSafeTokens}
+        allowText
+      />
 
       {tokens.length == 0 && (
         <Empty

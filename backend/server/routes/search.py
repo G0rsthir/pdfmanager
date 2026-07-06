@@ -42,7 +42,7 @@ async def search_files(
     )
 
     file_map = {f.file.id: f for f in files}
-    ordered_results = sorted(result, key=lambda r: r.best_rank)
+    ordered_results = sorted(result, key=lambda r: r.best_score, reverse=True)
     return [
         FileSearchResponse(
             file=build_file_response(file_map[r.doc_id], user_id=access_session.user_id),

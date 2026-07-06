@@ -135,6 +135,7 @@ class AuthProviderOidcUpdateRequest(BaseModel):
 
 
 class AuthProviderOidcResponse(AuthProviderResponse):
+    # TODO - lint error
     entity_type: Literal["OIDC"]
     client_id: str
     client_secret: MaskedStr

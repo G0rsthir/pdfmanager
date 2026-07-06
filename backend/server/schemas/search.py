@@ -24,7 +24,7 @@ class EnrichedHit(SearchHit):
 @dataclass(kw_only=True)
 class FileSearchResult:
     hits: list[EnrichedHit]
-    best_rank: float
+    best_score: float
     doc_id: UUID
 
 
@@ -59,7 +59,7 @@ class SearchHitResponse(BaseModel):
     snippet: str
     page_number: int | None = None
     fragment_type: FragmentType
-    rank: float
+    score: float = Field(ge=0, le=1, description="Normalized relevance, higher = better")
     source_id: UUID | None = Field(default=None, exclude=True)
     annotation: AnnotationResponse | None = None
     field: str | None = None
@@ -74,9 +74,9 @@ class FileSearchResponse(BaseModel):
     def score(self) -> Literal["weak", "good", "strong"]:
         if not self.hits:
             return "good"
-        rank = min(h.rank for h in self.hits)
-        if rank < -8:
+        best = max(h.score for h in self.hits)
+        if best >= 0.85:
             return "strong"
-        if rank < -3:
+        if best >= 0.7:
             return "good"
         return "weak"

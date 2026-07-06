@@ -11,7 +11,7 @@ from server.schemas.search import EnrichedHit, FileSearchResult, SearchFilter
 @dataclass(kw_only=True)
 class SearchContext:
     hits_by_file: dict[UUID, list[EnrichedHit]] = field(default_factory=lambda: defaultdict(list))
-    best_rank: dict[UUID, float] = field(default_factory=dict)
+    best_score: dict[UUID, float] = field(default_factory=dict)
     matched_per_filter: list[set[UUID]] = field(default_factory=list)
 
 
@@ -39,7 +39,7 @@ class SearchService:
         return [
             FileSearchResult(
                 hits=self._dedupe_hits(context.hits_by_file[doc_id]),
-                best_rank=context.best_rank[doc_id],
+                best_score=context.best_score[doc_id],
                 doc_id=doc_id,
             )
             for doc_id in matched_ids
@@ -66,15 +66,15 @@ class SearchService:
         ids_here: set[UUID] = set()
         for hit in result.hits:
             context.hits_by_file[hit.doc_id].append(EnrichedHit(**hit.to_dict()))
-            if hit.doc_id not in context.best_rank or hit.rank < context.best_rank[hit.doc_id]:
-                context.best_rank[hit.doc_id] = hit.rank
+            if hit.doc_id not in context.best_score or hit.score > context.best_score[hit.doc_id]:
+                context.best_score[hit.doc_id] = hit.score
             ids_here.add(hit.doc_id)
         context.matched_per_filter.append(ids_here)
 
     async def _run_label_filter(self, label: str, doc_ids: list[UUID], context: SearchContext):
         annotations = await self._annotations.list_by_label(label, doc_ids)
         ids_here: set[UUID] = set()
-        EXACT_RANK = -100.0
+        EXACT_SCORE = 1.0
 
         file_ids = {ann.file_id for ann in annotations.values() if ann.file_id in doc_ids}
 
@@ -88,13 +88,13 @@ class SearchService:
                 source_id=ann.id,
                 page_number=ann.page,
                 snippet=ann.label or "",
-                rank=EXACT_RANK,
+                score=EXACT_SCORE,
                 annotation=ann,
             )
             context.hits_by_file[ann.file_id].append(hit)
-            cur = context.best_rank.get(ann.file_id)
-            if cur is None or EXACT_RANK < cur:
-                context.best_rank[ann.file_id] = EXACT_RANK
+            cur = context.best_score.get(ann.file_id)
+            if cur is None or EXACT_SCORE > cur:
+                context.best_score[ann.file_id] = EXACT_SCORE
             ids_here.add(ann.file_id)
 
         context.matched_per_filter.append(ids_here)
@@ -130,6 +130,6 @@ class SearchService:
                 continue
             key = (h.fragment_type, h.source_id)
             existing = best_by_key.get(key)
-            if existing is None or h.rank < existing.rank:
+            if existing is None or h.score > existing.score:
                 best_by_key[key] = h
         return [*best_by_key.values(), *passthrough]

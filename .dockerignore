@@ -8,3 +8,5 @@ backend/tests
 .vscode/
 **/.venv
 frontend/dist
+**/.pytest_cache
+**/.ruff_cache
