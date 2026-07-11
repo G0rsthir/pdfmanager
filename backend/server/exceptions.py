@@ -55,10 +55,6 @@ class ConfigurationError(InfrastructureError):
     code = "configuration_error"
 
 
-class DuplicateResourceError(InfrastructureError):
-    code = "duplicate_resource"
-
-
 class ResourceNotFoundError(DomainError):
     code = "resource_not_found"
 

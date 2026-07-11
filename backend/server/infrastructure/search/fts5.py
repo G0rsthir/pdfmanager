@@ -58,31 +58,36 @@ class Fts5SearchBackend(SearchBackend):
         cases = " ".join(f"WHEN '{fragment}' THEN {boost}" for fragment, boost in self.FRAGMENT_BOOST.items())
         return f"{cases} ELSE {self.DEFAULT_BOOST}"
 
-    async def index(self, fragments: list[ContentFragment]) -> None:
+    async def index(self, fragments: list[ContentFragment]):
         if not fragments:
             return
 
-        for fragment in fragments:
-            if not fragment.content.strip():
-                continue
-            await self.session.execute(
-                text(
-                    "INSERT INTO content_fts (content, doc_id, entity_type, page_number, fragment_type, source_id, field) "
-                    "VALUES (:content, :doc_id, :entity_type, :page_number, :fragment_type, :source_id, :field)"
-                ),
-                {
-                    "content": fragment.content,
-                    "doc_id": str(fragment.doc_id),
-                    "entity_type": fragment.entity_type,
-                    "page_number": fragment.page_number,
-                    "fragment_type": fragment.fragment_type,
-                    "source_id": str(fragment.source_id) if fragment.source_id else None,
-                    "field": fragment.field,
-                },
-            )
+        rows = [
+            {
+                "content": f.content,
+                "doc_id": str(f.doc_id),
+                "entity_type": f.entity_type,
+                "page_number": f.page_number,
+                "fragment_type": f.fragment_type,
+                "source_id": str(f.source_id) if f.source_id else None,
+                "field": f.field,
+            }
+            for f in fragments
+            if f.content.strip()
+        ]
+        if not rows:
+            return
+        await self.session.execute(
+            text(
+                "INSERT INTO content_fts (content, doc_id, entity_type, page_number, "
+                "fragment_type, source_id, field) VALUES (:content, :doc_id, :entity_type, "
+                ":page_number, :fragment_type, :source_id, :field)"
+            ),
+            rows,
+        )
         await self.session.commit()
 
-    async def delete_by_docs(self, doc_ids: list[UUID]) -> None:
+    async def delete_by_docs(self, doc_ids: list[UUID]):
         if not doc_ids:
             return
 

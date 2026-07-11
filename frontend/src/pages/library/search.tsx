@@ -100,7 +100,9 @@ function SearchView(props: {
       },
       annotation: {
         label: "Annotation",
-        values: [],
+        values: [
+          "$ANY", // Special Case
+        ],
         isSingleUse: true,
         note: <TextNote />,
       },

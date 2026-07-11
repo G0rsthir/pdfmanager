@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from sqlalchemy import make_url
 from sqlalchemy.engine import Dialect
@@ -75,3 +75,6 @@ class DBInterface:
 def get_database_interface(connection_url: str) -> DBInterface:
     db_interface = DBInterface(config=get_database_config(connection_url))
     return db_interface
+
+
+type SessionFactory = Callable[[], AbstractAsyncContextManager[AsyncSession]]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends, Request, Security
@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.const import AccessScopeEnum, RefreshScopeEnum
 from server.exceptions import InsufficientPermissionsException
 from server.infrastructure.search import Fts5SearchBackend, SearchBackend
-from server.infrastructure.storage import LocalStorageBackend
+from server.infrastructure.storage import StorageBackend
+from server.infrastructure.tasks import TaskScheduler
 from server.repositories import (
     AnnotationRepository,
     AuthorRepository,
@@ -29,7 +30,6 @@ from server.security.permissions import PermissionResolver
 from server.services.api_keys import ApiKeyService
 from server.services.auth import AuthService
 from server.services.identity import IdentityService
-from server.services.indexing import IndexingService
 from server.services.library import LibraryService
 from server.services.search import SearchService
 from server.services.token import TokenResponseService
@@ -140,8 +140,8 @@ def get_library_service(
     user_repo: UserRepositoryDependency,
     authors_repo: AuthorRepositoryDependency,
 ) -> LibraryService:
-    env: AppEnvSettings = request.app.state.env
-    backend = LocalStorageBackend(env.STORAGE_DIR)
+
+    backend: StorageBackend = request.app.state.storage_backend
 
     return LibraryService(
         collection_repo=collection_repo,
@@ -162,16 +162,9 @@ def get_search_engine(
     return Fts5SearchBackend(session=db)
 
 
-async def run_with_indexing_service(context: RuntimeContainer, callback: Callable[[IndexingService], Awaitable[None]]):
-    """
-    Stand-alone service
-    """
-    async with context.db.get_session_context() as session:
-        service = IndexingService(
-            storage_backend=LocalStorageBackend(context.env.STORAGE_DIR),
-            search_engine=get_search_engine(session),
-        )
-        await callback(service)
+def get_task_scheduler(request: Request) -> TaskScheduler:
+    scheduler: TaskScheduler = request.app.state.scheduler
+    return scheduler
 
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
@@ -287,4 +280,9 @@ ApiKeyServiceDependency = Annotated[
 SearchEngineDependency = Annotated[
     SearchBackend,
     Depends(get_search_engine),
+]
+
+TaskSchedulerDependency = Annotated[
+    TaskScheduler,
+    Depends(get_task_scheduler),
 ]

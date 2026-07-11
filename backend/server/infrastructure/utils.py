@@ -26,7 +26,7 @@ def async_to_sync[T](awaitable: Callable[[], Coroutine[Any, Any, T]]) -> T:
         return asyncio.run(awaitable())
     raise RuntimeError(
         "You can't run an async function from a sync function if an event loop is already running. "
-        "Restructure your code or use threads."
+        "Restructure your code or use threads"
     )
 
 

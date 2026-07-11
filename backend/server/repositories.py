@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -255,6 +256,18 @@ class AnnotationRepository(Repository):
     async def list_by_file(self, file_id: UUID) -> list[models.ORMAnnotation]:
         stmt = select(models.ORMAnnotation).where(models.ORMAnnotation.file_id == file_id)
         return list(await self.session.scalars(stmt))
+
+    async def list_by_files(self, file_ids: Iterable[UUID]) -> dict[UUID, Iterable[models.ORMAnnotation]]:
+        if not file_ids:
+            return {}
+        stmt = select(models.ORMAnnotation).where(models.ORMAnnotation.file_id.in_(file_ids))
+        rows = await self.session.scalars(stmt)
+
+        result = {}
+        for annotation in rows:
+            result.setdefault(annotation.file_id, []).append(annotation)
+
+        return result
 
     async def list_by_label(self, label: str, file_ids: list[UUID] | None = None) -> dict[UUID, models.ORMAnnotation]:
         if not label:

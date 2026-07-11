@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Path, Query, Request, UploadFile, status
+from fastapi import APIRouter, Form, HTTPException, Path, Query, UploadFile, status
 from fastapi.responses import FileResponse as FastAPIFileResponse
 
 from server.const import UNSET, AccessScopeEnum
@@ -10,10 +10,10 @@ from server.dependencies import (
     FileRepositoryDependency,
     LibraryServiceDependency,
     PermissionDependency,
+    TaskSchedulerDependency,
     UserRepositoryDependency,
-    run_with_indexing_service,
 )
-from server.exceptions import DuplicateResourceError, FieldError, InvalidActionError
+from server.exceptions import FieldError, InvalidActionError
 from server.routes._assemblers import build_annotation_response, build_file_response
 from server.schemas.identity import UserSummaryResponse
 from server.schemas.library import (
@@ -369,10 +369,8 @@ async def upload_file(
     tags: Annotated[list[str], Form(default_factory=list)],
     access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
     library_service: LibraryServiceDependency,
-    background_tasks: BackgroundTasks,
-    request: Request,
+    scheduler: TaskSchedulerDependency,
 ):
-
     try:
         file_record = await library_service.upload_pdf_file(
             user_id=access_session.user_id,
@@ -382,18 +380,16 @@ async def upload_file(
             tags=tags,
             description=description,
         )
-    except DuplicateResourceError as e:
-        raise FieldError(
-            field="file",
-            msg="File already exists. This can happen if you try to upload the same file multiple times",
-        ) from e
-
-    async def index_file_pages(service):
-        await service.index_file(file_id=file_record.id, storage_key=file_record.storage_key)
+    except InvalidActionError as e:
+        if e.rule == "upload_pdf_only":
+            raise FieldError(field="file", msg="Only PDF files are supported") from e
+        raise
 
     if file_record.is_pdf:
-        background_tasks.add_task(
-            run_with_indexing_service, context=request.app.state.app_context, callback=index_file_pages
+        await scheduler.run(
+            "index_pdf",
+            payload={"file_id": str(file_record.id)},
+            dedup_key=str(file_record.id),
         )
 
 

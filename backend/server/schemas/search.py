@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
@@ -10,15 +11,36 @@ from server.schemas.library import AnnotationResponse, FileResponse
 from server.schemas.query import PaginationQueryParams
 
 
+class SpecialFilterValueEnum(StrEnum):
+    ANY = "$ANY"
+
+
 @dataclass(kw_only=True)
 class SearchFilter:
     query: str
     fragment_types: list[FragmentType] | None
+    match_any: bool = False
+
+    @property
+    def is_label_filter(self) -> bool:
+        return self.fragment_types == [FragmentType.LABEL]
+
+    @property
+    def is_annotation_filter(self) -> bool:
+        return self.fragment_types == [FragmentType.ANNOTATION]
+
+    @property
+    def is_any_annotation_filter(self) -> bool:
+        return self.is_annotation_filter and self.match_any
 
 
 @dataclass(kw_only=True)
 class EnrichedHit(SearchHit):
     annotation: Any | None = None
+
+    @property
+    def is_annotation_hit(self) -> bool:
+        return self.fragment_type == FragmentType.ANNOTATION
 
 
 @dataclass(kw_only=True)
@@ -39,15 +61,19 @@ class SearchFilesQueryParams(PaginationQueryParams):
 
     def filters(self) -> list[SearchFilter]:
         out: list[SearchFilter] = []
+
         if self.text:
             out.append(
                 SearchFilter(
                     query=self.text, fragment_types=[FragmentType.PAGE, FragmentType.TITLE, FragmentType.DESCRIPTION]
                 )
             )
-        # TODO add support for wildcard annotation search, not just text
         if self.annotation:
-            out.append(SearchFilter(query=self.annotation, fragment_types=[FragmentType.ANNOTATION]))
+            match_any = True if self.annotation == SpecialFilterValueEnum.ANY else False
+
+            out.append(
+                SearchFilter(query=self.annotation, fragment_types=[FragmentType.ANNOTATION], match_any=match_any)
+            )
 
         if self.label:
             out.append(SearchFilter(query=self.label, fragment_types=[FragmentType.LABEL]))

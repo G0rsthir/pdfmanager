@@ -2,12 +2,12 @@ import { StateLoader } from "@/common/state/loader";
 import { Block } from "@/components/ui/display";
 import { AccessScopeEnum } from "@/config/const";
 import { CurrentUserAccountPage } from "@/pages/account";
+import { ApiKeysPage } from "@/pages/admin/api/keys";
 import { AuthProvidersPage } from "@/pages/admin/identity/providers";
 import { RolesPage } from "@/pages/admin/identity/roles";
 import { UsersPage } from "@/pages/admin/identity/users";
 import { AdminLayout } from "@/pages/admin/layout";
-import APIDocumentationPage from "@/pages/admin/tools/apiDocs";
-import { ApiKeysPage } from "@/pages/admin/tools/apiKeys";
+import { TasksPage } from "@/pages/admin/tools/tasks";
 import { SessionExpiredPage } from "@/pages/auth/expired";
 import { LoginPage } from "@/pages/auth/login";
 import { LogoutPage } from "@/pages/auth/logout";
@@ -22,6 +22,7 @@ import { FolderPage } from "@/pages/library/folder";
 import { SearchPage } from "@/pages/library/search";
 import { TagsPage } from "@/pages/library/tags";
 import SetupPage from "@/pages/setup";
+import { lazy } from "react";
 import {
   createBrowserRouter,
   Navigate,
@@ -29,6 +30,28 @@ import {
   RouterProvider,
 } from "react-router";
 import { AuthGuard } from "../common/auth/guard";
+
+/**
+ * Function that wraps and returns a lazy-loaded version of the component
+ *
+ * @remarks
+ * - The component being lazy-loaded should be the default export of the module
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeLazyLoad<C extends React.ComponentType<any>>(
+  resolve: () => Promise<{ default: C }>,
+) {
+  const LazyComponent = lazy(resolve);
+  function RouteLazyLoad(props: React.ComponentProps<C>) {
+    return <LazyComponent {...props} />;
+  }
+
+  return RouteLazyLoad;
+}
+
+const APIDocumentationPage = makeLazyLoad(
+  () => import("@/pages/admin/api/docs"),
+);
 
 const router = createBrowserRouter([
   {
@@ -141,6 +164,10 @@ const router = createBrowserRouter([
               {
                 path: "api-keys",
                 element: <ApiKeysPage />,
+              },
+              {
+                path: "tasks",
+                element: <TasksPage />,
               },
             ],
           },

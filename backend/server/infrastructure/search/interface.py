@@ -10,7 +10,7 @@ from server.infrastructure.utils import Entity
 class ContentFragment:
     content: str
     doc_id: UUID
-    entity_type: str
+    entity_type: str  # Same as content_type
     fragment_type: FragmentType
     page_number: int | None = None
     source_id: UUID | None = None

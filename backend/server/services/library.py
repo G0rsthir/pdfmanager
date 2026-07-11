@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime
-from io import BytesIO
 from logging import getLogger
 from pathlib import Path
 from typing import Literal
@@ -16,7 +15,8 @@ from server.exceptions import (
 )
 from server.infrastructure.pdf import PdfFile
 from server.infrastructure.search import ContentFragment, SearchBackend
-from server.infrastructure.storage import StorageBackend
+from server.infrastructure.storage import StorageBackend, stream_bytes, stream_io
+from server.infrastructure.utils import sniff_content_type
 from server.models import (
     ORMAnnotation,
     ORMAuthor,
@@ -389,6 +389,11 @@ class LibraryService:
                 await self._storage_backend.delete(stored_file.thumbnail)
             raise
 
+    def _get_content_type(self, file: UploadFile) -> str:
+        head = file.file.read(16)
+        file.file.seek(0)
+        return sniff_content_type(head)
+
     async def _store_pdf_file(
         self,
         file: UploadFile,
@@ -396,16 +401,28 @@ class LibraryService:
     ) -> PdfStorageFile:
         filename = file.filename or "unnamed.pdf"
 
-        stored_file = await self._storage_backend.save(scope=f"pdf/{str(user_id)}", filename=filename, data=file.file)
+        content_type = self._get_content_type(file)
+        if content_type != "application/pdf":
+            raise InvalidActionError(rule="upload_pdf_only", msg="Only PDF files are supported")
 
-        async with self._storage_backend.open_path(stored_file.storage_key) as path:
+        stored_file = await self._storage_backend.save(
+            scope=f"pdf/{str(user_id)}",
+            filename=filename,
+            stream=stream_io(file.file),
+            content_type=content_type,
+        )
+
+        async with self._storage_backend.as_local_path(stored_file.storage_key) as path:
             pfg_file = PdfFile(path)
 
             thumb_img = pfg_file.render_page_as_image(1)
             thumb_name = Path(filename).stem + thumb_img.extension
 
             thumb = await self._storage_backend.save(
-                scope=f"thumbnails/{str(user_id)}", filename=thumb_name, data=BytesIO(thumb_img.image_bytes)
+                scope=f"thumbnails/{str(user_id)}",
+                filename=thumb_name,
+                stream=stream_bytes(thumb_img.image_bytes),
+                content_type=content_type,
             )
 
             return PdfStorageFile(
@@ -463,7 +480,7 @@ class LibraryService:
 
     @asynccontextmanager
     async def open_file(self, storage_key: str):
-        async with self._storage_backend.open_path(storage_key) as path:
+        async with self._storage_backend.as_local_path(storage_key) as path:
             yield path
 
     async def list_move_targets_for_file(self, user_id: UUID, source_id: UUID) -> list[ORMCollection]:

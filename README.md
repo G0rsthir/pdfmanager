@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/media/logo.svg" alt="PDF Manager logo" width="400" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/logo-dark.svg" />
+    <img src="docs/media/logo.svg" alt="PDF Manager logo" width="400" />
+  </picture>
 </p>
 
 <p align="center">

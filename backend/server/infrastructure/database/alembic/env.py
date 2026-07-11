@@ -20,6 +20,7 @@ dialect = db_interface.dialect
 target_metadata = db_interface.sa_metadata
 
 # Load DB schema
+import server.infrastructure.tasks.stores  # noqa: E402, F401
 import server.models  # noqa: E402, F401
 
 

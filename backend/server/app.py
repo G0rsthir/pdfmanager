@@ -3,6 +3,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from server.const import EnvironmentsEnum
 from server.exception_handlers import exception_handlers
+from server.infrastructure.storage import LocalStorageBackend
+from server.lifespan import api_server_lifespan
 from server.runtime import RuntimeContainer
 from server.security.loader import create_auth_managers
 from server.security.permissions import PermissionResolver
@@ -46,6 +48,7 @@ def create_http_server(app_context: RuntimeContainer, **kwargs) -> FastAPI:
         openapi_url="/api/v1/openapi.json" if debug else None,
         exception_handlers=exception_handlers,
         version="v1",
+        lifespan=api_server_lifespan,
     )
 
     access_manager, refresh_manager = create_auth_managers(
@@ -60,6 +63,8 @@ def create_http_server(app_context: RuntimeContainer, **kwargs) -> FastAPI:
     app.state.refresh_manager = refresh_manager
 
     app.state.permission_resolver = PermissionResolver(session_factory=app_context.db.get_session_context)
+
+    app.state.storage_backend = LocalStorageBackend(app_context.env.STORAGE_DIR)
 
     # Required by Authlib
     app.add_middleware(

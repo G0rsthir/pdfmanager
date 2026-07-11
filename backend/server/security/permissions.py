@@ -1,11 +1,8 @@
-from collections.abc import Callable
-from contextlib import AbstractAsyncContextManager
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from server.infrastructure.cache import Cache
+from server.infrastructure.database.interface import SessionFactory
 from server.models import ORMSession, ORMUserRole
 from server.repositories import RoleRepository, SessionRepository
 from server.schemas.security import AccessSessionContext
@@ -13,7 +10,7 @@ from server.schemas.types import Scopes
 
 
 class PermissionResolver:
-    def __init__(self, session_factory: Callable[[], AbstractAsyncContextManager[AsyncSession]]):
+    def __init__(self, session_factory: SessionFactory):
         self._session_factory = session_factory
         self._cache = Cache
 

@@ -1,6 +1,7 @@
 import { ReactNavLink } from "@/components/ui/navlink";
 import { Box, Flex, Heading, Separator, Stack, Text } from "@chakra-ui/react";
 import {
+  LuClipboardList,
   LuFingerprint,
   LuKeyRound,
   LuNavigation,
@@ -48,6 +49,15 @@ export function AdminLayout() {
             label="Keys"
             to="/admin/api-keys"
             icon={<LuKeyRound />}
+          />
+
+          <Text color="fg.muted" letterSpacing="wider" px={2} pt={2}>
+            Tools
+          </Text>
+          <ReactNavLink
+            label="Tasks"
+            to="/admin/tasks"
+            icon={<LuClipboardList />}
           />
         </Stack>
         <Separator orientation="vertical" />
