@@ -57,7 +57,7 @@ export const AnnotationResponseSchema = {
         },
       ],
       title: "Label",
-      description: "User-set identifier, used to cross-reference.",
+      description: "User-set identifier, used to cross-reference",
     },
     id: {
       type: "string",
@@ -582,7 +582,14 @@ export const Body_UploadFileSchema = {
       title: "File",
     },
     name: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Name",
     },
     description: {
@@ -610,7 +617,7 @@ export const Body_UploadFileSchema = {
     },
   },
   type: "object",
-  required: ["file", "name", "collection_id"],
+  required: ["file", "collection_id"],
   title: "Body_UploadFile",
 } as const;
 
@@ -738,7 +745,7 @@ export const CreateAnnotationRequestSchema = {
         },
       ],
       title: "Label",
-      description: "User-set identifier, used to cross-reference.",
+      description: "User-set identifier, used to cross-reference",
     },
   },
   type: "object",
@@ -1154,6 +1161,38 @@ export const OidcGroupRule_OutputSchema = {
   title: "OidcGroupRule",
 } as const;
 
+export const PaginatedResponse_TaskHistoryResponse_Schema = {
+  properties: {
+    results: {
+      items: {
+        $ref: "#/components/schemas/TaskHistoryResponse",
+      },
+      type: "array",
+      title: "Results",
+    },
+    row_count: {
+      type: "integer",
+      title: "Row Count",
+    },
+    page_size: {
+      type: "integer",
+      title: "Page Size",
+    },
+    page_count: {
+      type: "integer",
+      title: "Page Count",
+    },
+    page_index: {
+      type: "integer",
+      title: "Page Index",
+      default: 1,
+    },
+  },
+  type: "object",
+  required: ["results", "row_count", "page_size", "page_count"],
+  title: "PaginatedResponse[TaskHistoryResponse]",
+} as const;
+
 export const PatchAnnotationRequestSchema = {
   properties: {
     label: {
@@ -1166,7 +1205,7 @@ export const PatchAnnotationRequestSchema = {
         },
       ],
       title: "Label",
-      description: "User-set identifier, used to cross-reference.",
+      description: "User-set identifier, used to cross-reference",
     },
     body: {
       anyOf: [
@@ -1355,9 +1394,12 @@ export const SearchHitResponseSchema = {
     fragment_type: {
       $ref: "#/components/schemas/FragmentType",
     },
-    rank: {
+    score: {
       type: "number",
-      title: "Rank",
+      maximum: 1,
+      minimum: 0,
+      title: "Score",
+      description: "Normalized relevance, higher = better",
     },
     annotation: {
       anyOf: [
@@ -1382,7 +1424,7 @@ export const SearchHitResponseSchema = {
     },
   },
   type: "object",
-  required: ["snippet", "fragment_type", "rank"],
+  required: ["snippet", "fragment_type", "score"],
   title: "SearchHitResponse",
 } as const;
 
@@ -1467,6 +1509,181 @@ export const TagWithDetailsResponseSchema = {
   type: "object",
   required: ["id", "name", "color", "file_count"],
   title: "TagWithDetailsResponse",
+} as const;
+
+export const TaskActiveResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    status: {
+      $ref: "#/components/schemas/TaskStatusEnum",
+    },
+    attempt: {
+      type: "integer",
+      title: "Attempt",
+    },
+    subject: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Subject",
+    },
+    progress: {
+      anyOf: [
+        {
+          type: "number",
+          maximum: 1,
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Progress",
+    },
+    detail: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Detail",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    updated_at: {
+      type: "string",
+      format: "date-time",
+      title: "Updated At",
+    },
+    display_name: {
+      type: "string",
+      title: "Display Name",
+      readOnly: true,
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "name",
+    "status",
+    "attempt",
+    "subject",
+    "detail",
+    "created_at",
+    "updated_at",
+    "display_name",
+  ],
+  title: "TaskActiveResponse",
+} as const;
+
+export const TaskHistoryResponseSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    status: {
+      $ref: "#/components/schemas/TaskStatusEnum",
+    },
+    started_at: {
+      type: "string",
+      format: "date-time",
+      title: "Started At",
+    },
+    duration_ms: {
+      anyOf: [
+        {
+          type: "integer",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Duration Ms",
+    },
+    error: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Error",
+    },
+    subject: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Subject",
+    },
+    display_name: {
+      type: "string",
+      title: "Display Name",
+      readOnly: true,
+    },
+    display_duration: {
+      type: "string",
+      title: "Display Duration",
+      readOnly: true,
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "name",
+    "status",
+    "started_at",
+    "duration_ms",
+    "error",
+    "subject",
+    "display_name",
+    "display_duration",
+  ],
+  title: "TaskHistoryResponse",
+} as const;
+
+export const TaskStatusEnumSchema = {
+  type: "string",
+  enum: [
+    "pending",
+    "running",
+    "succeeded",
+    "failed",
+    "cancelled",
+    "interrupted",
+  ],
+  title: "TaskStatusEnum",
 } as const;
 
 export const UpdateCollectionPermissionRequestSchema = {
@@ -2100,6 +2317,38 @@ export const LibraryTreeNodeWritableSchema = {
   title: "LibraryTreeNode",
 } as const;
 
+export const PaginatedResponse_TaskHistoryResponse_WritableSchema = {
+  properties: {
+    results: {
+      items: {
+        $ref: "#/components/schemas/TaskHistoryResponseWritable",
+      },
+      type: "array",
+      title: "Results",
+    },
+    row_count: {
+      type: "integer",
+      title: "Row Count",
+    },
+    page_size: {
+      type: "integer",
+      title: "Page Size",
+    },
+    page_count: {
+      type: "integer",
+      title: "Page Count",
+    },
+    page_index: {
+      type: "integer",
+      title: "Page Index",
+      default: 1,
+    },
+  },
+  type: "object",
+  required: ["results", "row_count", "page_size", "page_count"],
+  title: "PaginatedResponse[TaskHistoryResponse]",
+} as const;
+
 export const ResourcePermissionResponseWritableSchema = {
   properties: {
     id: {
@@ -2194,6 +2443,150 @@ export const SetupUserWritableSchema = {
   required: ["email", "password", "password_confirm", "name"],
   title: "SetupUser",
   description: "Create initial application user",
+} as const;
+
+export const TaskActiveResponseWritableSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    status: {
+      $ref: "#/components/schemas/TaskStatusEnum",
+    },
+    attempt: {
+      type: "integer",
+      title: "Attempt",
+    },
+    subject: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Subject",
+    },
+    progress: {
+      anyOf: [
+        {
+          type: "number",
+          maximum: 1,
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Progress",
+    },
+    detail: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Detail",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    updated_at: {
+      type: "string",
+      format: "date-time",
+      title: "Updated At",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "name",
+    "status",
+    "attempt",
+    "subject",
+    "detail",
+    "created_at",
+    "updated_at",
+  ],
+  title: "TaskActiveResponse",
+} as const;
+
+export const TaskHistoryResponseWritableSchema = {
+  properties: {
+    id: {
+      type: "string",
+      format: "uuid",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    status: {
+      $ref: "#/components/schemas/TaskStatusEnum",
+    },
+    started_at: {
+      type: "string",
+      format: "date-time",
+      title: "Started At",
+    },
+    duration_ms: {
+      anyOf: [
+        {
+          type: "integer",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Duration Ms",
+    },
+    error: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Error",
+    },
+    subject: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Subject",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "name",
+    "status",
+    "started_at",
+    "duration_ms",
+    "error",
+    "subject",
+  ],
+  title: "TaskHistoryResponse",
 } as const;
 
 export const UserCreateRequestWritableSchema = {

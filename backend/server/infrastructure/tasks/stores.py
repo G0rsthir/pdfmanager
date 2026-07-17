@@ -19,6 +19,7 @@ _COMPLETE = (
     TaskStatusEnum.SUCCEEDED.value,
     TaskStatusEnum.FAILED.value,
     TaskStatusEnum.CANCELLED.value,
+    TaskStatusEnum.INTERRUPTED.value,
 )
 
 
@@ -26,6 +27,7 @@ class ORMTask(Base, AuditMixin):
     __tablename__ = "tasks"
 
     name: Mapped[str]
+    subject: Mapped[str | None] = mapped_column(default=None)
     status: Mapped[str] = mapped_column(index=True)
     attempt: Mapped[int] = mapped_column(default=1)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -41,6 +43,7 @@ class ORMTaskRun(Base, AuditMixin):
     name: Mapped[str] = mapped_column(index=True)
     status: Mapped[str]
     attempt: Mapped[int]
+    subject: Mapped[str | None] = mapped_column(default=None)
     started_at: Mapped[datetime] = mapped_column(DateTimeUTC(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTimeUTC(timezone=True), default=None)
     duration_ms: Mapped[int | None] = mapped_column(default=None)
@@ -51,6 +54,7 @@ def _to_info(row: ORMTask) -> TaskInfo:
     return TaskInfo(
         id=row.id,
         name=row.name,
+        subject=row.subject,
         status=TaskStatusEnum(row.status),
         attempt=row.attempt,
         payload=row.payload or {},
@@ -66,6 +70,7 @@ def _to_run(row: ORMTaskRun) -> TaskRun:
     return TaskRun(
         id=row.id,
         task_id=row.task_id,
+        subject=row.subject,
         name=row.name,
         status=TaskStatusEnum(row.status),
         attempt=row.attempt,
@@ -98,6 +103,7 @@ class SqlTaskStatusStore(TaskStatusStore):
                     progress=info.progress,
                     detail=info.detail,
                     dedup_key=info.dedup_key,
+                    subject=info.subject,
                 )
             )
             await session.commit()
@@ -179,6 +185,7 @@ class SqlTaskHistoryStore(TaskHistoryStore):
                     finished_at=run.finished_at,
                     duration_ms=run.duration_ms,
                     error=run.error,
+                    subject=run.subject,
                 )
             )
             await session.commit()
@@ -188,12 +195,18 @@ class SqlTaskHistoryStore(TaskHistoryStore):
             stmt = select(ORMTaskRun).where(ORMTaskRun.task_id == task_id).order_by(ORMTaskRun.started_at.desc())
             return [_to_run(r) for r in await session.scalars(stmt)]
 
-    async def list_recent(self, *, name: str | None = None, limit: int = 50, offset: int = 0) -> Sequence[TaskRun]:
+    async def list_recent(
+        self, *, name: str | None = None, limit: int = 50, offset: int = 0
+    ) -> tuple[Sequence[TaskRun], int]:
         async with self._session() as session:
             stmt = select(ORMTaskRun).order_by(ORMTaskRun.started_at.desc()).limit(limit).offset(offset)
+            count_stmt = select(func.count()).select_from(ORMTaskRun)
             if name is not None:
                 stmt = stmt.where(ORMTaskRun.name == name)
-            return [_to_run(r) for r in await session.scalars(stmt)]
+                count_stmt = count_stmt.where(ORMTaskRun.name == name)
+            items = [_to_run(r) for r in await session.scalars(stmt)]
+            total = await session.scalar(count_stmt) or 0
+            return items, total
 
     async def trim(self, keep_last: int) -> int:
         async with self._session() as session:

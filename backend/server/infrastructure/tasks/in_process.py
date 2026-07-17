@@ -61,6 +61,7 @@ class InProcessTaskScheduler(TaskScheduler):
         name: str,
         *,
         payload: dict[str, Any] | None = None,
+        subject: str | None = None,
         dedup_key: str | None = None,
     ) -> UUID:
         if dedup_key is not None:
@@ -74,6 +75,7 @@ class InProcessTaskScheduler(TaskScheduler):
             TaskInfo(
                 id=task_id,
                 name=name,
+                subject=subject,
                 status=TaskStatusEnum.PENDING,
                 attempt=0,
                 payload=payload or {},
@@ -168,6 +170,7 @@ class InProcessTaskScheduler(TaskScheduler):
                         id=uuid4(),
                         task_id=info.id,
                         name=info.name,
+                        subject=info.subject,
                         status=TaskStatusEnum.FAILED,
                         attempt=info.attempt,
                         started_at=info.updated_at,
@@ -186,6 +189,7 @@ class InProcessTaskScheduler(TaskScheduler):
                         id=uuid4(),
                         task_id=info.id,
                         name=info.name,
+                        subject=info.subject,
                         status=TaskStatusEnum.INTERRUPTED,
                         attempt=info.attempt,
                         started_at=info.updated_at,
@@ -260,6 +264,7 @@ class InProcessTaskScheduler(TaskScheduler):
                 id=uuid4(),
                 task_id=info.id,
                 name=info.name,
+                subject=info.subject,
                 status=status,
                 attempt=info.attempt,
                 started_at=started,

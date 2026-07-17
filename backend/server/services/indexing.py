@@ -21,6 +21,9 @@ class IndexingService:
         async with self._storage_backend.as_local_path(file.storage_key) as path:
             pfg_file = PdfFile(path)
             pages = await asyncio.to_thread(pfg_file.extract_page_text)
+
+            await self._search_engine.delete_fragments(doc_id=file.id, fragment_type=FragmentType.PAGE)
+
             fragments = [
                 ContentFragment(
                     content=page.text,

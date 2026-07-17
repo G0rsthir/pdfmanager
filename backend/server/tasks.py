@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from server.dependencies import get_file_repository, get_search_engine
 from server.infrastructure.database.interface import SessionFactory
 from server.infrastructure.storage import StorageBackend
-from server.infrastructure.tasks import TaskContext
+from server.infrastructure.tasks import TaskContext, TaskHistoryStore, TaskStatusStore
 from server.infrastructure.tasks.in_process import InProcessTaskScheduler
 from server.infrastructure.tasks.stores import SqlTaskHistoryStore, SqlTaskStatusStore
 from server.runtime import RuntimeContainer
@@ -16,7 +16,7 @@ def _index_pdf_handler(session_factory: SessionFactory, storage_backend: Storage
     async def handler(ctx: TaskContext) -> None:
         file_id = UUID(ctx.payload["file_id"])
 
-        await ctx.report_progress(0.0, "extracting text")
+        await ctx.report_progress(0.10, "extracting text")
 
         async with session_factory() as session:
             search_engine = get_search_engine(session)
@@ -45,7 +45,7 @@ def _purge_history_handler(
     return handler
 
 
-def build_scheduler(app: FastAPI) -> InProcessTaskScheduler:
+def build_scheduler(app: FastAPI) -> tuple[InProcessTaskScheduler, TaskStatusStore, TaskHistoryStore]:
 
     app_context: RuntimeContainer = app.state.app_context
     storage_backend: StorageBackend = app.state.storage_backend
@@ -67,4 +67,4 @@ def build_scheduler(app: FastAPI) -> InProcessTaskScheduler:
         "purge_task_history", _purge_history_handler(history_store=history_store, status_store=status_store)
     )
 
-    return scheduler
+    return scheduler, status_store, history_store

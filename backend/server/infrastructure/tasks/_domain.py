@@ -83,6 +83,7 @@ class TaskInfo:
 
     id: UUID
     name: str
+    subject: str | None
     status: TaskStatusEnum
     attempt: int
     # persisted so worker can rerun it after a restart
@@ -104,6 +105,7 @@ class TaskRun:
     id: UUID
     task_id: UUID
     name: str
+    subject: str | None
     status: TaskStatusEnum
     attempt: int
     started_at: datetime

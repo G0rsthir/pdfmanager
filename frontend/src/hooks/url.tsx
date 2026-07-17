@@ -65,3 +65,39 @@ export function useSearchParamMulti<T extends Record<string, ParamDef>>(
 
   return [state, update];
 }
+
+export function usePagination({
+  defaultSize = 10,
+}: { defaultSize?: number } = {}) {
+  const [params, setParams] = useSearchParamMulti({
+    page_index: { type: "string" },
+    page_size: { type: "string" },
+  });
+
+  const page_index = Math.max(Number(params.page_index) || 1, 1);
+  const page_size = Math.max(Number(params.page_size) || defaultSize, 1);
+
+  const setPage = (
+    next: { page_index?: number; page_size?: number },
+    options: { replace: boolean } = { replace: false },
+  ) => {
+    const newPageIndex =
+      next.page_index != null
+        ? String(Math.max(next.page_index, 1))
+        : params.page_index;
+    const newPageSize =
+      next.page_size != null
+        ? String(Math.max(next.page_size, 1))
+        : params.page_size;
+
+    setParams(
+      {
+        page_index: newPageIndex,
+        page_size: newPageSize,
+      },
+      options,
+    );
+  };
+
+  return [{ page_index, page_size }, setPage] as const;
+}

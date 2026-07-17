@@ -390,6 +390,7 @@ async def upload_file(
             "index_pdf",
             payload={"file_id": str(file_record.id)},
             dedup_key=str(file_record.id),
+            subject=file_record.name,
         )
 
 

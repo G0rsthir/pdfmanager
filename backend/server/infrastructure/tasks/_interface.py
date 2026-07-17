@@ -31,6 +31,7 @@ class TaskScheduler(ABC):
         name: str,
         *,
         payload: dict[str, Any] | None = None,
+        subject: str | None = None,
         dedup_key: str | None = None,
     ) -> UUID:
         """
@@ -152,7 +153,12 @@ class TaskHistoryStore(ABC):
         pass
 
     @abstractmethod
-    async def list_recent(self, *, name: str | None = None, limit: int = 50, offset: int = 0) -> Sequence[TaskRun]:
+    async def list_recent(
+        self, *, name: str | None = None, limit: int = 50, offset: int = 0
+    ) -> tuple[Sequence[TaskRun], int]:
+        """
+        Return runs (newest first) and total row count
+        """
         pass
 
     @abstractmethod

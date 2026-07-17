@@ -56,7 +56,7 @@ class ApiKeyService:
 
         api_key = await self._session_repo.get_by_id(api_key_id)
 
-        if not api_key.is_expired and not api_key.is_revoked:
+        if not api_key.is_revoked:
             api_key.revoke()
             await self._session_repo.commit()
 

@@ -1,17 +1,21 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Path, Request
+from fastapi import APIRouter, Path, Query, Request
 from fastapi.responses import JSONResponse
 
 from server.const import AccessScopeEnum
 from server.dependencies import (
     AccessSecurity,
     ApiKeyServiceDependency,
+    TaskHistoryStoreDependency,
+    TaskStatusStoreDependency,
     TokenServiceDependency,
     UserRepositoryDependency,
 )
 from server.routes._assemblers import build_api_key_response
+from server.schemas.general import TaskActiveResponse, TaskHistoryResponse
+from server.schemas.query import PaginatedResponse, PaginationQueryParams
 from server.schemas.security import (
     AccessSessionContext,
     ApiKeyCreateRequest,
@@ -105,3 +109,24 @@ async def reset_api_key(
         expires_at=result.session_expires_at,
         user_id=result.user_id,
     )
+
+
+@router.get(path="/tasks/active", response_model=list[TaskActiveResponse], operation_id="ListActiveTasks")
+async def list_active_tasks(
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
+    task_status_store: TaskStatusStoreDependency,
+):
+
+    return await task_status_store.list_active()
+
+
+@router.get(
+    path="/tasks/history", response_model=PaginatedResponse[TaskHistoryResponse], operation_id="ListTaskHistory"
+)
+async def list_task_history(
+    query: Annotated[PaginationQueryParams, Query()],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
+    task_history_store: TaskHistoryStoreDependency,
+):
+    result = await task_history_store.list_recent(limit=query.limit, offset=query.offset)
+    return PaginatedResponse.from_tuple(query, result)

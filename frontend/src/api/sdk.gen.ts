@@ -15,9 +15,11 @@ import {
   getFileDetailsResponseTransformer,
   getFileStateResponseTransformer,
   getLibraryTreeResponseTransformer,
+  listActiveTasksResponseTransformer,
   listAnnotationsResponseTransformer,
   listApiKeysResponseTransformer,
   listFilesResponseTransformer,
+  listTaskHistoryResponseTransformer,
   refreshAuthTokenResponseTransformer,
   resetApiKeyResponseTransformer,
   searchFilesResponseTransformer,
@@ -99,6 +101,8 @@ import type {
   InviteToCollectionData,
   InviteToCollectionErrors,
   InviteToCollectionResponses,
+  ListActiveTasksData,
+  ListActiveTasksResponses,
   ListAnnotationLabelsData,
   ListAnnotationLabelsResponses,
   ListAnnotationsData,
@@ -127,6 +131,9 @@ import type {
   ListRolesResponses,
   ListTagsData,
   ListTagsResponses,
+  ListTaskHistoryData,
+  ListTaskHistoryErrors,
+  ListTaskHistoryResponses,
   ListUsersData,
   ListUsersResponses,
   OidcCallbackData,
@@ -1219,4 +1226,38 @@ export const resetApiKey = <ThrowOnError extends boolean = false>(
       "Content-Type": "application/json",
       ...options.headers,
     },
+  });
+
+/**
+ * List Active Tasks
+ */
+export const listActiveTasks = <ThrowOnError extends boolean = false>(
+  options?: Options<ListActiveTasksData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    ListActiveTasksResponses,
+    unknown,
+    ThrowOnError
+  >({
+    responseTransformer: listActiveTasksResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/general/tasks/active",
+    ...options,
+  });
+
+/**
+ * List Task History
+ */
+export const listTaskHistory = <ThrowOnError extends boolean = false>(
+  options?: Options<ListTaskHistoryData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    ListTaskHistoryResponses,
+    ListTaskHistoryErrors,
+    ThrowOnError
+  >({
+    responseTransformer: listTaskHistoryResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/general/tasks/history",
+    ...options,
   });

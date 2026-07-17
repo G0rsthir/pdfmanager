@@ -35,6 +35,7 @@ import {
   getLibraryTree,
   getOidcAuthProvider,
   inviteToCollection,
+  listActiveTasks,
   listAnnotationLabels,
   listAnnotations,
   listApiKeys,
@@ -47,6 +48,7 @@ import {
   listOidcAuthProviders,
   listRoles,
   listTags,
+  listTaskHistory,
   listUsers,
   oidcCallback,
   oidcLogin,
@@ -131,6 +133,8 @@ import type {
   GetOidcAuthProviderResponse,
   InviteToCollectionData,
   InviteToCollectionError,
+  ListActiveTasksData,
+  ListActiveTasksResponse,
   ListAnnotationLabelsData,
   ListAnnotationLabelsResponse,
   ListAnnotationsData,
@@ -159,6 +163,9 @@ import type {
   ListRolesResponse,
   ListTagsData,
   ListTagsResponse,
+  ListTaskHistoryData,
+  ListTaskHistoryError,
+  ListTaskHistoryResponse,
   ListUsersData,
   ListUsersResponse,
   OidcCallbackData,
@@ -1803,3 +1810,59 @@ export const resetApiKeyMutation = (
   };
   return mutationOptions;
 };
+
+export const listActiveTasksQueryKey = (
+  options?: Options<ListActiveTasksData>,
+) => createQueryKey("listActiveTasks", options);
+
+/**
+ * List Active Tasks
+ */
+export const listActiveTasksOptions = (
+  options?: Options<ListActiveTasksData>,
+) =>
+  queryOptions<
+    ListActiveTasksResponse,
+    DefaultError,
+    ListActiveTasksResponse,
+    ReturnType<typeof listActiveTasksQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listActiveTasks({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listActiveTasksQueryKey(options),
+  });
+
+export const listTaskHistoryQueryKey = (
+  options?: Options<ListTaskHistoryData>,
+) => createQueryKey("listTaskHistory", options);
+
+/**
+ * List Task History
+ */
+export const listTaskHistoryOptions = (
+  options?: Options<ListTaskHistoryData>,
+) =>
+  queryOptions<
+    ListTaskHistoryResponse,
+    ListTaskHistoryError,
+    ListTaskHistoryResponse,
+    ReturnType<typeof listTaskHistoryQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listTaskHistory({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listTaskHistoryQueryKey(options),
+  });

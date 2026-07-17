@@ -51,7 +51,7 @@ export type AnnotationResponse = {
   /**
    * Label
    *
-   * User-set identifier, used to cross-reference.
+   * User-set identifier, used to cross-reference
    */
   label?: string | null;
   /**
@@ -408,7 +408,7 @@ export type BodyUploadFile = {
   /**
    * Name
    */
-  name: string;
+  name?: string | null;
   /**
    * Description
    */
@@ -505,7 +505,7 @@ export type CreateAnnotationRequest = {
   /**
    * Label
    *
-   * User-set identifier, used to cross-reference.
+   * User-set identifier, used to cross-reference
    */
   label?: string | null;
 };
@@ -800,13 +800,39 @@ export type OidcGroupRuleOutput = {
 };
 
 /**
+ * PaginatedResponse[TaskHistoryResponse]
+ */
+export type PaginatedResponseTaskHistoryResponse = {
+  /**
+   * Results
+   */
+  results: Array<TaskHistoryResponse>;
+  /**
+   * Row Count
+   */
+  row_count: number;
+  /**
+   * Page Size
+   */
+  page_size: number;
+  /**
+   * Page Count
+   */
+  page_count: number;
+  /**
+   * Page Index
+   */
+  page_index?: number;
+};
+
+/**
  * PatchAnnotationRequest
  */
 export type PatchAnnotationRequest = {
   /**
    * Label
    *
-   * User-set identifier, used to cross-reference.
+   * User-set identifier, used to cross-reference
    */
   label?: string | null;
   /**
@@ -919,9 +945,11 @@ export type SearchHitResponse = {
   page_number?: number | null;
   fragment_type: FragmentType;
   /**
-   * Rank
+   * Score
+   *
+   * Normalized relevance, higher = better
    */
-  rank: number;
+  score: number;
   annotation?: AnnotationResponse | null;
   /**
    * Field
@@ -1002,6 +1030,106 @@ export type TagWithDetailsResponse = {
    */
   file_count: number;
 };
+
+/**
+ * TaskActiveResponse
+ */
+export type TaskActiveResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  status: TaskStatusEnum;
+  /**
+   * Attempt
+   */
+  attempt: number;
+  /**
+   * Subject
+   */
+  subject: string | null;
+  /**
+   * Progress
+   */
+  progress?: number | null;
+  /**
+   * Detail
+   */
+  detail: string | null;
+  /**
+   * Created At
+   */
+  created_at: Date;
+  /**
+   * Updated At
+   */
+  updated_at: Date;
+  /**
+   * Display Name
+   */
+  readonly display_name: string;
+};
+
+/**
+ * TaskHistoryResponse
+ */
+export type TaskHistoryResponse = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  status: TaskStatusEnum;
+  /**
+   * Started At
+   */
+  started_at: Date;
+  /**
+   * Duration Ms
+   */
+  duration_ms: number | null;
+  /**
+   * Error
+   */
+  error: string | null;
+  /**
+   * Subject
+   */
+  subject: string | null;
+  /**
+   * Display Name
+   */
+  readonly display_name: string;
+  /**
+   * Display Duration
+   */
+  readonly display_duration: string;
+};
+
+/**
+ * TaskStatusEnum
+ */
+export const TaskStatusEnum = {
+  PENDING: "pending",
+  RUNNING: "running",
+  SUCCEEDED: "succeeded",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+  INTERRUPTED: "interrupted",
+} as const;
+
+/**
+ * TaskStatusEnum
+ */
+export type TaskStatusEnum =
+  (typeof TaskStatusEnum)[keyof typeof TaskStatusEnum];
 
 /**
  * UpdateCollectionPermissionRequest
@@ -1414,6 +1542,32 @@ export type LibraryTreeNodeWritable = {
 };
 
 /**
+ * PaginatedResponse[TaskHistoryResponse]
+ */
+export type PaginatedResponseTaskHistoryResponseWritable = {
+  /**
+   * Results
+   */
+  results: Array<TaskHistoryResponseWritable>;
+  /**
+   * Row Count
+   */
+  row_count: number;
+  /**
+   * Page Size
+   */
+  page_size: number;
+  /**
+   * Page Count
+   */
+  page_count: number;
+  /**
+   * Page Index
+   */
+  page_index?: number;
+};
+
+/**
  * ResourcePermissionResponse
  */
 export type ResourcePermissionResponseWritable = {
@@ -1484,6 +1638,76 @@ export type SetupUserWritable = {
    * Name
    */
   name: string;
+};
+
+/**
+ * TaskActiveResponse
+ */
+export type TaskActiveResponseWritable = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  status: TaskStatusEnum;
+  /**
+   * Attempt
+   */
+  attempt: number;
+  /**
+   * Subject
+   */
+  subject: string | null;
+  /**
+   * Progress
+   */
+  progress?: number | null;
+  /**
+   * Detail
+   */
+  detail: string | null;
+  /**
+   * Created At
+   */
+  created_at: Date;
+  /**
+   * Updated At
+   */
+  updated_at: Date;
+};
+
+/**
+ * TaskHistoryResponse
+ */
+export type TaskHistoryResponseWritable = {
+  /**
+   * Id
+   */
+  id: string;
+  /**
+   * Name
+   */
+  name: string;
+  status: TaskStatusEnum;
+  /**
+   * Started At
+   */
+  started_at: Date;
+  /**
+   * Duration Ms
+   */
+  duration_ms: number | null;
+  /**
+   * Error
+   */
+  error: string | null;
+  /**
+   * Subject
+   */
+  subject: string | null;
 };
 
 /**
@@ -3168,3 +3392,62 @@ export type ResetApiKeyResponses = {
 
 export type ResetApiKeyResponse =
   ResetApiKeyResponses[keyof ResetApiKeyResponses];
+
+export type ListActiveTasksData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/general/tasks/active";
+};
+
+export type ListActiveTasksResponses = {
+  /**
+   * Response Listactivetasks
+   *
+   * Successful Response
+   */
+  200: Array<TaskActiveResponse>;
+};
+
+export type ListActiveTasksResponse =
+  ListActiveTasksResponses[keyof ListActiveTasksResponses];
+
+export type ListTaskHistoryData = {
+  body?: never;
+  path?: never;
+  query?: {
+    /**
+     * Page Index
+     *
+     * Page index
+     */
+    page_index?: number;
+    /**
+     * Page Size
+     *
+     * Number of items per page
+     */
+    page_size?: number;
+  };
+  url: "/api/v1/general/tasks/history";
+};
+
+export type ListTaskHistoryErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ListTaskHistoryError =
+  ListTaskHistoryErrors[keyof ListTaskHistoryErrors];
+
+export type ListTaskHistoryResponses = {
+  /**
+   * Successful Response
+   */
+  200: PaginatedResponseTaskHistoryResponse;
+};
+
+export type ListTaskHistoryResponse =
+  ListTaskHistoryResponses[keyof ListTaskHistoryResponses];

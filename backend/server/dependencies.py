@@ -11,7 +11,7 @@ from server.const import AccessScopeEnum, RefreshScopeEnum
 from server.exceptions import InsufficientPermissionsException
 from server.infrastructure.search import Fts5SearchBackend, SearchBackend
 from server.infrastructure.storage import StorageBackend
-from server.infrastructure.tasks import TaskScheduler
+from server.infrastructure.tasks import TaskHistoryStore, TaskScheduler, TaskStatusStore
 from server.repositories import (
     AnnotationRepository,
     AuthorRepository,
@@ -167,6 +167,16 @@ def get_task_scheduler(request: Request) -> TaskScheduler:
     return scheduler
 
 
+def get_task_status_store(request: Request) -> TaskStatusStore:
+    store: TaskStatusStore = request.app.state.task_status_store
+    return store
+
+
+def get_task_history_store(request: Request) -> TaskHistoryStore:
+    store: TaskHistoryStore = request.app.state.task_history_store
+    return store
+
+
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession]:
     context: RuntimeContainer = request.app.state.app_context
     async with context.db.get_session_context() as session:
@@ -285,4 +295,15 @@ SearchEngineDependency = Annotated[
 TaskSchedulerDependency = Annotated[
     TaskScheduler,
     Depends(get_task_scheduler),
+]
+
+
+TaskStatusStoreDependency = Annotated[
+    TaskStatusStore,
+    Depends(get_task_status_store),
+]
+
+TaskHistoryStoreDependency = Annotated[
+    TaskHistoryStore,
+    Depends(get_task_history_store),
 ]

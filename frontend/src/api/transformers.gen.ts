@@ -7,9 +7,11 @@ import type {
   GetFileDetailsResponse,
   GetFileStateResponse,
   GetLibraryTreeResponse,
+  ListActiveTasksResponse,
   ListAnnotationsResponse,
   ListApiKeysResponse,
   ListFilesResponse,
+  ListTaskHistoryResponse,
   RefreshAuthTokenResponse,
   ResetApiKeyResponse,
   SearchFilesResponse,
@@ -165,5 +167,41 @@ export const resetApiKeyResponseTransformer = async (
   data: any,
 ): Promise<ResetApiKeyResponse> => {
   data = apiKeyCreateResultResponseSchemaResponseTransformer(data);
+  return data;
+};
+
+const taskActiveResponseSchemaResponseTransformer = (data: any) => {
+  data.created_at = new Date(data.created_at);
+  data.updated_at = new Date(data.updated_at);
+  return data;
+};
+
+export const listActiveTasksResponseTransformer = async (
+  data: any,
+): Promise<ListActiveTasksResponse> => {
+  data = data.map((item: any) =>
+    taskActiveResponseSchemaResponseTransformer(item),
+  );
+  return data;
+};
+
+const taskHistoryResponseSchemaResponseTransformer = (data: any) => {
+  data.started_at = new Date(data.started_at);
+  return data;
+};
+
+const paginatedResponseTaskHistoryResponseSchemaResponseTransformer = (
+  data: any,
+) => {
+  data.results = data.results.map((item: any) =>
+    taskHistoryResponseSchemaResponseTransformer(item),
+  );
+  return data;
+};
+
+export const listTaskHistoryResponseTransformer = async (
+  data: any,
+): Promise<ListTaskHistoryResponse> => {
+  data = paginatedResponseTaskHistoryResponseSchemaResponseTransformer(data);
   return data;
 };

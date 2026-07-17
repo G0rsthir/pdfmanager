@@ -9,8 +9,10 @@ from server.tasks import build_scheduler
 @asynccontextmanager
 async def api_server_lifespan(app: FastAPI):
 
-    scheduler = build_scheduler(app)
+    scheduler, status_store, history_store = build_scheduler(app)
     app.state.scheduler = scheduler
+    app.state.task_status_store = status_store
+    app.state.task_history_store = history_store
 
     await scheduler.start()
 

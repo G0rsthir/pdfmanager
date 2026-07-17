@@ -60,3 +60,17 @@ export function SettingsOption(props: SettingsOptionProps) {
     </Grid>
   );
 }
+
+export function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Text
+      fontSize="sm"
+      fontWeight="medium"
+      color="fg.muted"
+      letterSpacing="wider"
+      textTransform="uppercase"
+    >
+      {children}
+    </Text>
+  );
+}
