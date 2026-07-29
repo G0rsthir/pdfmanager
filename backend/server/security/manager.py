@@ -244,6 +244,25 @@ class AuthManager[T](OAuth2PasswordBearer):
 
         return token
 
+    async def validate_token(
+        self,
+        token: str,
+        security_scopes: SecurityScopes | None = None,
+    ) -> T:
+        """
+        Validate a token obtained outside of the normal flow
+
+        Raises:
+            AuthManager.not_authenticated_exception: The token is invalid
+            AuthManager.out_of_scope_exception: The token lacks a required scope
+        """
+        payload = self._get_payload(token)
+
+        if not self._has_scopes(payload, security_scopes):
+            raise self.out_of_scope_exception
+
+        return await self._get_current_context(payload)
+
     async def __call__(
         self,
         request: Request,
@@ -264,9 +283,4 @@ class AuthManager[T](OAuth2PasswordBearer):
 
         """
         token = await self._get_token(request)
-        payload = self._get_payload(token)
-
-        if not self._has_scopes(payload, security_scopes):
-            raise self.out_of_scope_exception
-
-        return await self._get_current_context(payload)
+        return await self.validate_token(token, security_scopes)

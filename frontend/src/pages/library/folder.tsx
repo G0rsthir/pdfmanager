@@ -148,7 +148,7 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
             return (
               <Empty
                 icon={<LuFilter />}
-                title="No files match your search. Try adjusting your filters."
+                title="No files match your search. Try adjusting your filters"
               />
             );
           }
@@ -157,7 +157,7 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
             return (
               <Empty
                 icon={<LuFileText />}
-                title="No files yet. Upload a PDF to get started."
+                title="No files yet. Upload a PDF to get started"
               />
             );
 
@@ -265,7 +265,7 @@ function UploadFileDialog(props: {
               onBlur={handleBlur}
             />
             <Field.HelperText>
-              Leave empty to use the PDF's title, or the file name.
+              Leave empty to use the PDF's title, or the file name
             </Field.HelperText>
             <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>
@@ -282,7 +282,7 @@ function UploadFileDialog(props: {
               onBlur={handleBlur}
             />
             <Field.HelperText>
-              Leave empty to use the PDF's description.
+              Leave empty to use the PDF's description
             </Field.HelperText>
             <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>

@@ -162,7 +162,7 @@ class LibraryService:
             return
 
         if source.id == parent_id:
-            raise InvalidActionError(rule="collection_parent_self", msg="Collection cannot be its own parent.")
+            raise InvalidActionError(rule="collection_parent_self", msg="Collection cannot be its own parent")
 
         perm = await self._permission_repo.get_effective_for_collection(source_id, user_id)
 
@@ -298,7 +298,7 @@ class LibraryService:
 
         collection = await self._collection_repo.get_by_id(collection_id)
         if collection.entity_type != "folder":
-            raise InvalidActionError(rule="file_collection_must_be_folder", msg="File can only be added to folders.")
+            raise InvalidActionError(rule="file_collection_must_be_folder", msg="File can only be added to folders")
 
         if file.name != name:
             file.name = name
@@ -422,13 +422,14 @@ class LibraryService:
                 scope=f"thumbnails/{str(user_id)}",
                 filename=thumb_name,
                 stream=stream_bytes(thumb_img.image_bytes),
-                content_type=content_type,
+                content_type=thumb_img.content_type,
             )
 
             return PdfStorageFile(
                 **stored_file.to_dict(),
                 page_count=pfg_file.page_count,
                 thumbnail=thumb.storage_key,
+                thumbnail_content_type=thumb.content_type,
                 metadata=pfg_file.metadata(),
             )
 
@@ -460,6 +461,7 @@ class LibraryService:
             page_count=file.page_count,
             thumbnail=file.thumbnail,
             content_type=file.content_type,
+            thumbnail_content_type=file.thumbnail_content_type,
             published=resolved_published,
         )
 
@@ -694,8 +696,7 @@ class LibraryService:
         if not files:
             return []
         file_ids = [f.id for f in files]
-        states = await self._file_repo.list_states(file_ids, user_id)
-        states = {state.file_id: state for state in states}
+        states = await self._file_repo.list_states_by_file_ids(file_ids, user_id)
         tags_by_file = await self._tags_repo.list_personalized_by_files(file_ids, user_id)
         authors_by_file = await self._authors_repo.list_by_files(file_ids)
 

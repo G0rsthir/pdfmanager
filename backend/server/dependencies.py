@@ -3,12 +3,12 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends, Request, Security
-from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from fastapi import Depends, HTTPException, Request, Security
+from fastapi.security import HTTPBasic, OAuth2PasswordBearer, SecurityScopes
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.const import AccessScopeEnum, RefreshScopeEnum
-from server.exceptions import InsufficientPermissionsException
+from server.exceptions import InsufficientPermissionsException, InvalidBasicCredentialsException
 from server.infrastructure.search import Fts5SearchBackend, SearchBackend
 from server.infrastructure.storage import StorageBackend
 from server.infrastructure.tasks import TaskHistoryStore, TaskScheduler, TaskStatusStore
@@ -31,6 +31,7 @@ from server.services.api_keys import ApiKeyService
 from server.services.auth import AuthService
 from server.services.identity import IdentityService
 from server.services.library import LibraryService
+from server.services.opds import OpdsCatalogService, OpdsUrls
 from server.services.search import SearchService
 from server.services.token import TokenResponseService
 
@@ -54,6 +55,35 @@ class AccessManagerDependency(OAuth2PasswordBearer):
         return context
 
 
+class BasicAuthManagerDependency(HTTPBasic):
+    """
+    HTTP Basic for clients that cannot send a bearer token (OPDS readers).
+
+    The password is access token (API key). Username is ignored
+    """
+
+    def __init__(self, realm: str = "PDF Manager"):
+        super().__init__(realm=realm, auto_error=False)
+
+    async def __call__(self, request: Request, scopes: SecurityScopes) -> AccessSessionContext:  # type: ignore
+        credentials = await super().__call__(request)
+        if credentials is None or not credentials.password:
+            raise InvalidBasicCredentialsException
+
+        manager: AuthManager[AccessSessionContext] = request.app.state.access_manager
+        try:
+            context = await manager.validate_token(credentials.password)
+        except HTTPException:
+            # Re-raise as a Basic challenge
+            raise InvalidBasicCredentialsException from None
+
+        resolver: PermissionResolver = request.app.state.permission_resolver
+        if not await resolver.has_scope(context, scopes.scopes):
+            # TODO replace with InvalidBasicCredentialsException ?
+            raise InsufficientPermissionsException
+        return context
+
+
 class RefreshManagerDependency(OAuth2PasswordBearer):
     def __init__(self):
         super().__init__(tokenUrl=AUTH_TOKEN_URL, auto_error=False)
@@ -67,6 +97,8 @@ _access_manager_dependency = AccessManagerDependency()
 
 _refresh_manager_dependency = RefreshManagerDependency()
 
+_basic_auth_manager_dependency = BasicAuthManagerDependency()
+
 
 def AccessSecurity(*, scopes: list[AccessScopeEnum] | None = None):
     return Security(_access_manager_dependency, scopes=scopes)
@@ -74,6 +106,10 @@ def AccessSecurity(*, scopes: list[AccessScopeEnum] | None = None):
 
 def RefreshSecurity(*, scopes: list[RefreshScopeEnum] | None = None):
     return Security(_refresh_manager_dependency, scopes=scopes)
+
+
+def BasicAuthSecurity(*, scopes: list[AccessScopeEnum] | None = None):
+    return Security(_basic_auth_manager_dependency, scopes=scopes)
 
 
 def get_token_service(request: Request) -> TokenResponseService:
@@ -118,6 +154,22 @@ def get_api_key_service(
     return ApiKeyService(
         user_repo=user_repo,
         session_repo=session_repo,
+    )
+
+
+def get_opds_service(
+    request: Request,
+    file_repo: FileRepositoryDependency,
+    collection_repo: CollectionRepositoryDependency,
+    tags_repo: TagRepositoryDependency,
+    permission_repo: PermissionDependency,
+) -> OpdsCatalogService:
+    return OpdsCatalogService(
+        file_repo=file_repo,
+        collection_repo=collection_repo,
+        tags_repo=tags_repo,
+        permission_repo=permission_repo,
+        urls=OpdsUrls(request.url_for),
     )
 
 
@@ -286,6 +338,11 @@ ApiKeyServiceDependency = Annotated[
     Depends(get_api_key_service),
 ]
 
+
+OpdsCatalogServiceDependency = Annotated[
+    OpdsCatalogService,
+    Depends(get_opds_service),
+]
 
 SearchEngineDependency = Annotated[
     SearchBackend,

@@ -1,7 +1,9 @@
 from uuid import UUID
 
-from fastapi import Request
+from fastapi import Request, Response
 
+from server.infrastructure.opds.document import OpdsFeed, OpdsLinkType, OpdsRel, OpenSearchDescription
+from server.infrastructure.opds.render import render_feed, render_opensearch
 from server.models import ORMAnnotation, ORMAuthProviderOidc, ORMSession, ORMUser
 from server.repositories import FileWithDetails
 from server.schemas.identity import AuthProviderOidcResponse, UserSummaryResponse
@@ -63,4 +65,24 @@ def build_api_key_response(session: ORMSession, user: ORMUser | None = None):
     return ApiKeyResponse(
         **session.__dict__,
         user=UserSummaryResponse.model_validate(user) if user else None,
+    )
+
+
+def build_opds_response(feed: OpdsFeed) -> Response:
+    """
+    Render OPDS Feed
+    """
+    self_link = next((link for link in feed.links if link.rel == OpdsRel.SELF), None)
+    media_type = self_link.type if self_link else OpdsLinkType.ACQUISITION
+    return Response(content=render_feed(feed), media_type=media_type)
+
+
+def build_opds_opensearch_response(description: OpenSearchDescription) -> Response:
+    """
+    Render OPDS OpenSearch Description
+    """
+
+    return Response(
+        content=render_opensearch(description),
+        media_type=OpdsLinkType.OPENSEARCH,
     )

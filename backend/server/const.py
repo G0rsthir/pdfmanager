@@ -32,6 +32,7 @@ class TagEnum(StrEnum):
     ACCOUNT = "account"
     GENERAL = "general"
     SEARCH = "search"
+    OPDS = "opds"
 
 
 class RefreshScopeEnum(StrEnum):

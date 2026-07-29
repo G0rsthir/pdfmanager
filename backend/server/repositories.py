@@ -232,6 +232,44 @@ class CollectionRepository(Repository):
         stmt = select(models.ORMCollection).where(models.ORMCollection.id.in_(ids))
         return list(await self.session.scalars(stmt))
 
+    async def list_visible_to_user(
+        self,
+        user_id: UUID,
+        direct_parent_id: UUID | None = None,
+        roots_only: bool = False,
+    ) -> list[models.ORMCollection]:
+
+        # Resources the user has ANY direct grant on (collections or files)
+        granted = (
+            select(models.ORMResourcePermission.resource_id)
+            .where(models.ORMResourcePermission.user_id == user_id)
+            .scalar_subquery()
+        )
+
+        # All collection IDs visible to the user (granted + descendants)
+        visible = (
+            select(models.ORMCollection.id)
+            .where(models.ORMCollection.id.in_(granted))
+            .cte("visible_collections", recursive=True)
+        )
+        visible = visible.union_all(
+            select(models.ORMCollection.id).join(visible, models.ORMCollection.parent_id == visible.c.id)
+        )
+
+        stmt = select(models.ORMCollection).where(models.ORMCollection.id.in_(select(visible.c.id)))
+
+        if roots_only:
+            stmt = stmt.where(
+                or_(
+                    models.ORMCollection.parent_id.is_(None),
+                    models.ORMCollection.parent_id.notin_(select(visible.c.id)),
+                )
+            )
+        elif direct_parent_id is not None:
+            stmt = stmt.where(models.ORMCollection.parent_id == direct_parent_id)
+
+        return list(await self.session.scalars(stmt))
+
     def create(self, collection: models.ORMCollection) -> None:
         self.session.add(collection)
 
@@ -354,6 +392,7 @@ class FileRepository(Repository):
             )
         )
 
+        # TODO rename to direct_collection_id
         if collection_id is not None:
             stmt = stmt.where(models.ORMFile.collection_id == collection_id)
 
@@ -412,6 +451,53 @@ class FileRepository(Repository):
         stmt = select(models.ORMFile).where(models.ORMFile.collection_id.in_(select(descendants.c.id)))
         return list(await self.session.scalars(stmt))
 
+    async def list_in_progress(self, user_id: UUID, limit: int = 50) -> list[models.ORMFile]:
+        """
+        Files that user is currently reading
+        """
+
+        # Resources the user has ANY direct grant on (collections or files)
+        granted = (
+            select(models.ORMResourcePermission.resource_id)
+            .where(models.ORMResourcePermission.user_id == user_id)
+            .scalar_subquery()
+        )
+
+        # All collection IDs visible to the user (granted + descendants)
+        visible = (
+            select(models.ORMCollection.id)
+            .where(models.ORMCollection.id.in_(granted))
+            .cte("visible_collections", recursive=True)
+        )
+        visible = visible.union_all(
+            select(models.ORMCollection.id).join(visible, models.ORMCollection.parent_id == visible.c.id)
+        )
+
+        # File is visible if its collection is visible OR the file itself is granted
+        stmt = (
+            select(models.ORMFile)
+            .join(
+                models.ORMFileState,
+                and_(
+                    models.ORMFileState.file_id == models.ORMFile.id,
+                    models.ORMFileState.user_id == user_id,
+                ),
+            )
+            .where(
+                or_(
+                    models.ORMFile.collection_id.in_(select(visible.c.id)),
+                    models.ORMFile.id.in_(granted),
+                ),
+                models.ORMFileState.last_read_at.is_not(None),
+                models.ORMFileState.current_page < models.ORMFile.page_count,
+                models.ORMFileState.current_page > 1,
+            )
+            .order_by(models.ORMFileState.last_read_at.desc())
+            .limit(limit)
+        )
+
+        return list(await self.session.scalars(stmt))
+
     async def list_owned_by(self, user_id: UUID) -> list[models.ORMFile]:
         stmt = (
             select(models.ORMFile)
@@ -439,13 +525,13 @@ class FileRepository(Repository):
             )
         )
 
-    async def list_states(self, file_ids: list[UUID], user_id: UUID):
+    async def list_states_by_file_ids(self, file_ids: list[UUID], user_id: UUID):
         states = await self.session.scalars(
             select(models.ORMFileState).where(
                 models.ORMFileState.user_id == user_id, models.ORMFileState.file_id.in_(set(file_ids))
             )
         )
-        return list(states.all())
+        return {s.file_id: s for s in states}
 
 
 @dataclass

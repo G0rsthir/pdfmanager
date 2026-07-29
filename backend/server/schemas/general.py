@@ -12,6 +12,7 @@ from server.infrastructure.tasks import TaskStatusEnum
 @dataclass(kw_only=True)
 class DocumentStorageFile(StorageFile):
     thumbnail: str | None = None
+    thumbnail_content_type: str
     metadata: FileMetadata
 
 

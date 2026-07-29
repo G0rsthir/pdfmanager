@@ -513,7 +513,7 @@ async def get_file_thumbnail(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thumbnail not available")
 
     async with library_service.open_file(view.file.thumbnail) as path:
-        return FastAPIFileResponse(path, media_type="image/webp")
+        return FastAPIFileResponse(path, media_type=view.file.thumbnail_content_type)
 
 
 @router.get(path="/tags", operation_id="ListTags", response_model=list[TagWithDetailsResponse])

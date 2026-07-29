@@ -154,7 +154,7 @@ class ORMUser(Base):
         )
 
 
-class ORMCollection(Base):
+class ORMCollection(Base, AuditMixin):
     __tablename__ = "collections"
 
     name: Mapped[str]
@@ -170,13 +170,14 @@ class ORMCollection(Base):
         return f"ORMCollection(id={self.id}, name='{self.name}' parent_id='{self.parent_id}')"
 
 
-class ORMFile(Base):
+class ORMFile(Base, AuditMixin):
     __tablename__ = "files"
 
     name: Mapped[str]
     description: Mapped[str | None]
     storage_key: Mapped[str]
-    thumbnail: Mapped[str | None] = mapped_column(default=None)
+    thumbnail: Mapped[str]
+    thumbnail_content_type: Mapped[str]
     content_type: Mapped[str]
     file_size: Mapped[int]
     file_hash: Mapped[str | None]

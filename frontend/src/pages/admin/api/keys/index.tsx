@@ -77,7 +77,7 @@ function CreateApiKeyAction() {
 
 function ApiKeysView({ apiKeys }: { apiKeys: ApiKeyResponse[] }) {
   if (apiKeys.length == 0)
-    return <Empty icon={<LuKeyRound />} title="No keys yet." />;
+    return <Empty icon={<LuKeyRound />} title="No keys yet" />;
 
   return (
     <Table.Root size="md">

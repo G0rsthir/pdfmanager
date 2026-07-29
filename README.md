@@ -17,6 +17,7 @@ Simple PDF manager - nothing more
 - Multi-user - very user has their own library
 - Sharing - Invite other users to any collection (with permission management)
 - Search - file metadata, page content, annotation bodies, and labels
+- OPDS - Browse and download your library from any e-reader app
 
 <table align="center">
   <tr>

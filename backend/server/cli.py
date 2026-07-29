@@ -13,10 +13,10 @@ from server.runtime import bootstrap_runtime, maybe_run_migrations, validate_ser
 cli = Typer()
 
 # Database CLI
-database_cli = Typer(help="Commands for interacting with the database.")
+database_cli = Typer(help="Commands for interacting with the database")
 
 # Run CLI
-run_cli = Typer(help="Commands for running the application.")
+run_cli = Typer(help="Commands for running the application")
 
 
 cli.add_typer(database_cli, name="database")

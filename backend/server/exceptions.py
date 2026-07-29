@@ -14,6 +14,12 @@ InsufficientPermissionsException = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+InvalidBasicCredentialsException = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Invalid credentials",
+    headers={"WWW-Authenticate": 'Basic realm="PDF Manager"'},
+)
+
 
 class DomainError(Exception):
     """
