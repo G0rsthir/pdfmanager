@@ -145,24 +145,32 @@ export function ExpiryDateSelect(props: ExpiryDateSelectProps) {
   );
 }
 
+const DefaultScopes = Object.values(AccessScopeEnum);
+
 export interface ScopeSelectProps {
   onValueChange: (value: string[]) => void;
   value: string[];
   onBlur: () => void;
   required?: boolean;
   excludedScopes?: string[];
+  scopes?: string[];
 }
 
 export function ScopeSelect(props: ScopeSelectProps) {
-  const { onValueChange, value, required, onBlur, excludedScopes = [] } = props;
+  const {
+    onValueChange,
+    value,
+    required,
+    onBlur,
+    excludedScopes = [],
+    scopes = DefaultScopes,
+  } = props;
 
   const collection = useMemo(() => {
     return createListCollection({
-      items: Object.values(AccessScopeEnum).filter(
-        (item) => !excludedScopes.includes(item),
-      ),
+      items: scopes.filter((item) => !excludedScopes.includes(item)),
     });
-  }, [excludedScopes]);
+  }, [excludedScopes, scopes]);
 
   return (
     <Select.Root

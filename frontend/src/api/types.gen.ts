@@ -110,6 +110,21 @@ export type ApiKeyCreateResultResponse = {
 };
 
 /**
+ * ApiKeyPersonalCreate
+ */
+export type ApiKeyPersonalCreate = {
+  /**
+   * Description
+   */
+  description: string;
+  /**
+   * Expires At
+   */
+  expires_at: Date;
+  scopes: Scopes;
+};
+
+/**
  * ApiKeyResetRequest
  */
 export type ApiKeyResetRequest = {
@@ -168,6 +183,10 @@ export type AppStateResponse = {
    */
   sso_servers?: Array<SsoConfigResponse>;
   auto_login_sso_server?: SsoConfigResponse | null;
+  /**
+   * Opds Url
+   */
+  opds_url: string;
   /**
    * Is Setup Complete
    *
@@ -1379,6 +1398,10 @@ export type AppStateResponseWritable = {
    */
   sso_servers?: Array<SsoConfigResponse>;
   auto_login_sso_server?: SsoConfigResponse | null;
+  /**
+   * Opds Url
+   */
+  opds_url: string;
 };
 
 /**
@@ -2979,6 +3002,113 @@ export type UpdateUserPasswordResponses = {
   200: unknown;
 };
 
+export type ListPersonalApiKeysData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/account/keys";
+};
+
+export type ListPersonalApiKeysResponses = {
+  /**
+   * Response Listpersonalapikeys
+   *
+   * Successful Response
+   */
+  200: Array<ApiKeyResponse>;
+};
+
+export type ListPersonalApiKeysResponse =
+  ListPersonalApiKeysResponses[keyof ListPersonalApiKeysResponses];
+
+export type CreatePersonalApiKeyData = {
+  body: ApiKeyPersonalCreate;
+  path?: never;
+  query?: never;
+  url: "/api/v1/account/keys";
+};
+
+export type CreatePersonalApiKeyErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type CreatePersonalApiKeyError =
+  CreatePersonalApiKeyErrors[keyof CreatePersonalApiKeyErrors];
+
+export type CreatePersonalApiKeyResponses = {
+  /**
+   * Successful Response
+   */
+  200: ApiKeyCreateResultResponse;
+};
+
+export type CreatePersonalApiKeyResponse =
+  CreatePersonalApiKeyResponses[keyof CreatePersonalApiKeyResponses];
+
+export type RevokePersonalApiKeyData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/account/keys/{id}";
+};
+
+export type RevokePersonalApiKeyErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type RevokePersonalApiKeyError =
+  RevokePersonalApiKeyErrors[keyof RevokePersonalApiKeyErrors];
+
+export type RevokePersonalApiKeyResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type ResetPersonalApiKeyData = {
+  body: ApiKeyResetRequest;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/account/keys/{id}/reset";
+};
+
+export type ResetPersonalApiKeyErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type ResetPersonalApiKeyError =
+  ResetPersonalApiKeyErrors[keyof ResetPersonalApiKeyErrors];
+
+export type ResetPersonalApiKeyResponses = {
+  /**
+   * Successful Response
+   */
+  200: ApiKeyCreateResultResponse;
+};
+
+export type ResetPersonalApiKeyResponse =
+  ResetPersonalApiKeyResponses[keyof ResetPersonalApiKeyResponses];
+
 export type ListRolesData = {
   body?: never;
   path?: never;
@@ -3451,3 +3581,191 @@ export type ListTaskHistoryResponses = {
 
 export type ListTaskHistoryResponse =
   ListTaskHistoryResponses[keyof ListTaskHistoryResponses];
+
+export type OpdsRootData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/opds/";
+};
+
+export type OpdsRootResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type OpdsAllData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/opds/all";
+};
+
+export type OpdsAllResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type OpdsOpenSearchData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/opds/opensearch.xml";
+};
+
+export type OpdsOpenSearchResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type OpdsSearchData = {
+  body?: never;
+  path?: never;
+  query?: {
+    /**
+     * Q
+     */
+    q?: string;
+  };
+  url: "/api/v1/opds/search";
+};
+
+export type OpdsSearchErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type OpdsSearchError = OpdsSearchErrors[keyof OpdsSearchErrors];
+
+export type OpdsSearchResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type OpdsShelfData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/opds/shelf";
+};
+
+export type OpdsShelfResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type OpdsCollectionsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/opds/collections";
+};
+
+export type OpdsCollectionsResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type OpdsCollectionData = {
+  body?: never;
+  path: {
+    /**
+     * Collection Id
+     */
+    collection_id: string;
+  };
+  query?: never;
+  url: "/api/v1/opds/collections/{collection_id}";
+};
+
+export type OpdsCollectionErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type OpdsCollectionError =
+  OpdsCollectionErrors[keyof OpdsCollectionErrors];
+
+export type OpdsCollectionResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type GetOpdsFileData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Ext
+     */
+    ext: string;
+  };
+  query?: never;
+  url: "/api/v1/opds/file/{id}.{ext}";
+};
+
+export type GetOpdsFileErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetOpdsFileError = GetOpdsFileErrors[keyof GetOpdsFileErrors];
+
+export type GetOpdsFileResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type GetOpdsFileThumbnailData = {
+  body?: never;
+  path: {
+    /**
+     * Id
+     */
+    id: string;
+  };
+  query?: never;
+  url: "/api/v1/opds/file/{id}/thumbnail";
+};
+
+export type GetOpdsFileThumbnailErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type GetOpdsFileThumbnailError =
+  GetOpdsFileThumbnailErrors[keyof GetOpdsFileThumbnailErrors];
+
+export type GetOpdsFileThumbnailResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};

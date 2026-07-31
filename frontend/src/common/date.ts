@@ -1,3 +1,9 @@
+import {
+  getLocalTimeZone,
+  today,
+  type DateValue,
+} from "@internationalized/date";
+
 const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, {
   numeric: "auto",
 });
@@ -27,3 +33,15 @@ export function formatRelativeTime(value: Date | string | null | undefined) {
   }
   return null;
 }
+
+const t = today(getLocalTimeZone());
+
+export const expiryDatePresets: { label: string; value: DateValue[] }[] = [
+  { label: "Tomorrow", value: [t.add({ days: 1 })] },
+  { label: "Next week", value: [t.add({ weeks: 1 })] },
+  { label: "Next month", value: [t.add({ months: 1 })] },
+  { label: "In 6 months", value: [t.add({ months: 6 })] },
+  { label: "Next year", value: [t.add({ years: 1 })] },
+  { label: "In 2 years", value: [t.add({ years: 2 })] },
+  { label: "In 3 years", value: [t.add({ years: 3 })] },
+];

@@ -1,8 +1,9 @@
 import { useAuth } from "@/common/auth/hooks";
 import { Heading, Stack, Tabs, Text } from "@chakra-ui/react";
-import { LuCircleUser, LuSlidersVertical } from "react-icons/lu";
+import { LuCircleUser, LuKeyRound, LuSlidersVertical } from "react-icons/lu";
 import { PreferencesContent } from "./preferences";
 import { ProfileContent } from "./profile";
+import { SecurityContent } from "./security";
 
 export function CurrentUserAccountPage() {
   const { session } = useAuth();
@@ -28,12 +29,19 @@ export function CurrentUserAccountPage() {
             <LuSlidersVertical />
             Preferences
           </Tabs.Trigger>
+          <Tabs.Trigger value="security">
+            <LuKeyRound />
+            Security
+          </Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="preferences">
           <PreferencesContent />
         </Tabs.Content>
         <Tabs.Content value="profile">
           <ProfileContent />
+        </Tabs.Content>
+        <Tabs.Content value="security">
+          <SecurityContent />
         </Tabs.Content>
       </Tabs.Root>
     </Stack>

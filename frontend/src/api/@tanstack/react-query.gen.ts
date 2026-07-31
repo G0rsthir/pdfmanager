@@ -13,6 +13,7 @@ import {
   createAuthToken,
   createCollection,
   createOidcAuthProvider,
+  createPersonalApiKey,
   createSetupUser,
   createUser,
   deleteAnnotation,
@@ -34,6 +35,8 @@ import {
   getFileThumbnail,
   getLibraryTree,
   getOidcAuthProvider,
+  getOpdsFile,
+  getOpdsFileThumbnail,
   inviteToCollection,
   listActiveTasks,
   listAnnotationLabels,
@@ -46,19 +49,29 @@ import {
   listFileMoveTargets,
   listFiles,
   listOidcAuthProviders,
+  listPersonalApiKeys,
   listRoles,
   listTags,
   listTaskHistory,
   listUsers,
   oidcCallback,
   oidcLogin,
+  opdsAll,
+  opdsCollection,
+  opdsCollections,
+  opdsOpenSearch,
+  opdsRoot,
+  opdsSearch,
+  opdsShelf,
   type Options,
   patchAnnotation,
   patchFileState,
   refreshAuthToken,
   resetApiKey,
+  resetPersonalApiKey,
   resetUserPassword,
   revokeApiKey,
+  revokePersonalApiKey,
   revokeToken,
   searchFiles,
   updateCollection,
@@ -84,6 +97,9 @@ import type {
   CreateCollectionError,
   CreateOidcAuthProviderData,
   CreateOidcAuthProviderError,
+  CreatePersonalApiKeyData,
+  CreatePersonalApiKeyError,
+  CreatePersonalApiKeyResponse,
   CreateSetupUserData,
   CreateSetupUserError,
   CreateSetupUserResponse,
@@ -131,6 +147,10 @@ import type {
   GetOidcAuthProviderData,
   GetOidcAuthProviderError,
   GetOidcAuthProviderResponse,
+  GetOpdsFileData,
+  GetOpdsFileError,
+  GetOpdsFileThumbnailData,
+  GetOpdsFileThumbnailError,
   InviteToCollectionData,
   InviteToCollectionError,
   ListActiveTasksData,
@@ -159,6 +179,8 @@ import type {
   ListFilesResponse,
   ListOidcAuthProvidersData,
   ListOidcAuthProvidersResponse,
+  ListPersonalApiKeysData,
+  ListPersonalApiKeysResponse,
   ListRolesData,
   ListRolesResponse,
   ListTagsData,
@@ -172,6 +194,15 @@ import type {
   OidcCallbackError,
   OidcLoginData,
   OidcLoginError,
+  OpdsAllData,
+  OpdsCollectionData,
+  OpdsCollectionError,
+  OpdsCollectionsData,
+  OpdsOpenSearchData,
+  OpdsRootData,
+  OpdsSearchData,
+  OpdsSearchError,
+  OpdsShelfData,
   PatchAnnotationData,
   PatchAnnotationError,
   PatchFileStateData,
@@ -181,10 +212,15 @@ import type {
   ResetApiKeyData,
   ResetApiKeyError,
   ResetApiKeyResponse,
+  ResetPersonalApiKeyData,
+  ResetPersonalApiKeyError,
+  ResetPersonalApiKeyResponse,
   ResetUserPasswordData,
   ResetUserPasswordError,
   RevokeApiKeyData,
   RevokeApiKeyError,
+  RevokePersonalApiKeyData,
+  RevokePersonalApiKeyError,
   RevokeTokenData,
   RevokeTokenResponse,
   SearchFilesData,
@@ -1367,6 +1403,115 @@ export const updateUserPasswordMutation = (
   return mutationOptions;
 };
 
+export const listPersonalApiKeysQueryKey = (
+  options?: Options<ListPersonalApiKeysData>,
+) => createQueryKey("listPersonalApiKeys", options);
+
+/**
+ * List Api Keys
+ */
+export const listPersonalApiKeysOptions = (
+  options?: Options<ListPersonalApiKeysData>,
+) =>
+  queryOptions<
+    ListPersonalApiKeysResponse,
+    DefaultError,
+    ListPersonalApiKeysResponse,
+    ReturnType<typeof listPersonalApiKeysQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listPersonalApiKeys({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listPersonalApiKeysQueryKey(options),
+  });
+
+/**
+ * Create Api Key
+ */
+export const createPersonalApiKeyMutation = (
+  options?: Partial<Options<CreatePersonalApiKeyData>>,
+): UseMutationOptions<
+  CreatePersonalApiKeyResponse,
+  CreatePersonalApiKeyError,
+  Options<CreatePersonalApiKeyData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    CreatePersonalApiKeyResponse,
+    CreatePersonalApiKeyError,
+    Options<CreatePersonalApiKeyData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await createPersonalApiKey({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Revoke Api Key
+ */
+export const revokePersonalApiKeyMutation = (
+  options?: Partial<Options<RevokePersonalApiKeyData>>,
+): UseMutationOptions<
+  unknown,
+  RevokePersonalApiKeyError,
+  Options<RevokePersonalApiKeyData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    RevokePersonalApiKeyError,
+    Options<RevokePersonalApiKeyData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await revokePersonalApiKey({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Reset Api Key
+ */
+export const resetPersonalApiKeyMutation = (
+  options?: Partial<Options<ResetPersonalApiKeyData>>,
+): UseMutationOptions<
+  ResetPersonalApiKeyResponse,
+  ResetPersonalApiKeyError,
+  Options<ResetPersonalApiKeyData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    ResetPersonalApiKeyResponse,
+    ResetPersonalApiKeyError,
+    Options<ResetPersonalApiKeyData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await resetPersonalApiKey({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
 export const listRolesQueryKey = (options?: Options<ListRolesData>) =>
   createQueryKey("listRoles", options);
 
@@ -1865,4 +2010,235 @@ export const listTaskHistoryOptions = (
       return data;
     },
     queryKey: listTaskHistoryQueryKey(options),
+  });
+
+export const opdsRootQueryKey = (options?: Options<OpdsRootData>) =>
+  createQueryKey("opdsRoot", options);
+
+/**
+ * Get Opds Root
+ */
+export const opdsRootOptions = (options?: Options<OpdsRootData>) =>
+  queryOptions<
+    unknown,
+    DefaultError,
+    unknown,
+    ReturnType<typeof opdsRootQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await opdsRoot({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: opdsRootQueryKey(options),
+  });
+
+export const opdsAllQueryKey = (options?: Options<OpdsAllData>) =>
+  createQueryKey("opdsAll", options);
+
+/**
+ * Get Opds All Files
+ */
+export const opdsAllOptions = (options?: Options<OpdsAllData>) =>
+  queryOptions<
+    unknown,
+    DefaultError,
+    unknown,
+    ReturnType<typeof opdsAllQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await opdsAll({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: opdsAllQueryKey(options),
+  });
+
+export const opdsOpenSearchQueryKey = (options?: Options<OpdsOpenSearchData>) =>
+  createQueryKey("opdsOpenSearch", options);
+
+/**
+ * Get Opds Opensearch
+ */
+export const opdsOpenSearchOptions = (options?: Options<OpdsOpenSearchData>) =>
+  queryOptions<
+    unknown,
+    DefaultError,
+    unknown,
+    ReturnType<typeof opdsOpenSearchQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await opdsOpenSearch({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: opdsOpenSearchQueryKey(options),
+  });
+
+export const opdsSearchQueryKey = (options?: Options<OpdsSearchData>) =>
+  createQueryKey("opdsSearch", options);
+
+/**
+ * Get Opds Search
+ */
+export const opdsSearchOptions = (options?: Options<OpdsSearchData>) =>
+  queryOptions<
+    unknown,
+    OpdsSearchError,
+    unknown,
+    ReturnType<typeof opdsSearchQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await opdsSearch({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: opdsSearchQueryKey(options),
+  });
+
+export const opdsShelfQueryKey = (options?: Options<OpdsShelfData>) =>
+  createQueryKey("opdsShelf", options);
+
+/**
+ * Get Opds Shelf
+ */
+export const opdsShelfOptions = (options?: Options<OpdsShelfData>) =>
+  queryOptions<
+    unknown,
+    DefaultError,
+    unknown,
+    ReturnType<typeof opdsShelfQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await opdsShelf({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: opdsShelfQueryKey(options),
+  });
+
+export const opdsCollectionsQueryKey = (
+  options?: Options<OpdsCollectionsData>,
+) => createQueryKey("opdsCollections", options);
+
+/**
+ * Get Opds Collections
+ */
+export const opdsCollectionsOptions = (
+  options?: Options<OpdsCollectionsData>,
+) =>
+  queryOptions<
+    unknown,
+    DefaultError,
+    unknown,
+    ReturnType<typeof opdsCollectionsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await opdsCollections({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: opdsCollectionsQueryKey(options),
+  });
+
+export const opdsCollectionQueryKey = (options: Options<OpdsCollectionData>) =>
+  createQueryKey("opdsCollection", options);
+
+/**
+ * Get Opds Collection
+ */
+export const opdsCollectionOptions = (options: Options<OpdsCollectionData>) =>
+  queryOptions<
+    unknown,
+    OpdsCollectionError,
+    unknown,
+    ReturnType<typeof opdsCollectionQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await opdsCollection({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: opdsCollectionQueryKey(options),
+  });
+
+export const getOpdsFileQueryKey = (options: Options<GetOpdsFileData>) =>
+  createQueryKey("getOpdsFile", options);
+
+/**
+ * Download Opds File
+ */
+export const getOpdsFileOptions = (options: Options<GetOpdsFileData>) =>
+  queryOptions<
+    unknown,
+    GetOpdsFileError,
+    unknown,
+    ReturnType<typeof getOpdsFileQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getOpdsFile({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getOpdsFileQueryKey(options),
+  });
+
+export const getOpdsFileThumbnailQueryKey = (
+  options: Options<GetOpdsFileThumbnailData>,
+) => createQueryKey("getOpdsFileThumbnail", options);
+
+/**
+ * Download Opds Thumbnail
+ */
+export const getOpdsFileThumbnailOptions = (
+  options: Options<GetOpdsFileThumbnailData>,
+) =>
+  queryOptions<
+    unknown,
+    GetOpdsFileThumbnailError,
+    unknown,
+    ReturnType<typeof getOpdsFileThumbnailQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await getOpdsFileThumbnail({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: getOpdsFileThumbnailQueryKey(options),
   });

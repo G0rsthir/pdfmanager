@@ -145,6 +145,26 @@ export const ApiKeyCreateResultResponseSchema = {
   title: "ApiKeyCreateResultResponse",
 } as const;
 
+export const ApiKeyPersonalCreateSchema = {
+  properties: {
+    description: {
+      type: "string",
+      title: "Description",
+    },
+    expires_at: {
+      type: "string",
+      format: "date-time",
+      title: "Expires At",
+    },
+    scopes: {
+      $ref: "#/components/schemas/Scopes",
+    },
+  },
+  type: "object",
+  required: ["description", "expires_at", "scopes"],
+  title: "ApiKeyPersonalCreate",
+} as const;
+
 export const ApiKeyResetRequestSchema = {
   properties: {
     expires_at: {
@@ -245,6 +265,10 @@ export const AppStateResponseSchema = {
         },
       ],
     },
+    opds_url: {
+      type: "string",
+      title: "Opds Url",
+    },
     is_setup_complete: {
       type: "boolean",
       title: "Is Setup Complete",
@@ -253,7 +277,7 @@ export const AppStateResponseSchema = {
     },
   },
   type: "object",
-  required: ["is_setup_complete"],
+  required: ["opds_url", "is_setup_complete"],
   title: "AppStateResponse",
 } as const;
 
@@ -2053,8 +2077,13 @@ export const AppStateResponseWritableSchema = {
         },
       ],
     },
+    opds_url: {
+      type: "string",
+      title: "Opds Url",
+    },
   },
   type: "object",
+  required: ["opds_url"],
   title: "AppStateResponse",
 } as const;
 

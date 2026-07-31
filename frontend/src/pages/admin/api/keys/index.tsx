@@ -1,4 +1,7 @@
-import { listApiKeysOptions } from "@/api/@tanstack/react-query.gen";
+import {
+  listApiKeysOptions,
+  resetApiKeyMutation,
+} from "@/api/@tanstack/react-query.gen";
 import type { ApiKeyResponse } from "@/api/types.gen";
 import { GenericIconButton } from "@/components/ui/button";
 import { QueryView } from "@/components/ui/feedback";
@@ -19,18 +22,11 @@ import {
 import { useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuKeyRound, LuPlus } from "react-icons/lu";
-import {
-  CreateApiKeyDialog,
-  ResetApiKeyDialog,
-  RevokeApiKeyDialog,
-} from "./forms";
+import { CreateApiKeyDialog, RevokeApiKeyDialog } from "./forms";
 
+import { TokenExpiresIndicator } from "@/pages/shared/badges";
 import { Empty } from "@/pages/shared/common";
-import {
-  fromDate,
-  getLocalTimeZone,
-  toCalendarDate,
-} from "@internationalized/date";
+import { ResetApiKeyDialog } from "@/pages/shared/dialogs";
 
 export function ApiKeysPage() {
   const query = useAPIQuery({
@@ -122,23 +118,6 @@ function ApiKeysView({ apiKeys }: { apiKeys: ApiKeyResponse[] }) {
   );
 }
 
-export function TokenExpiresIndicator({
-  date,
-  isExpired,
-}: {
-  date: Date;
-  isExpired: boolean;
-}) {
-  const dateFormatted = toCalendarDate(
-    fromDate(date, getLocalTimeZone()),
-  ).toString();
-
-  if (isExpired) {
-    return <Badge colorPalette="red">{dateFormatted}</Badge>;
-  }
-  return <Badge colorPalette="green">{dateFormatted}</Badge>;
-}
-
 type RowAction = "revoke" | "reset" | null;
 
 function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
@@ -180,6 +159,8 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
         open={dialog == "reset"}
         onClose={onClose}
         keyId={apiKey.id}
+        confirmBtnType="adminWrite"
+        mutationOptions={resetApiKeyMutation}
       />
     </>
   );

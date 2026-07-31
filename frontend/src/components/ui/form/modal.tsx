@@ -1,6 +1,15 @@
 import { useHasScopes } from "@/common/auth/hooks";
 import { AccessScopeEnum } from "@/config/const";
-import { Button, CloseButton, Dialog, Portal, Stack } from "@chakra-ui/react";
+import {
+  Button,
+  CloseButton,
+  Dialog,
+  Portal,
+  Stack,
+  type DialogRootProps,
+} from "@chakra-ui/react";
+
+export type FormModalButtonType = "generic" | "adminWrite" | "userWrite";
 
 export function FormModal(props: {
   open: boolean;
@@ -8,12 +17,13 @@ export function FormModal(props: {
   children: React.ReactNode;
   title: React.ReactNode;
   confirmBtnText?: string;
-  confirmBtnType?: "generic" | "adminWrite" | "userWrite";
+  confirmBtnType?: FormModalButtonType;
   confirmBtnPalette?: string;
   onSubmit: () => void;
   isPending?: boolean;
   submitOnEnter?: boolean;
   disabled?: boolean;
+  size?: DialogRootProps["size"];
 }) {
   const {
     open,
@@ -25,6 +35,7 @@ export function FormModal(props: {
     confirmBtnPalette,
     confirmBtnType,
     confirmBtnText = "Confirm",
+    size = "sm",
     onSubmit,
     close,
   } = props;
@@ -41,7 +52,7 @@ export function FormModal(props: {
     <Dialog.Root
       role="alertdialog"
       open={open}
-      size="sm"
+      size={size}
       onOpenChange={() => close()}
     >
       <Portal>

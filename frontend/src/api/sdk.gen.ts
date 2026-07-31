@@ -11,6 +11,7 @@ import { client } from "./client.gen";
 import {
   createApiKeyResponseTransformer,
   createAuthTokenResponseTransformer,
+  createPersonalApiKeyResponseTransformer,
   getCollectionFilesResponseTransformer,
   getFileDetailsResponseTransformer,
   getFileStateResponseTransformer,
@@ -19,9 +20,11 @@ import {
   listAnnotationsResponseTransformer,
   listApiKeysResponseTransformer,
   listFilesResponseTransformer,
+  listPersonalApiKeysResponseTransformer,
   listTaskHistoryResponseTransformer,
   refreshAuthTokenResponseTransformer,
   resetApiKeyResponseTransformer,
+  resetPersonalApiKeyResponseTransformer,
   searchFilesResponseTransformer,
 } from "./transformers.gen";
 import type {
@@ -40,6 +43,9 @@ import type {
   CreateOidcAuthProviderData,
   CreateOidcAuthProviderErrors,
   CreateOidcAuthProviderResponses,
+  CreatePersonalApiKeyData,
+  CreatePersonalApiKeyErrors,
+  CreatePersonalApiKeyResponses,
   CreateSetupUserData,
   CreateSetupUserErrors,
   CreateSetupUserResponses,
@@ -98,6 +104,12 @@ import type {
   GetOidcAuthProviderData,
   GetOidcAuthProviderErrors,
   GetOidcAuthProviderResponses,
+  GetOpdsFileData,
+  GetOpdsFileErrors,
+  GetOpdsFileResponses,
+  GetOpdsFileThumbnailData,
+  GetOpdsFileThumbnailErrors,
+  GetOpdsFileThumbnailResponses,
   InviteToCollectionData,
   InviteToCollectionErrors,
   InviteToCollectionResponses,
@@ -127,6 +139,8 @@ import type {
   ListFilesResponses,
   ListOidcAuthProvidersData,
   ListOidcAuthProvidersResponses,
+  ListPersonalApiKeysData,
+  ListPersonalApiKeysResponses,
   ListRolesData,
   ListRolesResponses,
   ListTagsData,
@@ -141,6 +155,22 @@ import type {
   OidcLoginData,
   OidcLoginErrors,
   OidcLoginResponses,
+  OpdsAllData,
+  OpdsAllResponses,
+  OpdsCollectionData,
+  OpdsCollectionErrors,
+  OpdsCollectionResponses,
+  OpdsCollectionsData,
+  OpdsCollectionsResponses,
+  OpdsOpenSearchData,
+  OpdsOpenSearchResponses,
+  OpdsRootData,
+  OpdsRootResponses,
+  OpdsSearchData,
+  OpdsSearchErrors,
+  OpdsSearchResponses,
+  OpdsShelfData,
+  OpdsShelfResponses,
   PatchAnnotationData,
   PatchAnnotationErrors,
   PatchAnnotationResponses,
@@ -152,12 +182,18 @@ import type {
   ResetApiKeyData,
   ResetApiKeyErrors,
   ResetApiKeyResponses,
+  ResetPersonalApiKeyData,
+  ResetPersonalApiKeyErrors,
+  ResetPersonalApiKeyResponses,
   ResetUserPasswordData,
   ResetUserPasswordErrors,
   ResetUserPasswordResponses,
   RevokeApiKeyData,
   RevokeApiKeyErrors,
   RevokeApiKeyResponses,
+  RevokePersonalApiKeyData,
+  RevokePersonalApiKeyErrors,
+  RevokePersonalApiKeyResponses,
   RevokeTokenData,
   RevokeTokenResponses,
   SearchFilesData,
@@ -940,6 +976,81 @@ export const updateUserPassword = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * List Api Keys
+ */
+export const listPersonalApiKeys = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPersonalApiKeysData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    ListPersonalApiKeysResponses,
+    unknown,
+    ThrowOnError
+  >({
+    responseTransformer: listPersonalApiKeysResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/account/keys",
+    ...options,
+  });
+
+/**
+ * Create Api Key
+ */
+export const createPersonalApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePersonalApiKeyData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    CreatePersonalApiKeyResponses,
+    CreatePersonalApiKeyErrors,
+    ThrowOnError
+  >({
+    responseTransformer: createPersonalApiKeyResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/account/keys",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Revoke Api Key
+ */
+export const revokePersonalApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<RevokePersonalApiKeyData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    RevokePersonalApiKeyResponses,
+    RevokePersonalApiKeyErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/account/keys/{id}",
+    ...options,
+  });
+
+/**
+ * Reset Api Key
+ */
+export const resetPersonalApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<ResetPersonalApiKeyData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    ResetPersonalApiKeyResponses,
+    ResetPersonalApiKeyErrors,
+    ThrowOnError
+  >({
+    responseTransformer: resetPersonalApiKeyResponseTransformer,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/api/v1/account/keys/{id}/reset",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
  * List Roles
  */
 export const listRoles = <ThrowOnError extends boolean = false>(
@@ -1259,5 +1370,137 @@ export const listTaskHistory = <ThrowOnError extends boolean = false>(
     responseTransformer: listTaskHistoryResponseTransformer,
     security: [{ scheme: "bearer", type: "http" }],
     url: "/api/v1/general/tasks/history",
+    ...options,
+  });
+
+/**
+ * Get Opds Root
+ */
+export const opdsRoot = <ThrowOnError extends boolean = false>(
+  options?: Options<OpdsRootData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<OpdsRootResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/",
+    ...options,
+  });
+
+/**
+ * Get Opds All Files
+ */
+export const opdsAll = <ThrowOnError extends boolean = false>(
+  options?: Options<OpdsAllData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<OpdsAllResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/all",
+    ...options,
+  });
+
+/**
+ * Get Opds Opensearch
+ */
+export const opdsOpenSearch = <ThrowOnError extends boolean = false>(
+  options?: Options<OpdsOpenSearchData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    OpdsOpenSearchResponses,
+    unknown,
+    ThrowOnError
+  >({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/opensearch.xml",
+    ...options,
+  });
+
+/**
+ * Get Opds Search
+ */
+export const opdsSearch = <ThrowOnError extends boolean = false>(
+  options?: Options<OpdsSearchData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    OpdsSearchResponses,
+    OpdsSearchErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/search",
+    ...options,
+  });
+
+/**
+ * Get Opds Shelf
+ */
+export const opdsShelf = <ThrowOnError extends boolean = false>(
+  options?: Options<OpdsShelfData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<OpdsShelfResponses, unknown, ThrowOnError>({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/shelf",
+    ...options,
+  });
+
+/**
+ * Get Opds Collections
+ */
+export const opdsCollections = <ThrowOnError extends boolean = false>(
+  options?: Options<OpdsCollectionsData, ThrowOnError>,
+) =>
+  (options?.client ?? client).get<
+    OpdsCollectionsResponses,
+    unknown,
+    ThrowOnError
+  >({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/collections",
+    ...options,
+  });
+
+/**
+ * Get Opds Collection
+ */
+export const opdsCollection = <ThrowOnError extends boolean = false>(
+  options: Options<OpdsCollectionData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    OpdsCollectionResponses,
+    OpdsCollectionErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/collections/{collection_id}",
+    ...options,
+  });
+
+/**
+ * Download Opds File
+ */
+export const getOpdsFile = <ThrowOnError extends boolean = false>(
+  options: Options<GetOpdsFileData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetOpdsFileResponses,
+    GetOpdsFileErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/file/{id}.{ext}",
+    ...options,
+  });
+
+/**
+ * Download Opds Thumbnail
+ */
+export const getOpdsFileThumbnail = <ThrowOnError extends boolean = false>(
+  options: Options<GetOpdsFileThumbnailData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    GetOpdsFileThumbnailResponses,
+    GetOpdsFileThumbnailErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "basic", type: "http" }],
+    url: "/api/v1/opds/file/{id}/thumbnail",
     ...options,
   });

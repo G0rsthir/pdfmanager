@@ -3,6 +3,7 @@
 import type {
   CreateApiKeyResponse,
   CreateAuthTokenResponse,
+  CreatePersonalApiKeyResponse,
   GetCollectionFilesResponse,
   GetFileDetailsResponse,
   GetFileStateResponse,
@@ -11,9 +12,11 @@ import type {
   ListAnnotationsResponse,
   ListApiKeysResponse,
   ListFilesResponse,
+  ListPersonalApiKeysResponse,
   ListTaskHistoryResponse,
   RefreshAuthTokenResponse,
   ResetApiKeyResponse,
+  ResetPersonalApiKeyResponse,
   SearchFilesResponse,
 } from "./types.gen";
 
@@ -144,15 +147,36 @@ const apiKeyResponseSchemaResponseTransformer = (data: any) => {
   return data;
 };
 
-export const listApiKeysResponseTransformer = async (
+export const listPersonalApiKeysResponseTransformer = async (
   data: any,
-): Promise<ListApiKeysResponse> => {
+): Promise<ListPersonalApiKeysResponse> => {
   data = data.map((item: any) => apiKeyResponseSchemaResponseTransformer(item));
   return data;
 };
 
 const apiKeyCreateResultResponseSchemaResponseTransformer = (data: any) => {
   data.expires_at = new Date(data.expires_at);
+  return data;
+};
+
+export const createPersonalApiKeyResponseTransformer = async (
+  data: any,
+): Promise<CreatePersonalApiKeyResponse> => {
+  data = apiKeyCreateResultResponseSchemaResponseTransformer(data);
+  return data;
+};
+
+export const resetPersonalApiKeyResponseTransformer = async (
+  data: any,
+): Promise<ResetPersonalApiKeyResponse> => {
+  data = apiKeyCreateResultResponseSchemaResponseTransformer(data);
+  return data;
+};
+
+export const listApiKeysResponseTransformer = async (
+  data: any,
+): Promise<ListApiKeysResponse> => {
+  data = data.map((item: any) => apiKeyResponseSchemaResponseTransformer(item));
   return data;
 };
 
