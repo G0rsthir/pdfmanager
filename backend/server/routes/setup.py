@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request
 from server.dependencies import (
     AuthProviderRepositoryDependency,
     IdentityServiceDependency,
+    OpdsCatalogServiceDependency,
     UserRepositoryDependency,
 )
 from server.schemas.config import AppStateResponse, SsoConfigResponse
@@ -13,13 +14,17 @@ router = APIRouter(prefix="/setup")
 
 @router.get(path="/state", operation_id="GetAppState")
 async def state(
-    request: Request, user_repo: UserRepositoryDependency, provider_repo: AuthProviderRepositoryDependency
+    request: Request,
+    user_repo: UserRepositoryDependency,
+    provider_repo: AuthProviderRepositoryDependency,
+    opds_service: OpdsCatalogServiceDependency,
 ) -> AppStateResponse:
     """
     Get current app state
     """
 
     is_initial_user_created = await user_repo.is_initial_user_exists()
+    opds_url = opds_service.root_url()
 
     sso_servers = []
     auto_login_sso_server = None
@@ -36,6 +41,7 @@ async def state(
         is_initial_user_created=is_initial_user_created,
         sso_servers=sso_servers,
         auto_login_sso_server=auto_login_sso_server,
+        opds_url=opds_url,
     )
 
 

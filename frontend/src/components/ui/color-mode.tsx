@@ -4,20 +4,24 @@ import { type PaletteColor } from "@/config/theme";
 import { useColorMode } from "@/hooks/theme";
 import type { IconButtonProps, SpanProps } from "@chakra-ui/react";
 import {
+  Center,
   ClientOnly,
   createListCollection,
+  Group,
   HStack,
   IconButton,
   Portal,
+  RadioGroup,
+  SegmentGroup,
   Select,
   Skeleton,
   Span,
   useSelectContext,
 } from "@chakra-ui/react";
 import type { ThemeProviderProps } from "next-themes";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider, useTheme } from "next-themes";
 import * as React from "react";
-import { LuMoon, LuSun } from "react-icons/lu";
+import { LuCheck, LuMonitor, LuMoon, LuSun } from "react-icons/lu";
 import { GenericIconButton } from "./button";
 
 export type ColorModeProviderProps = ThemeProviderProps;
@@ -56,6 +60,37 @@ export const ColorModeButton = function ColorModeButton({
     </ClientOnly>
   );
 };
+
+const COLOR_MODE_OPTIONS = [
+  { value: "system", label: "System", icon: <LuMonitor /> },
+  { value: "light", label: "Light", icon: <LuSun /> },
+  { value: "dark", label: "Dark", icon: <LuMoon /> },
+];
+
+export function ColorModeSegment() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <ClientOnly fallback={<Skeleton height="8" width="60" />}>
+      <SegmentGroup.Root
+        size="sm"
+        value={theme ?? "system"}
+        onValueChange={({ value }) => value && setTheme(value)}
+      >
+        <SegmentGroup.Indicator />
+        {COLOR_MODE_OPTIONS.map((option) => (
+          <SegmentGroup.Item key={option.value} value={option.value}>
+            <SegmentGroup.ItemText display="flex" alignItems="center" gap={2}>
+              {option.icon}
+              {option.label}
+            </SegmentGroup.ItemText>
+            <SegmentGroup.ItemHiddenInput />
+          </SegmentGroup.Item>
+        ))}
+      </SegmentGroup.Root>
+    </ClientOnly>
+  );
+}
 
 export const LightMode = function LightMode({
   ref,
@@ -147,5 +182,50 @@ export function ColorPaletteSelect(props: ColorPaletteSelectProps) {
         </Select.Positioner>
       </Portal>
     </Select.Root>
+  );
+}
+
+type ColorPaletteSelectListProps = ColorPaletteSelectProps;
+
+export function ColorPaletteSelectList(props: ColorPaletteSelectListProps) {
+  const { onValueChange, defaultValue, colors: paletteColors } = props;
+
+  return (
+    <RadioGroup.Root
+      defaultValue={defaultValue}
+      onValueChange={(e) => e.value && onValueChange(e.value)}
+    >
+      <Group wrap="wrap" gap={2}>
+        {paletteColors.map((color) => (
+          <RadioGroup.Item
+            key={color.value}
+            value={color.value}
+            colorPalette={color.value}
+            aria-label={color.label}
+            title={color.label}
+            cursor="pointer"
+          >
+            <RadioGroup.ItemHiddenInput />
+            <RadioGroup.ItemContext>
+              {({ checked }) => (
+                <Center
+                  boxSize="6"
+                  rounded="full"
+                  bg="colorPalette.solid"
+                  color="colorPalette.contrast"
+                  outline="2px solid"
+                  outlineOffset="2px"
+                  outlineColor={checked ? "colorPalette.solid" : "transparent"}
+                  transition="outline-color 0.15s"
+                  _hover={{ outlineColor: "colorPalette.muted" }}
+                >
+                  {checked && <LuCheck size={14} />}
+                </Center>
+              )}
+            </RadioGroup.ItemContext>
+          </RadioGroup.Item>
+        ))}
+      </Group>
+    </RadioGroup.Root>
   );
 }

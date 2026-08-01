@@ -11,6 +11,7 @@ class AppStateResponse(BaseModel):
     is_initial_user_created: bool = False
     sso_servers: list[SsoConfigResponse] = Field(default_factory=list)
     auto_login_sso_server: SsoConfigResponse | None = None
+    opds_url: str
 
     @computed_field
     @property

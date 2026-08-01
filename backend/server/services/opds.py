@@ -56,8 +56,8 @@ class OpdsUrls:
     def search(self, query: str) -> str:
         return f"{self._url_for('get_opds_search')}?q={quote_plus(query)}"
 
-    def download(self, file_id: UUID) -> str:
-        return str(self._url_for("download_opds_file", id=str(file_id)))
+    def download(self, file_id: UUID, ext: str = "pdf") -> str:
+        return str(self._url_for("download_opds_file", id=str(file_id), ext=ext))
 
     def thumbnail(self, file_id: UUID) -> str:
         return str(self._url_for("download_opds_thumbnail", id=str(file_id)))
@@ -78,6 +78,9 @@ class OpdsCatalogService:
         self._tags_repo = tags_repo
         self._permission_repo = permission_repo
         self._urls = urls
+
+    def root_url(self):
+        return self._urls.root()
 
     def root_feed(self) -> OpdsFeed:
         now = datetime.now(UTC)

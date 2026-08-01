@@ -16,7 +16,7 @@ from pydantic import (
 
 from server.schemas._validation import access_scope_validator, expiration_in_future_validator
 from server.schemas.identity import UserSummaryResponse
-from server.schemas.types import Scopes
+from server.schemas.types import ExcludedField, Scopes
 
 
 class AuthSessionContextBase(BaseModel):
@@ -141,6 +141,10 @@ class ApiKeyCreateRequest(BaseModel):
     expires_at: Annotated[AwareDatetime, AfterValidator(expiration_in_future_validator)]
     user_id: UUID
     scopes: Annotated[Scopes, AfterValidator(access_scope_validator)]
+
+
+class ApiKeyPersonalCreate(ApiKeyCreateRequest):
+    user_id: ExcludedField = None
 
 
 class ApiKeyResetRequest(BaseModel):

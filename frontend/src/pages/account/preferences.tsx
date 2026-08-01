@@ -1,6 +1,6 @@
 import {
-  ColorModeButton,
-  ColorPaletteSelect,
+  ColorModeSegment,
+  ColorPaletteSelectList,
 } from "@/components/ui/color-mode";
 import { Block, SettingsOption } from "@/components/ui/display";
 import { PaletteColors } from "@/config/theme";
@@ -19,7 +19,7 @@ export function PreferencesContent() {
           labelSpan={4}
           fieldSpan={8}
         >
-          <ColorModeButton />
+          <ColorModeSegment />
         </SettingsOption>
         <SettingsOption
           title="Color palette"
@@ -55,7 +55,7 @@ export function PaletteSelect() {
   );
 
   return (
-    <ColorPaletteSelect
+    <ColorPaletteSelectList
       colors={colors}
       onValueChange={state.updatePrimaryColor}
       defaultValue={state.primaryColor}

@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from server.const import SessionTypeEnum
-from server.exceptions import AuthenticationError
+from server.exceptions import AuthenticationError, InvalidActionError, SessionNotFoundError
 from server.models import ORMSession
 from server.repositories import SessionRepository, UserRepository
 from server.schemas.security import ApiKeyCreateResult
@@ -21,6 +21,26 @@ class ApiKeyService:
     async def list_all(self) -> list[ORMSession]:
         return await self._session_repo.get_list(session_type=[SessionTypeEnum.SERVICE])
 
+    async def list_all_by_user(self, user_id: UUID) -> list[ORMSession]:
+        return await self._session_repo.get_list(session_type=[SessionTypeEnum.SERVICE], user_id=user_id)
+
+    async def create_personal_api_key(self, user_id: UUID, description: str, expires_at: datetime, scopes: Scopes):
+        user = await self._user_repo.get_by_id(user_id)
+
+        user_scopes = Scopes.from_str(user.role.scopes)
+
+        # A user who creates a token cannot assign scopes they do not have
+        for scope in scopes:
+            if scope not in user_scopes:
+                raise InvalidActionError(rule="scope_not_granted_to_user", msg=f"Forbidden scope '{scope}'")
+
+        return await self.create_api_key(
+            user_id=user_id,
+            description=description,
+            expires_at=expires_at,
+            scopes=scopes,
+        )
+
     async def create_api_key(
         self, user_id: UUID, description: str, expires_at: datetime, scopes: Scopes
     ) -> ApiKeyCreateResult:
@@ -31,6 +51,9 @@ class ApiKeyService:
 
         if not user.can_authenticate():
             raise AuthenticationError("User account is disabled or does not support authentication")
+
+        if not scopes.to_list():
+            raise ValueError("Cannot create an API key with no scopes")
 
         auth_token = ORMSession.build_service(
             user_id=user.id,
@@ -52,6 +75,17 @@ class ApiKeyService:
             created_at=auth_token.created_at,
         )
 
+    async def revoke_personal_api_key(self, user_id: UUID, api_key_id: UUID):
+
+        api_key = await self._session_repo.get_by_id(api_key_id)
+
+        if api_key.user_id != user_id:
+            raise SessionNotFoundError(api_key_id)
+
+        if not api_key.is_revoked:
+            api_key.revoke()
+            await self._session_repo.commit()
+
     async def revoke_api_key(self, api_key_id: UUID):
 
         api_key = await self._session_repo.get_by_id(api_key_id)
@@ -59,6 +93,20 @@ class ApiKeyService:
         if not api_key.is_revoked:
             api_key.revoke()
             await self._session_repo.commit()
+
+    async def reset_personal_api_key(
+        self,
+        user_id: UUID,
+        key_id: UUID,
+        expires_at: datetime,
+    ) -> ApiKeyCreateResult:
+
+        token = await self._session_repo.get_by_id(key_id)
+
+        if token.user_id != user_id:
+            raise SessionNotFoundError(key_id)
+
+        return await self.reset_api_key(key_id=key_id, expires_at=expires_at)
 
     async def reset_api_key(
         self,

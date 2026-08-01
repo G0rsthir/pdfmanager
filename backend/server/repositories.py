@@ -183,13 +183,19 @@ class SessionRepository(Repository):
         self.session.add(session)
 
     async def get_list(
-        self, include_revoked: bool = False, session_type: list[SessionTypeEnum] | None = None
+        self,
+        include_revoked: bool = False,
+        session_type: list[SessionTypeEnum] | None = None,
+        user_id: UUID | None = None,
     ) -> list[models.ORMSession]:
         stmt = select(models.ORMSession)
         if not include_revoked:
             stmt = stmt.where(~models.ORMSession.is_revoked)
         if session_type is not None:
             stmt = stmt.where(models.ORMSession.session_type.in_(session_type))
+        if user_id is not None:
+            stmt = stmt.where(models.ORMSession.user_id == user_id)
+
         records = await self.session.scalars(stmt)
         return list(records.all())
 

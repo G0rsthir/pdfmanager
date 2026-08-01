@@ -83,9 +83,11 @@ async def get_opds_collection(
     )
 
 
-@router.get(path="/file/{id}", response_class=FastAPIFileResponse, operation_id="GetOpdsFile")
+# Path must include file type. Readers append the file extension to the acquisition URL
+@router.get(path="/file/{id}.{ext}", response_class=FastAPIFileResponse, operation_id="GetOpdsFile")
 async def download_opds_file(
     file_id: Annotated[UUID, Path(alias="id")],
+    ext: Annotated[str, Path()],
     access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScopeEnum.USER_READ])],
     library_service: LibraryServiceDependency,
 ) -> FastAPIFileResponse:
@@ -93,7 +95,12 @@ async def download_opds_file(
     view = await library_service.get_file(user_id=access_session.user_id, file_id=file_id)
 
     async with library_service.open_file(view.file.storage_key) as path:
-        return FastAPIFileResponse(path, media_type=view.file.content_type)
+        return FastAPIFileResponse(
+            path,
+            media_type=view.file.content_type,
+            # TODO use original file name
+            filename=view.file.name,
+        )
 
 
 @router.get(path="/file/{id}/thumbnail", response_class=FastAPIFileResponse, operation_id="GetOpdsFileThumbnail")
