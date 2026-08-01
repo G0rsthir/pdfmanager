@@ -22,3 +22,44 @@
 .pdfViewer .page {
   margin: 1px auto 20px;
 }
+
+.pdfViewer .custom-annotation-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pdfViewer .custom-annotation-highlight {
+  position: absolute;
+  mix-blend-mode: multiply;
+}
+
+.pdfViewer .custom-annotation-marker {
+  position: absolute;
+  left: calc(100% - 8px);
+  width: 8px;
+  min-height: 10px;
+  padding: 0 !important;
+  border: unset !important;
+  border-radius: 3px;
+  opacity: 0.75;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    width 0.2s ease,
+    left 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.pdfViewer .custom-annotation-marker:hover,
+.pdfViewer .custom-annotation-marker:focus-visible {
+  width: 12px;
+  left: calc(100% - 12px);
+  opacity: 1;
+}
+
+.pdfViewer .custom-annotation-marker:focus-visible {
+  outline: 2px solid var(--chakra-colors-color-palette-solid);
+  outline-offset: 2px;
+}

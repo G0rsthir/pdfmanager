@@ -1,38 +1,27 @@
-import msgIcon from "@/assets/media/msg.svg?raw";
 import { parseColor } from "@chakra-ui/react";
 import type { AnnotationItem } from "./types";
 
 const ANNOTATION_OVERLAY_CLASS = "custom-annotation-overlay";
+const ANNOTATION_MARKER_CLASS = "custom-annotation-marker";
+const ANNOTATION_HIGHLIGHT_CLASS = "custom-annotation-highlight";
 
 function createMarker(
   annotation: AnnotationItem,
   onOpen: (annotation: AnnotationItem) => void = () => {},
 ) {
-  const r = annotation.rects[0];
-  if (!r) return;
+  const first = annotation.rects[0];
+  if (!first) return;
+  const last = annotation.rects.at(-1) ?? first;
+
   const marker = document.createElement("button");
   marker.type = "button";
+  marker.className = ANNOTATION_MARKER_CLASS;
   marker.title = annotation.body;
   marker.setAttribute("aria-label", `Open annotation: ${annotation.body}`);
 
-  Object.assign(marker.style, {
-    position: "absolute",
-    top: `${r.top * 100}%`,
-    left: `calc(100% - 4rem)`,
-    transform: "translateY(-2px)",
-    pointerEvents: "auto",
-    cursor: "pointer",
-    border: "unset",
-  });
-
-  marker.innerHTML = msgIcon;
-
-  const svg = marker.querySelector("svg");
-  if (svg) {
-    svg.setAttribute("width", "24");
-    svg.setAttribute("height", "24");
-    svg.style.color = "var(--chakra-colors-purple-solid, #805ad5)";
-  }
+  marker.style.top = `${first.top * 100}%`;
+  marker.style.height = `${(last.top + last.height - first.top) * 100}%`;
+  marker.style.background = annotation.color;
 
   marker.onclick = (e) => {
     e.stopPropagation();
@@ -58,16 +47,13 @@ export function renderAnnotation(
 
   for (const r of annotation.rects) {
     const div = document.createElement("div");
+    div.className = ANNOTATION_HIGHLIGHT_CLASS;
 
-    Object.assign(div.style, {
-      position: "absolute",
-      top: `${r.top * 100}%`,
-      left: `${r.left * 100}%`,
-      width: `${r.width * 100}%`,
-      height: `${r.height * 100}%`,
-      background: color,
-      mixBlendMode: "multiply",
-    });
+    div.style.top = `${r.top * 100}%`;
+    div.style.left = `${r.left * 100}%`;
+    div.style.width = `${r.width * 100}%`;
+    div.style.height = `${r.height * 100}%`;
+    div.style.background = color;
 
     overlay.appendChild(div);
   }
@@ -89,12 +75,6 @@ export const renderPageAnnotations = (
 
   const overlay = document.createElement("div");
   overlay.className = ANNOTATION_OVERLAY_CLASS;
-  Object.assign(overlay.style, {
-    position: "absolute",
-    inset: "0",
-    pointerEvents: "none",
-    zIndex: "2",
-  });
 
   for (const a of items) {
     renderAnnotation(a, overlay, onOpen);

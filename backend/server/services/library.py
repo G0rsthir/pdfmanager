@@ -463,6 +463,7 @@ class LibraryService:
             content_type=file.content_type,
             thumbnail_content_type=file.thumbnail_content_type,
             published=resolved_published,
+            original_name=file.original_name,
         )
 
         self._file_repo.save(file_record)

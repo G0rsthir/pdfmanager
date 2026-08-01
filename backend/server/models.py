@@ -183,6 +183,7 @@ class ORMFile(Base, AuditMixin):
     file_hash: Mapped[str | None]
     page_count: Mapped[int] = mapped_column(default=1)
     published: Mapped[date | None] = mapped_column(default=None)
+    original_name: Mapped[str]
 
     # # Relationships
     collection_id: Mapped[UUID] = mapped_column(ForeignKey("collections.id", ondelete="CASCADE"))

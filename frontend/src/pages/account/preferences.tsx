@@ -4,7 +4,7 @@ import {
 } from "@/components/ui/color-mode";
 import { Block, SettingsOption } from "@/components/ui/display";
 import { PaletteColors } from "@/config/theme";
-import { LayoutMenu } from "@/pages/library/shared/layout";
+import { LayoutRadioCards } from "@/pages/library/shared/layout";
 import { useGlobalStore } from "@/store";
 import { Stack } from "@chakra-ui/react";
 import { useShallow } from "zustand/shallow";
@@ -72,9 +72,8 @@ function DefaultLayoutSelect() {
   );
 
   return (
-    <LayoutMenu
+    <LayoutRadioCards
       value={state.defaultLibraryLayout}
-      showTriggerLabel
       onChange={state.setDefaultLibraryLayout}
     />
   );
