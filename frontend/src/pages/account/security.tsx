@@ -285,7 +285,7 @@ function CreatePersonalApiKeyDialog(props: {
       >
         <RadioCard.Label>Key type</RadioCard.Label>
         <Group attached orientation="horizontal" grow>
-          <RadioCard.Item value="standard">
+          <RadioCard.Item value="standard" cursor="pointer">
             <RadioCard.ItemHiddenInput />
             <RadioCard.ItemControl>
               <RadioCard.ItemContent>
@@ -297,7 +297,7 @@ function CreatePersonalApiKeyDialog(props: {
               <RadioCard.ItemIndicator />
             </RadioCard.ItemControl>
           </RadioCard.Item>
-          <RadioCard.Item value="opds">
+          <RadioCard.Item value="opds" cursor="pointer">
             <RadioCard.ItemHiddenInput />
             <RadioCard.ItemControl>
               <RadioCard.ItemContent>

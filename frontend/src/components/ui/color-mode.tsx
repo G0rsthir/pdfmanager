@@ -79,7 +79,11 @@ export function ColorModeSegment() {
       >
         <SegmentGroup.Indicator />
         {COLOR_MODE_OPTIONS.map((option) => (
-          <SegmentGroup.Item key={option.value} value={option.value}>
+          <SegmentGroup.Item
+            key={option.value}
+            value={option.value}
+            cursor="pointer"
+          >
             <SegmentGroup.ItemText display="flex" alignItems="center" gap={2}>
               {option.icon}
               {option.label}

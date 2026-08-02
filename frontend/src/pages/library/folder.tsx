@@ -265,7 +265,7 @@ function UploadFileDialog(props: {
               onBlur={handleBlur}
             />
             <Field.HelperText>
-              Leave empty to use the PDF's title, or the file name
+              Leave empty to use the PDF's title or the file name
             </Field.HelperText>
             <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>

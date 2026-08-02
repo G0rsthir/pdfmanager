@@ -46,6 +46,7 @@ export function LayoutSegment(props: {
           value={option.value}
           aria-label={option.label}
           title={option.label}
+          cursor="pointer"
         >
           <SegmentGroup.ItemText display="flex" alignItems="center" gap={2}>
             {option.icon}
@@ -75,7 +76,11 @@ export function LayoutRadioCards(props: {
     >
       <HStack align="stretch">
         {LAYOUTS.map((option) => (
-          <RadioCard.Item key={option.value} value={option.value}>
+          <RadioCard.Item
+            key={option.value}
+            value={option.value}
+            cursor="pointer"
+          >
             <RadioCard.ItemHiddenInput />
             <RadioCard.ItemControl>
               <Icon fontSize="xl" color="fg.subtle">
