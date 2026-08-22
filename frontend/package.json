@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "tsc": "npx tsc -b .",
     "preview": "vite preview",
-    "openapi": "openapi-ts"
+    "openapi": "openapi-ts",
+    "typegen": "chakra typegen src/config/system.ts --tsconfig tsconfig.app.json"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.34.0",

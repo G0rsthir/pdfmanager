@@ -33,6 +33,7 @@ import {
   Grid,
   GridItem,
   Group,
+  Icon,
   Image,
   Input,
   Menu,
@@ -40,6 +41,7 @@ import {
   Portal,
   Skeleton,
   Stack,
+  Table,
   Tabs,
   Text,
   useCombobox,
@@ -149,6 +151,7 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
   );
 }
 
+// Legacy
 export function FileRow(props: {
   file: FileResponse;
   includeReadDate?: boolean;
@@ -239,6 +242,97 @@ export function FileRow(props: {
         </Grid>
       </Card.Body>
     </Card.Root>
+  );
+}
+
+export function FileTable(props: {
+  files: FileResponse[];
+  includeReadDate?: boolean;
+  tagType?: "search" | "filter";
+}) {
+  const { files, includeReadDate = true, tagType = "search" } = props;
+
+  return (
+    <Table.Root size="sm" variant="outline" interactive colorPalette="gray">
+      <Table.Header>
+        <Table.Row>
+          <Table.ColumnHeader>Name</Table.ColumnHeader>
+          <Table.ColumnHeader>Tags</Table.ColumnHeader>
+          <Table.ColumnHeader>Progress</Table.ColumnHeader>
+          {includeReadDate && <Table.ColumnHeader>Read</Table.ColumnHeader>}
+          <Table.ColumnHeader textAlign="end">Actions</Table.ColumnHeader>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {files.map((file) => (
+          <Table.Row key={file.id}>
+            <Table.Cell>
+              <Group gap={3}>
+                {/** TODO - improve */}
+                <Icon flexShrink={0} color="accent.fg">
+                  <LuFileText />
+                </Icon>
+                <Stack gap={0}>
+                  <NavLink
+                    to={toFileUrl({
+                      folderId: file.collection_id,
+                      fileId: file.id,
+                    })}
+                  >
+                    <Text
+                      truncate
+                      fontWeight="medium"
+                      _hover={{ color: "accent.fg" }}
+                      transition="color 0.2s"
+                    >
+                      {file.name}
+                    </Text>
+                  </NavLink>
+                  {file.description && (
+                    <Text textStyle="xs" color="fg.muted" truncate>
+                      {file.description}
+                    </Text>
+                  )}
+                </Stack>
+              </Group>
+            </Table.Cell>
+            <Table.Cell>
+              <Group gap={1} wrap="wrap">
+                {file.tags?.map((tag) =>
+                  tagType == "search" ? (
+                    <SearchTag key={tag.id} tag={tag} />
+                  ) : (
+                    <FilterTag key={tag.id} tag={tag} />
+                  ),
+                )}
+              </Group>
+            </Table.Cell>
+            <Table.Cell whiteSpace="nowrap" color="fg.muted">
+              {file.page_count != null &&
+                `${file.state.current_page} / ${file.page_count}`}
+            </Table.Cell>
+            {includeReadDate && (
+              <Table.Cell whiteSpace="nowrap" color="fg.muted">
+                {file.state.last_read_at && (
+                  <Text
+                    textStyle="xs"
+                    title={new Date(file.state.last_read_at).toLocaleString()}
+                  >
+                    {formatRelativeTime(file.state.last_read_at)}
+                  </Text>
+                )}
+              </Table.Cell>
+            )}
+            <Table.Cell textAlign="end">
+              <Group gap={0} justify="end">
+                <FavoriteButton file={file} />
+                <FileCardActions file={file} />
+              </Group>
+            </Table.Cell>
+          </Table.Row>
+        ))}
+      </Table.Body>
+    </Table.Root>
   );
 }
 

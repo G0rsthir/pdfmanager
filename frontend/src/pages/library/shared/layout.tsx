@@ -8,10 +8,10 @@ import {
   SimpleGrid,
   Stack,
 } from "@chakra-ui/react";
-import { LuLayoutGrid, LuLayoutList } from "react-icons/lu";
-import { FileCard, FileRow } from "./file";
+import { LuLayoutGrid, LuTable2 } from "react-icons/lu";
+import { FileCard, FileTable } from "./file";
 
-export type LibraryLayout = "list" | "grid";
+export type LibraryLayout = "grid" | "table";
 
 interface Layout {
   value: LibraryLayout;
@@ -20,8 +20,8 @@ interface Layout {
 }
 
 const LAYOUTS: Layout[] = [
-  { value: "list", label: "List", icon: <LuLayoutList /> },
   { value: "grid", label: "Grid", icon: <LuLayoutGrid /> },
+  { value: "table", label: "List", icon: <LuTable2 /> },
 ];
 
 export function LayoutSegment(props: {
@@ -126,9 +126,7 @@ export function FileList({
 
   return (
     <Stack gap={4}>
-      {files.map((file) => (
-        <FileRow file={file} key={file.id} tagType={tagType} />
-      ))}
+      <FileTable tagType={tagType} files={files} />
     </Stack>
   );
 }
