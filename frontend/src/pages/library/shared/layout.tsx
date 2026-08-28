@@ -13,6 +13,8 @@ import { FileCard, FileTable } from "./file";
 
 export type LibraryLayout = "grid" | "table";
 
+export const DEFAULT_LIBRARY_LAYOUT: LibraryLayout = "table";
+
 interface Layout {
   value: LibraryLayout;
   label: string;
@@ -21,7 +23,7 @@ interface Layout {
 
 const LAYOUTS: Layout[] = [
   { value: "grid", label: "Grid", icon: <LuLayoutGrid /> },
-  { value: "table", label: "List", icon: <LuTable2 /> },
+  { value: "table", label: "Table", icon: <LuTable2 /> },
 ];
 
 export function LayoutSegment(props: {

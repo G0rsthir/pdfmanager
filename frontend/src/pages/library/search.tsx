@@ -4,14 +4,16 @@ import {
   listTagsOptions,
   searchFilesOptions,
 } from "@/api/@tanstack/react-query.gen";
-import type {
-  AuthorResponse,
-  FileSearchResponse,
-  SearchHitResponse,
-  TagResponse,
+import {
+  FileStatusEnum,
+  type AuthorResponse,
+  type FileSearchResponse,
+  type SearchHitResponse,
+  type TagResponse,
 } from "@/api/types.gen";
 import { MultiQueryView, QueryView } from "@/components/ui/feedback";
 import { SearchBar } from "@/components/ui/searchBar";
+import { useFileClickAction } from "@/hooks/layout";
 import { useAPIQuery } from "@/hooks/query";
 import {
   Badge,
@@ -37,8 +39,8 @@ import {
   type UrlSearchParamState,
 } from "../shared/smartSearchBar/hooks";
 import { TextNote } from "../shared/smartSearchBar/params";
-import { FavoriteButton, FileCardActions, FilterTag } from "./shared/file";
-import { toFileUrl } from "./shared/path";
+import { FavoriteButton, FilterTag, GenericFileActions } from "./shared/file";
+import { toFileReaderUrl, toFileUrl } from "./shared/path";
 
 type SearchParamKeys =
   | "tag"
@@ -47,7 +49,8 @@ type SearchParamKeys =
   | "description"
   | "label"
   | "annotation"
-  | "author";
+  | "author"
+  | "status";
 
 export function SearchPage() {
   const tagsQ = useAPIQuery({
@@ -96,6 +99,11 @@ function SearchView(props: {
       description: {
         label: "Description",
         values: [],
+        isSingleUse: true,
+      },
+      status: {
+        label: "Status",
+        values: Object.values(FileStatusEnum),
         isSingleUse: true,
       },
       annotation: {
@@ -167,6 +175,7 @@ function SearchQuery(props: SearchQueryProps) {
         label: searchParams.label?.[0],
         annotation: searchParams.annotation?.[0],
         authors: searchParams.author,
+        status: searchParams.status?.[0] as FileStatusEnum,
       },
     }),
   });
@@ -223,6 +232,14 @@ export function SearchFileHitsCard(props: {
     weak: { label: "Weak relevance", color: "gray.solid" },
   }[score];
 
+  const [clickAction] = useFileClickAction();
+
+  const fileUrl = toFileUrl({
+    folderId: file.collection_id,
+    fileId: file.id,
+    action: clickAction,
+  });
+
   return (
     <Card.Root variant="outline" size="sm">
       <Card.Body>
@@ -242,12 +259,7 @@ export function SearchFileHitsCard(props: {
           </GridItem>
           <GridItem>
             <Stack gap={1}>
-              <NavLink
-                to={toFileUrl({
-                  folderId: file.collection_id,
-                  fileId: file.id,
-                })}
-              >
+              <NavLink to={fileUrl}>
                 <Card.Title
                   _hover={{ color: "colorPalette.fg" }}
                   transition="color 0.2s"
@@ -265,7 +277,7 @@ export function SearchFileHitsCard(props: {
           <GridItem>
             <Group gap={0}>
               <FavoriteButton file={file} />
-              <FileCardActions file={file} />
+              <GenericFileActions file={file} />
             </Group>
           </GridItem>
 
@@ -345,7 +357,7 @@ function highlightSnippet(snippet: string) {
 function SearchHitItem(props: {
   hit: SearchHitResponse;
   fileId: string;
-  folderId: string | null | undefined;
+  folderId: string;
 }) {
   const { hit, fileId, folderId } = props;
 
@@ -366,14 +378,14 @@ function SearchHitItem(props: {
 function GenericHitItem(props: {
   hit: SearchHitResponse;
   fileId: string;
-  folderId: string | null | undefined;
+  folderId: string;
 }) {
   const { hit, fileId, folderId } = props;
   const fragmentName = FRAGMENT_LABELS[hit.fragment_type] ?? hit.fragment_type;
 
   return (
     <NavLink
-      to={toFileUrl({
+      to={toFileReaderUrl({
         folderId,
         fileId,
         page: hit.page_number ?? undefined,
@@ -417,13 +429,13 @@ function AnnotationHitItem(props: {
   hit: SearchHitResponse;
   annotation: NonNullable<SearchHitResponse["annotation"]>;
   fileId: string;
-  folderId: string | null | undefined;
+  folderId: string;
 }) {
   const { hit, annotation, fileId, folderId } = props;
 
   return (
     <NavLink
-      to={toFileUrl({
+      to={toFileReaderUrl({
         folderId,
         fileId,
         page: annotation.page,

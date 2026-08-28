@@ -6,9 +6,9 @@ import type {
   PaginatedResponseTaskHistoryResponse,
   TaskActiveResponse,
 } from "@/api/types.gen";
-import { formatRelativeTime } from "@/common/date";
+import { formatRelativeTime } from "@/common/format";
 import { GenericIconButton } from "@/components/ui/button";
-import { SectionLabel } from "@/components/ui/display";
+import { Section } from "@/components/ui/display";
 import { QueryView } from "@/components/ui/feedback";
 import { useAPIQuery } from "@/hooks/query";
 import { usePagination } from "@/hooks/url";
@@ -108,15 +108,13 @@ export function TasksPage() {
         </Button>
       </Group>
 
-      <Stack gap={3}>
-        <SectionLabel>In progress</SectionLabel>
+      <Section title="In progress">
         <QueryView query={activeTasksQ}>
           {(data) => <ActiveTasksView tasks={data} />}
         </QueryView>
-      </Stack>
+      </Section>
 
-      <Stack gap={3}>
-        <SectionLabel>Recent</SectionLabel>
+      <Section title="Recent">
         <QueryView query={historyTasksQ}>
           {(data) => (
             <RecentRunsView
@@ -125,7 +123,7 @@ export function TasksPage() {
             />
           )}
         </QueryView>
-      </Stack>
+      </Section>
     </Stack>
   );
 }

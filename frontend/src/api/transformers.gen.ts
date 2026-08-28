@@ -50,6 +50,8 @@ const fileResponseSchemaResponseTransformer = (data: any) => {
   if (data.published) {
     data.published = new Date(data.published);
   }
+  data.created_at = new Date(data.created_at);
+  data.updated_at = new Date(data.updated_at);
   data.state = fileStateResponseSchemaResponseTransformer(data.state);
   return data;
 };

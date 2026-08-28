@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field
 
-from server.const import RESOURCE_PERMISSIONS
+from server.const import RESOURCE_PERMISSIONS, FileStatusEnum
 from server.schemas.identity import UserSummaryResponse
 
 
@@ -84,13 +84,19 @@ class FileResponse(BaseModel):
 
     id: UUID
     name: str
-    collection_id: UUID | None = None
+    collection_id: UUID
     description: str | None = None
     page_count: int
     tags: list[TagResponse] = Field(default_factory=list)
 
     authors: list[AuthorResponse] = Field(default_factory=list)
     published: date | None = None
+    file_size: int
+    content_type: str
+    original_name: str
+    file_hash: str | None = None
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
 
     state: FileStateResponse
 
@@ -121,18 +127,26 @@ class FileStateResponse(BaseModel):
     is_favorite: bool
     current_page: int
     scale: str
+    status: FileStatusEnum
 
     last_read_at: AwareDatetime | None = None
 
     @classmethod
     def with_defaults(cls):
-        return cls(is_favorite=False, current_page=1, scale="1.0", last_read_at=None)
+        return cls(
+            is_favorite=False,
+            current_page=1,
+            scale="1.0",
+            last_read_at=None,
+            status=FileStatusEnum.UNREAD,
+        )
 
 
 class PatchFileStateRequest(BaseModel):
     current_page: int | None = Field(default=None, ge=1)
     scale: str | None = None
     is_favorite: bool | None = None
+    status: FileStatusEnum | None = None
 
 
 class UpdateFileRequest(BaseModel):

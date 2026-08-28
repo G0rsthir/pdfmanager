@@ -74,3 +74,18 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
     </Text>
   );
 }
+
+export function Section(props: {
+  title: string;
+  children: React.ReactNode;
+  gap?: number;
+}) {
+  const { title, children, gap = 4 } = props;
+
+  return (
+    <Stack gap={gap}>
+      <SectionLabel>{title}</SectionLabel>
+      {children}
+    </Stack>
+  );
+}

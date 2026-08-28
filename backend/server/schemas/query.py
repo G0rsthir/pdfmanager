@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, Field, computed_field
 
+from server.const import FileStatusEnum
+
 
 @dataclass(frozen=True, kw_only=True)
 class PaginatedResult[T]:
@@ -63,3 +65,4 @@ class CollectionFilesQueryParams(BaseModel):
     authors: list[str] | None = None
     name: str | None = None
     description: str | None = None
+    status: FileStatusEnum | None = None

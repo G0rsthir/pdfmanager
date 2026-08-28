@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from server.const import SessionTypeEnum
+from server.const import FileStatusEnum, SessionTypeEnum
 from server.infrastructure.database.base import AuditMixin, Base, DateTimeUTC
 from server.schemas.types import Scopes
 
@@ -212,6 +212,7 @@ class ORMFileState(Base, AuditMixin):
     current_page: Mapped[int] = mapped_column(default=1)
     scale: Mapped[str] = mapped_column(default="1.0")
     is_favorite: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[str] = mapped_column(default=FileStatusEnum.UNREAD)
 
     last_read_at: Mapped[datetime | None] = mapped_column(type_=DateTimeUTC(timezone=True), default=None)
 

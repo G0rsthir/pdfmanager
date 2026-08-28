@@ -15,3 +15,14 @@ export function useLibraryLayout(key: string) {
     (next: LibraryLayout) => setLibraryLayout(key, next),
   ] as const;
 }
+
+export function useFileClickAction() {
+  const { action, setFileClickAction } = useGlobalStore(
+    useShallow((state) => ({
+      action: state.fileClickAction,
+      setFileClickAction: state.setFileClickAction,
+    })),
+  );
+
+  return [action, setFileClickAction] as const;
+}

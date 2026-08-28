@@ -17,7 +17,8 @@ import { Error500Page } from "@/pages/error/500";
 import { DynamicErrorPage } from "@/pages/error/dynamic";
 import { Layout } from "@/pages/layout";
 import { FavoritesPage } from "@/pages/library/favorites";
-import { FilePage } from "@/pages/library/file";
+import { FileDetailsPage } from "@/pages/library/file";
+import { FileReaderPage } from "@/pages/library/file/reader";
 import { FolderPage } from "@/pages/library/folder";
 import { SearchPage } from "@/pages/library/search";
 import { TagsPage } from "@/pages/library/tags";
@@ -123,15 +124,15 @@ const router = createBrowserRouter([
                 path: "account",
                 element: <CurrentUserAccountPage />,
               },
+              {
+                path: "folder/:folderid/file/:fileid/details",
+                element: <FileDetailsPage />,
+              },
             ],
           },
           {
-            path: "folder/:folderid/file/:fileid",
-            element: <FilePage />,
-          },
-          {
-            path: "uncategorized/file/:fileid",
-            element: <FilePage />,
+            path: "folder/:folderid/file/:fileid/reader",
+            element: <FileReaderPage />,
           },
           {
             path: "admin",

@@ -4,6 +4,43 @@ import {
   type DateValue,
 } from "@internationalized/date";
 
+const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"];
+
+export function formatBytes(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return null;
+  if (value < 1024) return `${value} B`;
+
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < BYTE_UNITS.length - 1) {
+    size /= 1024;
+    unit++;
+  }
+
+  return `${size.toFixed(size < 10 ? 1 : 0)} ${BYTE_UNITS[unit]}`;
+}
+
+const DATE_TIME = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const DATE_ONLY = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+
+export function formatDateTime(value: Date | string | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return DATE_TIME.format(date);
+}
+
+export function formatDate(value: Date | string | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return DATE_ONLY.format(date);
+}
+
 const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, {
   numeric: "auto",
 });

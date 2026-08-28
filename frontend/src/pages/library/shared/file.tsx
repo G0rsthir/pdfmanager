@@ -1,58 +1,71 @@
 import {
   deleteFileMutation,
-  listAuthorsOptions,
   listCollectionsOptions,
-  listFileMoveTargetsOptions,
-  listTagsOptions,
   patchFileStateMutation,
-  updateFileMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { FileResponse, TagResponse } from "@/api/types.gen";
-import { formatRelativeTime } from "@/common/date";
+import { FileStatusEnum } from "@/api/types.gen";
 import { parseAPIError } from "@/common/error";
+import { formatDateTime, formatRelativeTime } from "@/common/format";
 import { GenericIconButton } from "@/components/ui/button";
-import { FormError } from "@/components/ui/error";
-import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import {
   showErrorNotification,
   showSuccessNotification,
 } from "@/components/ui/toaster";
 import { useFileThumbnail } from "@/hooks/asset";
-import { useFormMutation } from "@/hooks/form";
+import { useFileClickAction } from "@/hooks/layout";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import { useSearchParamMulti } from "@/hooks/url";
-import { TokensInput } from "@/pages/shared/input";
-import { DateSelect } from "@/pages/shared/selects";
 import {
   Badge,
   Box,
   Card,
   Combobox,
+  createListCollection,
   Field,
   Grid,
   GridItem,
   Group,
+  HStack,
   Icon,
   Image,
-  Input,
   Menu,
-  parseDate,
   Portal,
+  RadioCard,
+  Select,
   Skeleton,
+  Span,
   Stack,
   Table,
-  Tabs,
   Text,
   useCombobox,
   useFilter,
   useListCollection,
+  useSelectContext,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { LuFileText, LuStar } from "react-icons/lu";
+import {
+  LuBookmark,
+  LuBookOpen,
+  LuCircleCheck,
+  LuCircleDashed,
+  LuCircleX,
+  LuFileText,
+  LuInfo,
+  LuPause,
+  LuStar,
+} from "react-icons/lu";
 import { NavLink } from "react-router";
-import { toFileUrl } from "./path";
+import { toFileDetailsUrl, toFileReaderUrl, toFileUrl } from "./path";
+
+/**
+ * What opening a file from a library listing should do
+ */
+export type FileClickAction = "reader" | "details";
+
+export const DEFAULT_FILE_CLICK_ACTION: FileClickAction = "details";
 
 interface FileFolderSelectProps {
   onValueChange: (values: string) => void;
@@ -183,7 +196,7 @@ export function FileRow(props: {
           <GridItem>
             <Stack gap={1}>
               <NavLink
-                to={toFileUrl({
+                to={toFileReaderUrl({
                   folderId: file.collection_id,
                   fileId: file.id,
                 })}
@@ -205,7 +218,7 @@ export function FileRow(props: {
           <GridItem>
             <Group gap={0}>
               <FavoriteButton file={file} />
-              <FileCardActions file={file} />
+              <GenericFileActions file={file} />
             </Group>
           </GridItem>
 
@@ -252,12 +265,15 @@ export function FileTable(props: {
 }) {
   const { files, includeReadDate = true, tagType = "search" } = props;
 
+  const [clickAction] = useFileClickAction();
+
   return (
     <Table.Root size="sm" variant="outline" interactive colorPalette="gray">
       <Table.Header>
         <Table.Row>
           <Table.ColumnHeader>Name</Table.ColumnHeader>
           <Table.ColumnHeader>Tags</Table.ColumnHeader>
+          <Table.ColumnHeader>Status</Table.ColumnHeader>
           <Table.ColumnHeader>Progress</Table.ColumnHeader>
           {includeReadDate && <Table.ColumnHeader>Read</Table.ColumnHeader>}
           <Table.ColumnHeader textAlign="end">Actions</Table.ColumnHeader>
@@ -268,15 +284,13 @@ export function FileTable(props: {
           <Table.Row key={file.id}>
             <Table.Cell>
               <Group gap={3}>
-                {/** TODO - improve */}
-                <Icon flexShrink={0} color="accent.fg">
-                  <LuFileText />
-                </Icon>
+                <FileThumbnail fileId={file.id} height="32px" width="24px" />
                 <Stack gap={0}>
                   <NavLink
                     to={toFileUrl({
                       folderId: file.collection_id,
                       fileId: file.id,
+                      action: clickAction,
                     })}
                   >
                     <Text
@@ -307,6 +321,9 @@ export function FileTable(props: {
                 )}
               </Group>
             </Table.Cell>
+            <Table.Cell>
+              <ReadingStatusSelect file={file} />
+            </Table.Cell>
             <Table.Cell whiteSpace="nowrap" color="fg.muted">
               {file.page_count != null &&
                 `${file.state.current_page} / ${file.page_count}`}
@@ -326,7 +343,7 @@ export function FileTable(props: {
             <Table.Cell textAlign="end">
               <Group gap={0} justify="end">
                 <FavoriteButton file={file} />
-                <FileCardActions file={file} />
+                <GenericFileActions file={file} />
               </Group>
             </Table.Cell>
           </Table.Row>
@@ -343,12 +360,13 @@ export function FileCard(props: {
 }) {
   const { file, includeReadDate = true, tagType = "search" } = props;
 
+  const [clickAction] = useFileClickAction();
+
   const fileUrl = toFileUrl({
     folderId: file.collection_id,
     fileId: file.id,
+    action: clickAction,
   });
-
-  const thumbSrc = useFileThumbnail(file.id);
 
   return (
     <Card.Root
@@ -362,37 +380,17 @@ export function FileCard(props: {
         <Grid templateColumns="auto 1fr" gap={5}>
           <GridItem>
             <NavLink to={fileUrl}>
-              <Box width="120px" height="160px">
-                {thumbSrc ? (
-                  <Image
-                    src={thumbSrc}
-                    rounded="md"
-                    width="full"
-                    height="full"
-                    objectFit="cover"
-                  />
-                ) : (
-                  <Skeleton height="160px" />
-                )}
-              </Box>
+              <FileThumbnail fileId={file.id} height="160px" width="120px" />
             </NavLink>
           </GridItem>
 
           <GridItem minW={0}>
             <Stack gap={2} h="full">
               <Group>
-                {includeReadDate && file.state.last_read_at && (
-                  <Text
-                    textStyle="xs"
-                    color="fg.muted"
-                    title={new Date(file.state.last_read_at).toLocaleString()}
-                  >
-                    Read {formatRelativeTime(file.state.last_read_at)}
-                  </Text>
-                )}
+                <ReadingStatusSelect file={file} />
                 <Group gap={0} ms="auto">
                   <FavoriteButton file={file} />
-                  <FileCardActions file={file} />
+                  <GenericFileActions file={file} />
                 </Group>
               </Group>
 
@@ -422,17 +420,50 @@ export function FileCard(props: {
                 </Group>
               )}
               <Group gap={3} justify="end" mt="auto">
-                {file.page_count != null && (
-                  <Text textStyle="xs" ms="auto">
-                    Page {file.state.current_page} of {file.page_count}
+                {includeReadDate && file.state.last_read_at && (
+                  <Text
+                    textStyle="xs"
+                    color="fg.muted"
+                    title={formatDateTime(file.state.last_read_at) ?? undefined}
+                  >
+                    Read {formatRelativeTime(file.state.last_read_at)}
                   </Text>
                 )}
+                <Text textStyle="xs" ms="auto">
+                  Page {file.state.current_page} of {file.page_count}
+                </Text>
               </Group>
             </Stack>
           </GridItem>
         </Grid>
       </Card.Body>
     </Card.Root>
+  );
+}
+
+export function FileThumbnail(props: {
+  fileId: string;
+  width: string;
+  height: string;
+}) {
+  const { fileId, width, height } = props;
+
+  const thumbSrc = useFileThumbnail(fileId);
+
+  return (
+    <Box width={width} height={height}>
+      {thumbSrc ? (
+        <Image
+          src={thumbSrc}
+          rounded="md"
+          width="full"
+          height="full"
+          objectFit="cover"
+        />
+      ) : (
+        <Skeleton height={height} />
+      )}
+    </Box>
   );
 }
 
@@ -515,18 +546,29 @@ export function FavoriteButton({ file }: { file: FileResponse }) {
   );
 }
 
-type FileDialog = "edit" | "delete" | null;
+type GenericFileActionDialog = "delete" | null;
 
-export function FileCardActions(props: { file: FileResponse }) {
+export function GenericFileActions(props: { file: FileResponse }) {
   const { file } = props;
 
-  const [dialog, setDialog] = useState<FileDialog>(null);
+  const [dialog, setDialog] = useState<GenericFileActionDialog>(null);
+
+  const target = { folderId: file.collection_id, fileId: file.id };
 
   return (
     <>
-      <FileCardActionsMenu>
-        <Menu.Item value="edit" onClick={() => setDialog("edit")}>
-          Edit
+      <GenericFileActionsMenu>
+        <Menu.Item value="details" asChild>
+          <NavLink to={toFileDetailsUrl(target)}>Details</NavLink>
+        </Menu.Item>
+        <Menu.Item
+          value="edit"
+          asChild
+          disabled={file.is_read_only_by_current_user}
+        >
+          <NavLink to={toFileDetailsUrl({ ...target, tab: "edit" })}>
+            Edit
+          </NavLink>
         </Menu.Item>
         <Menu.Item
           value="delete"
@@ -537,13 +579,7 @@ export function FileCardActions(props: { file: FileResponse }) {
         >
           Delete
         </Menu.Item>
-      </FileCardActionsMenu>
-
-      <EditFileDialog
-        open={dialog === "edit"}
-        onClose={() => setDialog(null)}
-        file={file}
-      />
+      </GenericFileActionsMenu>
 
       <DeleteFileDialog
         open={dialog === "delete"}
@@ -554,7 +590,11 @@ export function FileCardActions(props: { file: FileResponse }) {
   );
 }
 
-function FileCardActionsMenu({ children }: { children: React.ReactNode }) {
+export function GenericFileActionsMenu({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
@@ -575,228 +615,20 @@ function FileCardActionsMenu({ children }: { children: React.ReactNode }) {
   );
 }
 
-function EditFileDialog(props: {
+export function DeleteFileDialog(props: {
   open: boolean;
   onClose: () => void;
-  file: FileResponse;
-}) {
-  const { open, onClose, file } = props;
-
-  const { form } = useFormMutation({
-    formOptions: {
-      defaultValues: {
-        name: file.name,
-        collection_id: file.collection_id ?? "",
-        description: file.description ?? "",
-        tags: file.tags?.map((item) => item.name),
-        authors: file.authors?.map((item) => item.name),
-        published: file.published
-          ? [parseDate(file.published.toISOString().slice(0, 10))]
-          : undefined,
-      },
-    },
-    mutationOptions: updateFileMutation,
-    onMutate: (value) => ({
-      body: {
-        ...value,
-        published: value.published?.[0]?.toDate("UTC"),
-      },
-      path: { id: file.id },
-    }),
-    successMessage: "File updated successfully",
-    onSuccess: onClose,
-  });
-
-  const moveTargetsQ = useAPIQuery({
-    ...listFileMoveTargetsOptions({
-      path: {
-        id: file.id,
-      },
-    }),
-    enabled: open,
-  });
-
-  const handleClose = useCallback(() => {
-    form.reset();
-    onClose();
-  }, [onClose, form]);
-
-  const listTagsQ = useAPIQuery({
-    ...listTagsOptions(),
-  });
-
-  const listAuthorsQ = useAPIQuery({
-    ...listAuthorsOptions(),
-  });
-
-  return (
-    <FormModal
-      open={open}
-      close={handleClose}
-      title="Edit file"
-      onSubmit={() => form.handleSubmit()}
-      confirmBtnText="Update"
-      disabled={file.is_read_only_by_current_user}
-    >
-      <Tabs.Root defaultValue="details" variant="line">
-        <Tabs.List mb={1}>
-          <Tabs.Trigger value="details">Details</Tabs.Trigger>
-          <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
-        </Tabs.List>
-
-        <Tabs.Content value="details" px={0}>
-          <Stack gap={4}>
-            <form.Field
-              name="name"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  required
-                  disabled={file.is_read_only_by_current_user}
-                >
-                  <Field.Label>
-                    Name <Field.RequiredIndicator />
-                  </Field.Label>
-                  <Input
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
-            />
-            <form.Field
-              name="description"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={file.is_read_only_by_current_user}
-                >
-                  <Field.Label>Description</Field.Label>
-                  <Input
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
-            />
-            <form.Field
-              name="collection_id"
-              validators={{
-                onChange: ({ value }) =>
-                  !value ? "Folder is required" : undefined,
-              }}
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  required
-                  disabled={file.is_read_only_by_current_user}
-                >
-                  <FileFolderSelect
-                    defaultValue={fieldState.value ?? ""}
-                    allowedFolderIds={moveTargetsQ.data?.map((c) => c.id)}
-                    onValueChange={handleChange}
-                    onBlur={handleBlur}
-                    required
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
-            />
-            <form.Field
-              name="tags"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={file.is_read_only_by_current_user}
-                >
-                  <Field.Label>Tags</Field.Label>
-                  <TokensInput
-                    defaultValue={fieldState.value ?? []}
-                    onValueChange={handleChange}
-                    onBlur={handleBlur}
-                    suggestions={listTagsQ.data?.map((item) => item.name)}
-                    description="Press Enter or Return to add tag"
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
-            />
-          </Stack>
-        </Tabs.Content>
-
-        <Tabs.Content value="metadata" px={0}>
-          <Stack gap={4}>
-            <form.Field
-              name="authors"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={file.is_read_only_by_current_user}
-                >
-                  <Field.Label>Authors</Field.Label>
-                  <TokensInput
-                    defaultValue={fieldState.value ?? []}
-                    onValueChange={handleChange}
-                    onBlur={handleBlur}
-                    description="Press Enter or Return to add author"
-                    suggestions={listAuthorsQ.data?.map((item) => item.name)}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
-            />
-            <form.Field
-              name="published"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={file.is_read_only_by_current_user}
-                >
-                  <Field.Label>Published</Field.Label>
-                  <Field.Context>
-                    {(ctx) => (
-                      <DateSelect
-                        onValueChange={(details) => handleChange(details.value)}
-                        onBlur={handleBlur}
-                        required
-                        value={fieldState.value}
-                        invalid={ctx.invalid}
-                        ids={{
-                          label: () => ctx.ids.label,
-                          input: () => ctx.ids.control,
-                        }}
-                      />
-                    )}
-                  </Field.Context>
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
-            />
-          </Stack>
-        </Tabs.Content>
-      </Tabs.Root>
-
-      <FormError errors={form.state.errorMap.onSubmit} />
-    </FormModal>
-  );
-}
-
-function DeleteFileDialog(props: {
-  open: boolean;
-  onClose: () => void;
+  onSuccess?: () => void;
   id: string;
 }) {
-  const { open, onClose, id: fileId } = props;
+  const { open, onClose, onSuccess, id: fileId } = props;
 
   const { mutate: deleteRequest } = useAPIMutation({
     ...deleteFileMutation(),
     onSuccess() {
       showSuccessNotification(`File deleted successfully`);
       onClose();
+      onSuccess?.();
     },
     onError(error) {
       showErrorNotification(
@@ -817,5 +649,168 @@ function DeleteFileDialog(props: {
     >
       This action cannot be undone. This will permanently delete this file.
     </ConfirmModal>
+  );
+}
+
+interface StatusMeta {
+  label: string;
+  palette: string;
+  icon: React.ReactNode;
+}
+
+const STATUS_META: Record<FileStatusEnum, StatusMeta> = {
+  unread: { label: "Unread", palette: "gray", icon: <LuCircleDashed /> },
+  want_to_read: {
+    label: "Want to read",
+    palette: "purple",
+    icon: <LuBookmark />,
+  },
+  reading: { label: "Reading", palette: "blue", icon: <LuBookOpen /> },
+  on_hold: { label: "On hold", palette: "orange", icon: <LuPause /> },
+  read: { label: "Read", palette: "green", icon: <LuCircleCheck /> },
+  dropped: { label: "Dropped", palette: "red", icon: <LuCircleX /> },
+};
+
+const STATUS_ORDER: FileStatusEnum[] = [
+  FileStatusEnum.UNREAD,
+  FileStatusEnum.WANT_TO_READ,
+  FileStatusEnum.READING,
+  FileStatusEnum.ON_HOLD,
+  FileStatusEnum.READ,
+  FileStatusEnum.DROPPED,
+];
+
+const statusCollection = createListCollection({
+  items: STATUS_ORDER.map((status) => ({
+    value: status,
+    label: STATUS_META[status].label,
+  })),
+});
+
+export function ReadingStatusSelect({ file }: { file: FileResponse }) {
+  const { mutate } = useAPIMutation({
+    ...patchFileStateMutation(),
+    onError(error) {
+      showErrorNotification(
+        "Status update failed",
+        parseAPIError(error).message,
+      );
+    },
+  });
+
+  return (
+    <Select.Root
+      collection={statusCollection}
+      size="xs"
+      width="150px"
+      positioning={{ sameWidth: true }}
+      value={[file.state.status]}
+      onValueChange={({ value }) => {
+        const next = value[0] as FileStatusEnum | undefined;
+        if (!next || next == file.state.status) return;
+        mutate({ body: { status: next }, path: { id: file.id } });
+      }}
+    >
+      <Select.HiddenSelect />
+      <Select.Control>
+        <Select.Trigger>
+          <SelectedStatusValue />
+        </Select.Trigger>
+        <Select.IndicatorGroup>
+          <Select.Indicator />
+        </Select.IndicatorGroup>
+      </Select.Control>
+      <Portal>
+        <Select.Positioner>
+          <Select.Content>
+            {statusCollection.items.map((item) => (
+              <Select.Item item={item} key={item.value}>
+                <StatusOption status={item.value} />
+                <Select.ItemIndicator />
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Positioner>
+      </Portal>
+    </Select.Root>
+  );
+}
+
+function SelectedStatusValue() {
+  const select = useSelectContext();
+  const selected = select.selectedItems.at(0) as
+    | { value: FileStatusEnum }
+    | undefined;
+
+  if (!selected) return <Select.ValueText placeholder="Select status" />;
+
+  return (
+    <Select.ValueText>
+      <StatusOption status={selected.value} />
+    </Select.ValueText>
+  );
+}
+
+function StatusOption({ status }: { status: FileStatusEnum }) {
+  const meta = STATUS_META[status];
+
+  return (
+    <Span
+      display="flex"
+      alignItems="center"
+      gap={2}
+      colorPalette={meta.palette}
+    >
+      <Icon color="colorPalette.fg">{meta.icon}</Icon>
+      <Text color="colorPalette.fg">{meta.label}</Text>
+    </Span>
+  );
+}
+
+interface FileClickActionOption {
+  value: FileClickAction;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const FILE_CLICK_ACTIONS: FileClickActionOption[] = [
+  { value: "reader", label: "Reader", icon: <LuBookOpen /> },
+  { value: "details", label: "Details", icon: <LuInfo /> },
+];
+
+export function FileClickActionRadioCards(props: {
+  value: FileClickAction;
+  onChange: (value: FileClickAction) => void;
+}) {
+  const { value, onChange } = props;
+
+  return (
+    <RadioCard.Root
+      value={value}
+      onValueChange={({ value: next }) =>
+        next && onChange(next as FileClickAction)
+      }
+      orientation="horizontal"
+      maxW="sm"
+    >
+      <HStack align="stretch">
+        {FILE_CLICK_ACTIONS.map((option) => (
+          <RadioCard.Item
+            key={option.value}
+            value={option.value}
+            cursor="pointer"
+          >
+            <RadioCard.ItemHiddenInput />
+            <RadioCard.ItemControl>
+              <Icon fontSize="xl" color="fg.subtle">
+                {option.icon}
+              </Icon>
+              <RadioCard.ItemText>{option.label}</RadioCard.ItemText>
+              <RadioCard.ItemIndicator />
+            </RadioCard.ItemControl>
+          </RadioCard.Item>
+        ))}
+      </HStack>
+    </RadioCard.Root>
   );
 }

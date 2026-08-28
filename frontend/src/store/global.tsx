@@ -1,7 +1,14 @@
 import { create } from "zustand";
 
 import type { AppStateResponse, UserSessionResponse } from "@/api/types.gen";
-import type { LibraryLayout } from "@/pages/library/shared/layout";
+import {
+  DEFAULT_FILE_CLICK_ACTION,
+  type FileClickAction,
+} from "@/pages/library/shared/file";
+import {
+  DEFAULT_LIBRARY_LAYOUT,
+  type LibraryLayout,
+} from "@/pages/library/shared/layout";
 import { persist } from "zustand/middleware";
 
 export interface State {
@@ -12,6 +19,7 @@ export interface State {
   primaryColor: string;
   defaultLibraryLayout: LibraryLayout;
   libraryLayouts: Record<string, LibraryLayout>;
+  fileClickAction: FileClickAction;
 }
 
 export interface Actions {
@@ -22,6 +30,7 @@ export interface Actions {
   updatePrimaryColor: (color: string) => void;
   setDefaultLibraryLayout: (layout: LibraryLayout) => void;
   setLibraryLayout: (key: string, layout: LibraryLayout) => void;
+  setFileClickAction: (action: FileClickAction) => void;
 }
 
 /**
@@ -35,8 +44,9 @@ export const useGlobalStore = create<State & Actions>()(
       pinnedOverviewNodes: [],
       expandedLibraryNodes: [],
       primaryColor: "blue",
-      defaultLibraryLayout: "list",
+      defaultLibraryLayout: DEFAULT_LIBRARY_LAYOUT,
       libraryLayouts: {},
+      fileClickAction: DEFAULT_FILE_CLICK_ACTION,
 
       setExpandedLibraryNodes: (value) => set({ expandedLibraryNodes: value }),
       setPinnedOverviewNodes: (value) => set({ pinnedOverviewNodes: value }),
@@ -55,6 +65,8 @@ export const useGlobalStore = create<State & Actions>()(
         set((state) => ({
           libraryLayouts: { ...state.libraryLayouts, [key]: layout },
         })),
+
+      setFileClickAction: (action) => set({ fileClickAction: action }),
     }),
     {
       name: "global",
@@ -63,6 +75,7 @@ export const useGlobalStore = create<State & Actions>()(
         primaryColor: state.primaryColor,
         defaultLibraryLayout: state.defaultLibraryLayout,
         libraryLayouts: state.libraryLayouts,
+        fileClickAction: state.fileClickAction,
         pinnedOverviewNodes: state.pinnedOverviewNodes,
       }),
     },

@@ -62,9 +62,10 @@ class AuthProviderTypesEnum(StrEnum):
     OIDC = "OIDC"
 
 
-class FragmentType(StrEnum):
-    TITLE = "title"
-    DESCRIPTION = "description"
-    PAGE = "page"
-    ANNOTATION = "annotation"
-    LABEL = "label"
+class FileStatusEnum(StrEnum):
+    UNREAD = "unread"
+    READING = "reading"
+    ON_HOLD = "on_hold"
+    DROPPED = "dropped"
+    READ = "read"
+    WANT_TO_READ = "want_to_read"

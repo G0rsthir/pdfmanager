@@ -5,7 +5,10 @@ import {
   listTagsOptions,
   uploadFileMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { CollectionWithDetailsResponse } from "@/api/types.gen";
+import {
+  FileStatusEnum,
+  type CollectionWithDetailsResponse,
+} from "@/api/types.gen";
 import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
 import { FormModal } from "@/components/ui/form/modal";
@@ -57,7 +60,7 @@ export function FolderPage() {
   );
 }
 
-type SearchParamKeys = "tag" | "name" | "description" | "author";
+type SearchParamKeys = "tag" | "name" | "description" | "author" | "status";
 
 function FolderView(props: { collection: CollectionWithDetailsResponse }) {
   const { collection } = props;
@@ -90,6 +93,11 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
         values: [],
         isSingleUse: true,
       },
+      status: {
+        label: "Status",
+        values: Object.values(FileStatusEnum),
+        isSingleUse: true,
+      },
     }),
     [tags, authors],
   );
@@ -106,6 +114,7 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
         name: searchParams.name?.[0],
         description: searchParams.description?.[0],
         authors: searchParams.author,
+        status: searchParams.status?.[0] as FileStatusEnum,
       },
     }),
   });

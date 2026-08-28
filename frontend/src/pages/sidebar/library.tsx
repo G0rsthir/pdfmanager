@@ -595,6 +595,9 @@ function EditNodeDialog(props: {
               onBlur={handleBlur}
               allowedCollectionIds={moveTargetsQ.data?.map((c) => c.id)}
             />
+            <Field.HelperText>
+              Only collections you can write to are selectable
+            </Field.HelperText>
             <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>
         )}

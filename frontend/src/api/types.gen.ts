@@ -612,7 +612,7 @@ export type FileResponse = {
   /**
    * Collection Id
    */
-  collection_id?: string | null;
+  collection_id: string;
   /**
    * Description
    */
@@ -633,6 +633,30 @@ export type FileResponse = {
    * Published
    */
   published?: Date | null;
+  /**
+   * File Size
+   */
+  file_size: number;
+  /**
+   * Content Type
+   */
+  content_type: string;
+  /**
+   * Original Name
+   */
+  original_name: string;
+  /**
+   * File Hash
+   */
+  file_hash?: string | null;
+  /**
+   * Created At
+   */
+  created_at: Date;
+  /**
+   * Updated At
+   */
+  updated_at: Date;
   state: FileStateResponse;
   /**
    * Tags Name List
@@ -677,11 +701,30 @@ export type FileStateResponse = {
    * Scale
    */
   scale: string;
+  status: FileStatusEnum;
   /**
    * Last Read At
    */
   last_read_at?: Date | null;
 };
+
+/**
+ * FileStatusEnum
+ */
+export const FileStatusEnum = {
+  UNREAD: "unread",
+  READING: "reading",
+  ON_HOLD: "on_hold",
+  DROPPED: "dropped",
+  READ: "read",
+  WANT_TO_READ: "want_to_read",
+} as const;
+
+/**
+ * FileStatusEnum
+ */
+export type FileStatusEnum =
+  (typeof FileStatusEnum)[keyof typeof FileStatusEnum];
 
 /**
  * FragmentType
@@ -880,6 +923,7 @@ export type PatchFileStateRequest = {
    * Is Favorite
    */
   is_favorite?: boolean | null;
+  status?: FileStatusEnum | null;
 };
 
 /**
@@ -1503,7 +1547,7 @@ export type FileResponseWritable = {
   /**
    * Collection Id
    */
-  collection_id?: string | null;
+  collection_id: string;
   /**
    * Description
    */
@@ -1524,6 +1568,30 @@ export type FileResponseWritable = {
    * Published
    */
   published?: Date | null;
+  /**
+   * File Size
+   */
+  file_size: number;
+  /**
+   * Content Type
+   */
+  content_type: string;
+  /**
+   * Original Name
+   */
+  original_name: string;
+  /**
+   * File Hash
+   */
+  file_hash?: string | null;
+  /**
+   * Created At
+   */
+  created_at: Date;
+  /**
+   * Updated At
+   */
+  updated_at: Date;
   state: FileStateResponse;
 };
 
@@ -2134,6 +2202,10 @@ export type GetCollectionFilesData = {
      * Description
      */
     description?: string | null;
+    /**
+     * Status
+     */
+    status?: FileStatusEnum | null;
   };
   url: "/api/v1/library/collections/{id}/files";
 };
@@ -2871,6 +2943,10 @@ export type SearchFilesData = {
      * Label
      */
     label?: string | null;
+    /**
+     * Status
+     */
+    status?: FileStatusEnum | null;
   };
   url: "/api/v1/search/files";
 };

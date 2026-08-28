@@ -3,8 +3,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from server.const import FragmentType
-from server.infrastructure.search import SearchBackend
+from server.infrastructure.search import FragmentType, SearchBackend
 from server.models import ORMAnnotation
 from server.repositories import AnnotationRepository, FileRepository
 from server.schemas.search import EnrichedHit, FileSearchResult, SearchFilter

@@ -6,6 +6,7 @@ import {
   useFilter,
   useListCollection,
   useTagsInput,
+  type TagsInputRootProps,
 } from "@chakra-ui/react";
 import { useEffect, useId, useRef } from "react";
 
@@ -16,6 +17,7 @@ export interface TokensInputProps {
   placeholder?: string;
   suggestions?: string[];
   description?: string;
+  colorPalette?: TagsInputRootProps["colorPalette"];
 }
 
 export function TokensInput(props: TokensInputProps) {
@@ -56,7 +58,7 @@ export function TokensInput(props: TokensInputProps) {
 
   return (
     <Combobox.RootProvider value={comobobox}>
-      <TagsInput.RootProvider value={tags}>
+      <TagsInput.RootProvider value={tags} colorPalette={props.colorPalette}>
         <TagsInput.Control ref={controlRef} bg="bg.subtle">
           {tags.value.map((tag, index) => (
             <TagsInput.Item key={index} index={index} value={tag}>

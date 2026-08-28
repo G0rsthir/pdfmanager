@@ -3,7 +3,7 @@ import type {
   ApiKeyResetRequest,
   HttpValidationError,
 } from "@/api/types.gen";
-import { expiryDatePresets } from "@/common/date";
+import { expiryDatePresets } from "@/common/format";
 import { FormError } from "@/components/ui/error";
 import {
   FormModal,

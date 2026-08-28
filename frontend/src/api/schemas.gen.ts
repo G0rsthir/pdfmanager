@@ -882,15 +882,8 @@ export const FileResponseSchema = {
       title: "Name",
     },
     collection_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
+      type: "string",
+      format: "uuid",
       title: "Collection Id",
     },
     description: {
@@ -934,6 +927,39 @@ export const FileResponseSchema = {
       ],
       title: "Published",
     },
+    file_size: {
+      type: "integer",
+      title: "File Size",
+    },
+    content_type: {
+      type: "string",
+      title: "Content Type",
+    },
+    original_name: {
+      type: "string",
+      title: "Original Name",
+    },
+    file_hash: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "File Hash",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    updated_at: {
+      type: "string",
+      format: "date-time",
+      title: "Updated At",
+    },
     state: {
       $ref: "#/components/schemas/FileStateResponse",
     },
@@ -956,7 +982,13 @@ export const FileResponseSchema = {
   required: [
     "id",
     "name",
+    "collection_id",
     "page_count",
+    "file_size",
+    "content_type",
+    "original_name",
+    "created_at",
+    "updated_at",
     "state",
     "tags_name_list",
     "is_read_only_by_current_user",
@@ -1002,6 +1034,9 @@ export const FileStateResponseSchema = {
       type: "string",
       title: "Scale",
     },
+    status: {
+      $ref: "#/components/schemas/FileStatusEnum",
+    },
     last_read_at: {
       anyOf: [
         {
@@ -1016,8 +1051,14 @@ export const FileStateResponseSchema = {
     },
   },
   type: "object",
-  required: ["is_favorite", "current_page", "scale"],
+  required: ["is_favorite", "current_page", "scale", "status"],
   title: "FileStateResponse",
+} as const;
+
+export const FileStatusEnumSchema = {
+  type: "string",
+  enum: ["unread", "reading", "on_hold", "dropped", "read", "want_to_read"],
+  title: "FileStatusEnum",
 } as const;
 
 export const FragmentTypeSchema = {
@@ -1293,6 +1334,16 @@ export const PatchFileStateRequestSchema = {
         },
       ],
       title: "Is Favorite",
+    },
+    status: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/FileStatusEnum",
+        },
+        {
+          type: "null",
+        },
+      ],
     },
   },
   type: "object",
@@ -2226,15 +2277,8 @@ export const FileResponseWritableSchema = {
       title: "Name",
     },
     collection_id: {
-      anyOf: [
-        {
-          type: "string",
-          format: "uuid",
-        },
-        {
-          type: "null",
-        },
-      ],
+      type: "string",
+      format: "uuid",
       title: "Collection Id",
     },
     description: {
@@ -2278,12 +2322,56 @@ export const FileResponseWritableSchema = {
       ],
       title: "Published",
     },
+    file_size: {
+      type: "integer",
+      title: "File Size",
+    },
+    content_type: {
+      type: "string",
+      title: "Content Type",
+    },
+    original_name: {
+      type: "string",
+      title: "Original Name",
+    },
+    file_hash: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "File Hash",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    updated_at: {
+      type: "string",
+      format: "date-time",
+      title: "Updated At",
+    },
     state: {
       $ref: "#/components/schemas/FileStateResponse",
     },
   },
   type: "object",
-  required: ["id", "name", "page_count", "state"],
+  required: [
+    "id",
+    "name",
+    "collection_id",
+    "page_count",
+    "file_size",
+    "content_type",
+    "original_name",
+    "created_at",
+    "updated_at",
+    "state",
+  ],
   title: "FileResponse",
 } as const;
 

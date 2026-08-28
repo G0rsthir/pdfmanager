@@ -3,7 +3,7 @@ export interface PaletteColor {
   label: string;
 }
 
-export const PaletteColors: PaletteColor[] = [
+export const PaletteColors = [
   { value: "black", label: "Black" },
   { value: "blue", label: "Blue" },
   { value: "cyan", label: "Cyan" },
@@ -16,4 +16,6 @@ export const PaletteColors: PaletteColor[] = [
   { value: "teal", label: "Teal" },
   { value: "white", label: "White" },
   { value: "yellow", label: "Yellow" },
-];
+] as const satisfies readonly PaletteColor[];
+
+export type PaletteColorValue = (typeof PaletteColors)[number]["value"];

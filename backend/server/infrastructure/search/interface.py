@@ -1,9 +1,17 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import StrEnum
 from uuid import UUID
 
-from server.const import FragmentType
 from server.infrastructure.utils import Entity
+
+
+class FragmentType(StrEnum):
+    TITLE = "title"
+    DESCRIPTION = "description"
+    PAGE = "page"
+    ANNOTATION = "annotation"
+    LABEL = "label"
 
 
 @dataclass(kw_only=True)

@@ -2,8 +2,10 @@
 
 import {
   type Client,
+  type ClientMeta,
   formDataBodySerializer,
   type Options as Options2,
+  type RequestResult,
   type TDataShape,
   urlSearchParamsBodySerializer,
 } from "./client";
@@ -243,7 +245,7 @@ export type Options<
    * You can pass arbitrary values through the `meta` object. This can be
    * used to access values that aren't defined as part of the SDK function.
    */
-  meta?: Record<string, unknown>;
+  meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
 
 /**
@@ -253,13 +255,19 @@ export type Options<
  */
 export const getCurrentSession = <ThrowOnError extends boolean = false>(
   options?: Options<GetCurrentSessionData, ThrowOnError>,
-) =>
+): RequestResult<GetCurrentSessionResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     GetCurrentSessionResponses,
     unknown,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/auth/session",
     ...options,
   });
@@ -271,13 +279,19 @@ export const getCurrentSession = <ThrowOnError extends boolean = false>(
  */
 export const revokeToken = <ThrowOnError extends boolean = false>(
   options?: Options<RevokeTokenData, ThrowOnError>,
-) =>
+): RequestResult<RevokeTokenResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).delete<
     RevokeTokenResponses,
     unknown,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "RefreshManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/auth/token",
     ...options,
   });
@@ -289,7 +303,11 @@ export const revokeToken = <ThrowOnError extends boolean = false>(
  */
 export const createAuthToken = <ThrowOnError extends boolean = false>(
   options: Options<CreateAuthTokenData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateAuthTokenResponses,
+  CreateAuthTokenErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateAuthTokenResponses,
     CreateAuthTokenErrors,
@@ -312,14 +330,20 @@ export const createAuthToken = <ThrowOnError extends boolean = false>(
  */
 export const refreshAuthToken = <ThrowOnError extends boolean = false>(
   options?: Options<RefreshAuthTokenData, ThrowOnError>,
-) =>
+): RequestResult<RefreshAuthTokenResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).post<
     RefreshAuthTokenResponses,
     unknown,
     ThrowOnError
   >({
     responseTransformer: refreshAuthTokenResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "RefreshManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/auth/refresh",
     ...options,
   });
@@ -329,7 +353,7 @@ export const refreshAuthToken = <ThrowOnError extends boolean = false>(
  */
 export const oidcLogin = <ThrowOnError extends boolean = false>(
   options: Options<OidcLoginData, ThrowOnError>,
-) =>
+): RequestResult<OidcLoginResponses, OidcLoginErrors, ThrowOnError> =>
   (options.client ?? client).get<
     OidcLoginResponses,
     OidcLoginErrors,
@@ -341,7 +365,7 @@ export const oidcLogin = <ThrowOnError extends boolean = false>(
  */
 export const oidcCallback = <ThrowOnError extends boolean = false>(
   options: Options<OidcCallbackData, ThrowOnError>,
-) =>
+): RequestResult<unknown, OidcCallbackErrors, ThrowOnError> =>
   (options.client ?? client).get<unknown, OidcCallbackErrors, ThrowOnError>({
     url: "/api/v1/auth/oidc/{id}/callback",
     ...options,
@@ -352,13 +376,19 @@ export const oidcCallback = <ThrowOnError extends boolean = false>(
  */
 export const listCollections = <ThrowOnError extends boolean = false>(
   options?: Options<ListCollectionsData, ThrowOnError>,
-) =>
+): RequestResult<ListCollectionsResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     ListCollectionsResponses,
     unknown,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections",
     ...options,
   });
@@ -368,13 +398,23 @@ export const listCollections = <ThrowOnError extends boolean = false>(
  */
 export const createCollection = <ThrowOnError extends boolean = false>(
   options: Options<CreateCollectionData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateCollectionResponses,
+  CreateCollectionErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateCollectionResponses,
     CreateCollectionErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections",
     ...options,
     headers: {
@@ -388,13 +428,23 @@ export const createCollection = <ThrowOnError extends boolean = false>(
  */
 export const listCollectionMoveTargets = <ThrowOnError extends boolean = false>(
   options: Options<ListCollectionMoveTargetsData, ThrowOnError>,
-) =>
+): RequestResult<
+  ListCollectionMoveTargetsResponses,
+  ListCollectionMoveTargetsErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     ListCollectionMoveTargetsResponses,
     ListCollectionMoveTargetsErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{id}/move-targets",
     ...options,
   });
@@ -404,13 +454,23 @@ export const listCollectionMoveTargets = <ThrowOnError extends boolean = false>(
  */
 export const deleteCollection = <ThrowOnError extends boolean = false>(
   options: Options<DeleteCollectionData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteCollectionResponses,
+  DeleteCollectionErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteCollectionResponses,
     DeleteCollectionErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{id}",
     ...options,
   });
@@ -420,13 +480,19 @@ export const deleteCollection = <ThrowOnError extends boolean = false>(
  */
 export const getCollection = <ThrowOnError extends boolean = false>(
   options: Options<GetCollectionData, ThrowOnError>,
-) =>
+): RequestResult<GetCollectionResponses, GetCollectionErrors, ThrowOnError> =>
   (options.client ?? client).get<
     GetCollectionResponses,
     GetCollectionErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{id}",
     ...options,
   });
@@ -436,13 +502,23 @@ export const getCollection = <ThrowOnError extends boolean = false>(
  */
 export const updateCollection = <ThrowOnError extends boolean = false>(
   options: Options<UpdateCollectionData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateCollectionResponses,
+  UpdateCollectionErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateCollectionResponses,
     UpdateCollectionErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{id}",
     ...options,
     headers: {
@@ -456,14 +532,24 @@ export const updateCollection = <ThrowOnError extends boolean = false>(
  */
 export const getCollectionFiles = <ThrowOnError extends boolean = false>(
   options: Options<GetCollectionFilesData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetCollectionFilesResponses,
+  GetCollectionFilesErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetCollectionFilesResponses,
     GetCollectionFilesErrors,
     ThrowOnError
   >({
     responseTransformer: getCollectionFilesResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{id}/files",
     ...options,
   });
@@ -473,13 +559,23 @@ export const getCollectionFiles = <ThrowOnError extends boolean = false>(
  */
 export const getCollectionPermissions = <ThrowOnError extends boolean = false>(
   options: Options<GetCollectionPermissionsData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetCollectionPermissionsResponses,
+  GetCollectionPermissionsErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetCollectionPermissionsResponses,
     GetCollectionPermissionsErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{id}/permissions",
     ...options,
   });
@@ -489,13 +585,23 @@ export const getCollectionPermissions = <ThrowOnError extends boolean = false>(
  */
 export const inviteToCollection = <ThrowOnError extends boolean = false>(
   options: Options<InviteToCollectionData, ThrowOnError>,
-) =>
+): RequestResult<
+  InviteToCollectionResponses,
+  InviteToCollectionErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     InviteToCollectionResponses,
     InviteToCollectionErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{id}/permissions/invite",
     ...options,
     headers: {
@@ -511,13 +617,23 @@ export const deleteCollectionPermission = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeleteCollectionPermissionData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteCollectionPermissionResponses,
+  DeleteCollectionPermissionErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteCollectionPermissionResponses,
     DeleteCollectionPermissionErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{collection_id}/permissions/{id}",
     ...options,
   });
@@ -529,13 +645,23 @@ export const updateCollectionPermission = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateCollectionPermissionData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateCollectionPermissionResponses,
+  UpdateCollectionPermissionErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateCollectionPermissionResponses,
     UpdateCollectionPermissionErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/collections/{collection_id}/permissions/{id}",
     ...options,
     headers: {
@@ -549,13 +675,23 @@ export const updateCollectionPermission = <
  */
 export const listFileMoveTargets = <ThrowOnError extends boolean = false>(
   options: Options<ListFileMoveTargetsData, ThrowOnError>,
-) =>
+): RequestResult<
+  ListFileMoveTargetsResponses,
+  ListFileMoveTargetsErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     ListFileMoveTargetsResponses,
     ListFileMoveTargetsErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}/move-targets",
     ...options,
   });
@@ -565,13 +701,19 @@ export const listFileMoveTargets = <ThrowOnError extends boolean = false>(
  */
 export const deleteFile = <ThrowOnError extends boolean = false>(
   options: Options<DeleteFileData, ThrowOnError>,
-) =>
+): RequestResult<DeleteFileResponses, DeleteFileErrors, ThrowOnError> =>
   (options.client ?? client).delete<
     DeleteFileResponses,
     DeleteFileErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}",
     ...options,
   });
@@ -581,14 +723,20 @@ export const deleteFile = <ThrowOnError extends boolean = false>(
  */
 export const getFileDetails = <ThrowOnError extends boolean = false>(
   options: Options<GetFileDetailsData, ThrowOnError>,
-) =>
+): RequestResult<GetFileDetailsResponses, GetFileDetailsErrors, ThrowOnError> =>
   (options.client ?? client).get<
     GetFileDetailsResponses,
     GetFileDetailsErrors,
     ThrowOnError
   >({
     responseTransformer: getFileDetailsResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}",
     ...options,
   });
@@ -598,13 +746,19 @@ export const getFileDetails = <ThrowOnError extends boolean = false>(
  */
 export const updateFile = <ThrowOnError extends boolean = false>(
   options: Options<UpdateFileData, ThrowOnError>,
-) =>
+): RequestResult<UpdateFileResponses, UpdateFileErrors, ThrowOnError> =>
   (options.client ?? client).put<
     UpdateFileResponses,
     UpdateFileErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}",
     ...options,
     headers: {
@@ -618,14 +772,20 @@ export const updateFile = <ThrowOnError extends boolean = false>(
  */
 export const getFileState = <ThrowOnError extends boolean = false>(
   options: Options<GetFileStateData, ThrowOnError>,
-) =>
+): RequestResult<GetFileStateResponses, GetFileStateErrors, ThrowOnError> =>
   (options.client ?? client).get<
     GetFileStateResponses,
     GetFileStateErrors,
     ThrowOnError
   >({
     responseTransformer: getFileStateResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}/state",
     ...options,
   });
@@ -635,13 +795,19 @@ export const getFileState = <ThrowOnError extends boolean = false>(
  */
 export const patchFileState = <ThrowOnError extends boolean = false>(
   options: Options<PatchFileStateData, ThrowOnError>,
-) =>
+): RequestResult<PatchFileStateResponses, PatchFileStateErrors, ThrowOnError> =>
   (options.client ?? client).patch<
     PatchFileStateResponses,
     PatchFileStateErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}/state",
     ...options,
     headers: {
@@ -655,14 +821,20 @@ export const patchFileState = <ThrowOnError extends boolean = false>(
  */
 export const getLibraryTree = <ThrowOnError extends boolean = false>(
   options?: Options<GetLibraryTreeData, ThrowOnError>,
-) =>
+): RequestResult<GetLibraryTreeResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     GetLibraryTreeResponses,
     unknown,
     ThrowOnError
   >({
     responseTransformer: getLibraryTreeResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/tree",
     ...options,
   });
@@ -672,14 +844,20 @@ export const getLibraryTree = <ThrowOnError extends boolean = false>(
  */
 export const listFiles = <ThrowOnError extends boolean = false>(
   options?: Options<ListFilesData, ThrowOnError>,
-) =>
+): RequestResult<ListFilesResponses, ListFilesErrors, ThrowOnError> =>
   (options?.client ?? client).get<
     ListFilesResponses,
     ListFilesErrors,
     ThrowOnError
   >({
     responseTransformer: listFilesResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files",
     ...options,
   });
@@ -689,14 +867,20 @@ export const listFiles = <ThrowOnError extends boolean = false>(
  */
 export const uploadFile = <ThrowOnError extends boolean = false>(
   options: Options<UploadFileData, ThrowOnError>,
-) =>
+): RequestResult<UploadFileResponses, UploadFileErrors, ThrowOnError> =>
   (options.client ?? client).post<
     UploadFileResponses,
     UploadFileErrors,
     ThrowOnError
   >({
     ...formDataBodySerializer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/upload",
     ...options,
     headers: {
@@ -710,10 +894,16 @@ export const uploadFile = <ThrowOnError extends boolean = false>(
  */
 export const getFile = <ThrowOnError extends boolean = false>(
   options: Options<GetFileData, ThrowOnError>,
-) =>
+): RequestResult<GetFileResponses, GetFileErrors, ThrowOnError> =>
   (options.client ?? client).get<GetFileResponses, GetFileErrors, ThrowOnError>(
     {
-      security: [{ scheme: "bearer", type: "http" }],
+      security: [
+        {
+          key: "AccessManagerDependency",
+          scheme: "bearer",
+          type: "http",
+        },
+      ],
       url: "/api/v1/library/files/{id}/download",
       ...options,
     },
@@ -724,13 +914,19 @@ export const getFile = <ThrowOnError extends boolean = false>(
  */
 export const listAnnotationLabels = <ThrowOnError extends boolean = false>(
   options?: Options<ListAnnotationLabelsData, ThrowOnError>,
-) =>
+): RequestResult<ListAnnotationLabelsResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     ListAnnotationLabelsResponses,
     unknown,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/annotations/labels",
     ...options,
   });
@@ -740,14 +936,24 @@ export const listAnnotationLabels = <ThrowOnError extends boolean = false>(
  */
 export const listAnnotations = <ThrowOnError extends boolean = false>(
   options: Options<ListAnnotationsData, ThrowOnError>,
-) =>
+): RequestResult<
+  ListAnnotationsResponses,
+  ListAnnotationsErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     ListAnnotationsResponses,
     ListAnnotationsErrors,
     ThrowOnError
   >({
     responseTransformer: listAnnotationsResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}/annotations",
     ...options,
   });
@@ -757,13 +963,23 @@ export const listAnnotations = <ThrowOnError extends boolean = false>(
  */
 export const createAnnotation = <ThrowOnError extends boolean = false>(
   options: Options<CreateAnnotationData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateAnnotationResponses,
+  CreateAnnotationErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateAnnotationResponses,
     CreateAnnotationErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}/annotations",
     ...options,
     headers: {
@@ -777,13 +993,23 @@ export const createAnnotation = <ThrowOnError extends boolean = false>(
  */
 export const deleteAnnotation = <ThrowOnError extends boolean = false>(
   options: Options<DeleteAnnotationData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteAnnotationResponses,
+  DeleteAnnotationErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteAnnotationResponses,
     DeleteAnnotationErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{file_id}/annotations/{id}",
     ...options,
   });
@@ -793,13 +1019,23 @@ export const deleteAnnotation = <ThrowOnError extends boolean = false>(
  */
 export const patchAnnotation = <ThrowOnError extends boolean = false>(
   options: Options<PatchAnnotationData, ThrowOnError>,
-) =>
+): RequestResult<
+  PatchAnnotationResponses,
+  PatchAnnotationErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).patch<
     PatchAnnotationResponses,
     PatchAnnotationErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{file_id}/annotations/{id}",
     ...options,
     headers: {
@@ -813,13 +1049,23 @@ export const patchAnnotation = <ThrowOnError extends boolean = false>(
  */
 export const getFileThumbnail = <ThrowOnError extends boolean = false>(
   options: Options<GetFileThumbnailData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetFileThumbnailResponses,
+  GetFileThumbnailErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetFileThumbnailResponses,
     GetFileThumbnailErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/files/{id}/thumbnail",
     ...options,
   });
@@ -829,9 +1075,15 @@ export const getFileThumbnail = <ThrowOnError extends boolean = false>(
  */
 export const listTags = <ThrowOnError extends boolean = false>(
   options?: Options<ListTagsData, ThrowOnError>,
-) =>
+): RequestResult<ListTagsResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<ListTagsResponses, unknown, ThrowOnError>({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/tags",
     ...options,
   });
@@ -841,13 +1093,19 @@ export const listTags = <ThrowOnError extends boolean = false>(
  */
 export const updateTag = <ThrowOnError extends boolean = false>(
   options: Options<UpdateTagData, ThrowOnError>,
-) =>
+): RequestResult<UpdateTagResponses, UpdateTagErrors, ThrowOnError> =>
   (options.client ?? client).put<
     UpdateTagResponses,
     UpdateTagErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/tags/{id}",
     ...options,
     headers: {
@@ -861,9 +1119,15 @@ export const updateTag = <ThrowOnError extends boolean = false>(
  */
 export const listAuthors = <ThrowOnError extends boolean = false>(
   options?: Options<ListAuthorsData, ThrowOnError>,
-) =>
+): RequestResult<ListAuthorsResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<ListAuthorsResponses, unknown, ThrowOnError>({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/library/authors",
     ...options,
   });
@@ -873,14 +1137,20 @@ export const listAuthors = <ThrowOnError extends boolean = false>(
  */
 export const searchFiles = <ThrowOnError extends boolean = false>(
   options?: Options<SearchFilesData, ThrowOnError>,
-) =>
+): RequestResult<SearchFilesResponses, SearchFilesErrors, ThrowOnError> =>
   (options?.client ?? client).get<
     SearchFilesResponses,
     SearchFilesErrors,
     ThrowOnError
   >({
     responseTransformer: searchFilesResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/search/files",
     ...options,
   });
@@ -892,7 +1162,7 @@ export const searchFiles = <ThrowOnError extends boolean = false>(
  */
 export const getAppState = <ThrowOnError extends boolean = false>(
   options?: Options<GetAppStateData, ThrowOnError>,
-) =>
+): RequestResult<GetAppStateResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<GetAppStateResponses, unknown, ThrowOnError>({
     url: "/api/v1/setup/state",
     ...options,
@@ -905,7 +1175,11 @@ export const getAppState = <ThrowOnError extends boolean = false>(
  */
 export const createSetupUser = <ThrowOnError extends boolean = false>(
   options: Options<CreateSetupUserData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateSetupUserResponses,
+  CreateSetupUserErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateSetupUserResponses,
     CreateSetupUserErrors,
@@ -926,7 +1200,7 @@ export const createSetupUser = <ThrowOnError extends boolean = false>(
  */
 export const getAppStatus = <ThrowOnError extends boolean = false>(
   options?: Options<GetAppStatusData, ThrowOnError>,
-) =>
+): RequestResult<GetAppStatusResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<GetAppStatusResponses, unknown, ThrowOnError>(
     { url: "/api/v1/setup/status", ...options },
   );
@@ -938,13 +1212,23 @@ export const getAppStatus = <ThrowOnError extends boolean = false>(
  */
 export const updateUserAccountDetails = <ThrowOnError extends boolean = false>(
   options: Options<UpdateUserAccountDetailsData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateUserAccountDetailsResponses,
+  UpdateUserAccountDetailsErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateUserAccountDetailsResponses,
     UpdateUserAccountDetailsErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/account/details",
     ...options,
     headers: {
@@ -960,13 +1244,23 @@ export const updateUserAccountDetails = <ThrowOnError extends boolean = false>(
  */
 export const updateUserPassword = <ThrowOnError extends boolean = false>(
   options: Options<UpdateUserPasswordData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateUserPasswordResponses,
+  UpdateUserPasswordErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateUserPasswordResponses,
     UpdateUserPasswordErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/account/password",
     ...options,
     headers: {
@@ -980,14 +1274,20 @@ export const updateUserPassword = <ThrowOnError extends boolean = false>(
  */
 export const listPersonalApiKeys = <ThrowOnError extends boolean = false>(
   options?: Options<ListPersonalApiKeysData, ThrowOnError>,
-) =>
+): RequestResult<ListPersonalApiKeysResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     ListPersonalApiKeysResponses,
     unknown,
     ThrowOnError
   >({
     responseTransformer: listPersonalApiKeysResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/account/keys",
     ...options,
   });
@@ -997,14 +1297,24 @@ export const listPersonalApiKeys = <ThrowOnError extends boolean = false>(
  */
 export const createPersonalApiKey = <ThrowOnError extends boolean = false>(
   options: Options<CreatePersonalApiKeyData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreatePersonalApiKeyResponses,
+  CreatePersonalApiKeyErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreatePersonalApiKeyResponses,
     CreatePersonalApiKeyErrors,
     ThrowOnError
   >({
     responseTransformer: createPersonalApiKeyResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/account/keys",
     ...options,
     headers: {
@@ -1018,13 +1328,23 @@ export const createPersonalApiKey = <ThrowOnError extends boolean = false>(
  */
 export const revokePersonalApiKey = <ThrowOnError extends boolean = false>(
   options: Options<RevokePersonalApiKeyData, ThrowOnError>,
-) =>
+): RequestResult<
+  RevokePersonalApiKeyResponses,
+  RevokePersonalApiKeyErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     RevokePersonalApiKeyResponses,
     RevokePersonalApiKeyErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/account/keys/{id}",
     ...options,
   });
@@ -1034,14 +1354,24 @@ export const revokePersonalApiKey = <ThrowOnError extends boolean = false>(
  */
 export const resetPersonalApiKey = <ThrowOnError extends boolean = false>(
   options: Options<ResetPersonalApiKeyData, ThrowOnError>,
-) =>
+): RequestResult<
+  ResetPersonalApiKeyResponses,
+  ResetPersonalApiKeyErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     ResetPersonalApiKeyResponses,
     ResetPersonalApiKeyErrors,
     ThrowOnError
   >({
     responseTransformer: resetPersonalApiKeyResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/account/keys/{id}/reset",
     ...options,
     headers: {
@@ -1055,9 +1385,15 @@ export const resetPersonalApiKey = <ThrowOnError extends boolean = false>(
  */
 export const listRoles = <ThrowOnError extends boolean = false>(
   options?: Options<ListRolesData, ThrowOnError>,
-) =>
+): RequestResult<ListRolesResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<ListRolesResponses, unknown, ThrowOnError>({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/roles",
     ...options,
   });
@@ -1067,9 +1403,15 @@ export const listRoles = <ThrowOnError extends boolean = false>(
  */
 export const listUsers = <ThrowOnError extends boolean = false>(
   options?: Options<ListUsersData, ThrowOnError>,
-) =>
+): RequestResult<ListUsersResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<ListUsersResponses, unknown, ThrowOnError>({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/users",
     ...options,
   });
@@ -1079,13 +1421,19 @@ export const listUsers = <ThrowOnError extends boolean = false>(
  */
 export const createUser = <ThrowOnError extends boolean = false>(
   options: Options<CreateUserData, ThrowOnError>,
-) =>
+): RequestResult<CreateUserResponses, CreateUserErrors, ThrowOnError> =>
   (options.client ?? client).post<
     CreateUserResponses,
     CreateUserErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/users",
     ...options,
     headers: {
@@ -1099,13 +1447,19 @@ export const createUser = <ThrowOnError extends boolean = false>(
  */
 export const deleteUser = <ThrowOnError extends boolean = false>(
   options: Options<DeleteUserData, ThrowOnError>,
-) =>
+): RequestResult<DeleteUserResponses, DeleteUserErrors, ThrowOnError> =>
   (options.client ?? client).delete<
     DeleteUserResponses,
     DeleteUserErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/users/{id}",
     ...options,
   });
@@ -1115,13 +1469,19 @@ export const deleteUser = <ThrowOnError extends boolean = false>(
  */
 export const updateUser = <ThrowOnError extends boolean = false>(
   options: Options<UpdateUserData, ThrowOnError>,
-) =>
+): RequestResult<UpdateUserResponses, UpdateUserErrors, ThrowOnError> =>
   (options.client ?? client).put<
     UpdateUserResponses,
     UpdateUserErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/users/{id}",
     ...options,
     headers: {
@@ -1135,13 +1495,23 @@ export const updateUser = <ThrowOnError extends boolean = false>(
  */
 export const resetUserPassword = <ThrowOnError extends boolean = false>(
   options: Options<ResetUserPasswordData, ThrowOnError>,
-) =>
+): RequestResult<
+  ResetUserPasswordResponses,
+  ResetUserPasswordErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     ResetUserPasswordResponses,
     ResetUserPasswordErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/users/{id}/password",
     ...options,
     headers: {
@@ -1155,13 +1525,19 @@ export const resetUserPassword = <ThrowOnError extends boolean = false>(
  */
 export const listAuthProviders = <ThrowOnError extends boolean = false>(
   options?: Options<ListAuthProvidersData, ThrowOnError>,
-) =>
+): RequestResult<ListAuthProvidersResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     ListAuthProvidersResponses,
     unknown,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/auth_providers",
     ...options,
   });
@@ -1171,13 +1547,19 @@ export const listAuthProviders = <ThrowOnError extends boolean = false>(
  */
 export const listOidcAuthProviders = <ThrowOnError extends boolean = false>(
   options?: Options<ListOidcAuthProvidersData, ThrowOnError>,
-) =>
+): RequestResult<ListOidcAuthProvidersResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     ListOidcAuthProvidersResponses,
     unknown,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/auth_providers/oidc",
     ...options,
   });
@@ -1187,13 +1569,23 @@ export const listOidcAuthProviders = <ThrowOnError extends boolean = false>(
  */
 export const createOidcAuthProvider = <ThrowOnError extends boolean = false>(
   options: Options<CreateOidcAuthProviderData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateOidcAuthProviderResponses,
+  CreateOidcAuthProviderErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateOidcAuthProviderResponses,
     CreateOidcAuthProviderErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/auth_providers/oidc",
     ...options,
     headers: {
@@ -1207,13 +1599,23 @@ export const createOidcAuthProvider = <ThrowOnError extends boolean = false>(
  */
 export const deleteOidcAuthProvider = <ThrowOnError extends boolean = false>(
   options: Options<DeleteOidcAuthProviderData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteOidcAuthProviderResponses,
+  DeleteOidcAuthProviderErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteOidcAuthProviderResponses,
     DeleteOidcAuthProviderErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/auth_providers/oidc/{id}",
     ...options,
   });
@@ -1223,13 +1625,23 @@ export const deleteOidcAuthProvider = <ThrowOnError extends boolean = false>(
  */
 export const getOidcAuthProvider = <ThrowOnError extends boolean = false>(
   options: Options<GetOidcAuthProviderData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetOidcAuthProviderResponses,
+  GetOidcAuthProviderErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetOidcAuthProviderResponses,
     GetOidcAuthProviderErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/auth_providers/oidc/{id}",
     ...options,
   });
@@ -1239,13 +1651,23 @@ export const getOidcAuthProvider = <ThrowOnError extends boolean = false>(
  */
 export const updateOidcAuthProvider = <ThrowOnError extends boolean = false>(
   options: Options<UpdateOidcAuthProviderData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateOidcAuthProviderResponses,
+  UpdateOidcAuthProviderErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateOidcAuthProviderResponses,
     UpdateOidcAuthProviderErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/identity/auth_providers/oidc/{id}",
     ...options,
     headers: {
@@ -1261,9 +1683,15 @@ export const updateOidcAuthProvider = <ThrowOnError extends boolean = false>(
  */
 export const getApiDocs = <ThrowOnError extends boolean = false>(
   options?: Options<GetApiDocsData, ThrowOnError>,
-) =>
+): RequestResult<GetApiDocsResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<GetApiDocsResponses, unknown, ThrowOnError>({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/general/api/docs",
     ...options,
   });
@@ -1273,10 +1701,16 @@ export const getApiDocs = <ThrowOnError extends boolean = false>(
  */
 export const listApiKeys = <ThrowOnError extends boolean = false>(
   options?: Options<ListApiKeysData, ThrowOnError>,
-) =>
+): RequestResult<ListApiKeysResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<ListApiKeysResponses, unknown, ThrowOnError>({
     responseTransformer: listApiKeysResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/general/api/keys",
     ...options,
   });
@@ -1286,14 +1720,20 @@ export const listApiKeys = <ThrowOnError extends boolean = false>(
  */
 export const createApiKey = <ThrowOnError extends boolean = false>(
   options: Options<CreateApiKeyData, ThrowOnError>,
-) =>
+): RequestResult<CreateApiKeyResponses, CreateApiKeyErrors, ThrowOnError> =>
   (options.client ?? client).post<
     CreateApiKeyResponses,
     CreateApiKeyErrors,
     ThrowOnError
   >({
     responseTransformer: createApiKeyResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/general/api/keys",
     ...options,
     headers: {
@@ -1307,13 +1747,19 @@ export const createApiKey = <ThrowOnError extends boolean = false>(
  */
 export const revokeApiKey = <ThrowOnError extends boolean = false>(
   options: Options<RevokeApiKeyData, ThrowOnError>,
-) =>
+): RequestResult<RevokeApiKeyResponses, RevokeApiKeyErrors, ThrowOnError> =>
   (options.client ?? client).delete<
     RevokeApiKeyResponses,
     RevokeApiKeyErrors,
     ThrowOnError
   >({
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/general/api/keys/{id}",
     ...options,
   });
@@ -1323,14 +1769,20 @@ export const revokeApiKey = <ThrowOnError extends boolean = false>(
  */
 export const resetApiKey = <ThrowOnError extends boolean = false>(
   options: Options<ResetApiKeyData, ThrowOnError>,
-) =>
+): RequestResult<ResetApiKeyResponses, ResetApiKeyErrors, ThrowOnError> =>
   (options.client ?? client).post<
     ResetApiKeyResponses,
     ResetApiKeyErrors,
     ThrowOnError
   >({
     responseTransformer: resetApiKeyResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/general/api/keys/{id}/reset",
     ...options,
     headers: {
@@ -1344,14 +1796,20 @@ export const resetApiKey = <ThrowOnError extends boolean = false>(
  */
 export const listActiveTasks = <ThrowOnError extends boolean = false>(
   options?: Options<ListActiveTasksData, ThrowOnError>,
-) =>
+): RequestResult<ListActiveTasksResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     ListActiveTasksResponses,
     unknown,
     ThrowOnError
   >({
     responseTransformer: listActiveTasksResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/general/tasks/active",
     ...options,
   });
@@ -1361,14 +1819,24 @@ export const listActiveTasks = <ThrowOnError extends boolean = false>(
  */
 export const listTaskHistory = <ThrowOnError extends boolean = false>(
   options?: Options<ListTaskHistoryData, ThrowOnError>,
-) =>
+): RequestResult<
+  ListTaskHistoryResponses,
+  ListTaskHistoryErrors,
+  ThrowOnError
+> =>
   (options?.client ?? client).get<
     ListTaskHistoryResponses,
     ListTaskHistoryErrors,
     ThrowOnError
   >({
     responseTransformer: listTaskHistoryResponseTransformer,
-    security: [{ scheme: "bearer", type: "http" }],
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
     url: "/api/v1/general/tasks/history",
     ...options,
   });
@@ -1378,7 +1846,7 @@ export const listTaskHistory = <ThrowOnError extends boolean = false>(
  */
 export const opdsRoot = <ThrowOnError extends boolean = false>(
   options?: Options<OpdsRootData, ThrowOnError>,
-) =>
+): RequestResult<OpdsRootResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<OpdsRootResponses, unknown, ThrowOnError>({
     security: [{ scheme: "basic", type: "http" }],
     url: "/api/v1/opds/",
@@ -1390,7 +1858,7 @@ export const opdsRoot = <ThrowOnError extends boolean = false>(
  */
 export const opdsAll = <ThrowOnError extends boolean = false>(
   options?: Options<OpdsAllData, ThrowOnError>,
-) =>
+): RequestResult<OpdsAllResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<OpdsAllResponses, unknown, ThrowOnError>({
     security: [{ scheme: "basic", type: "http" }],
     url: "/api/v1/opds/all",
@@ -1402,7 +1870,7 @@ export const opdsAll = <ThrowOnError extends boolean = false>(
  */
 export const opdsOpenSearch = <ThrowOnError extends boolean = false>(
   options?: Options<OpdsOpenSearchData, ThrowOnError>,
-) =>
+): RequestResult<OpdsOpenSearchResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     OpdsOpenSearchResponses,
     unknown,
@@ -1418,7 +1886,7 @@ export const opdsOpenSearch = <ThrowOnError extends boolean = false>(
  */
 export const opdsSearch = <ThrowOnError extends boolean = false>(
   options?: Options<OpdsSearchData, ThrowOnError>,
-) =>
+): RequestResult<OpdsSearchResponses, OpdsSearchErrors, ThrowOnError> =>
   (options?.client ?? client).get<
     OpdsSearchResponses,
     OpdsSearchErrors,
@@ -1434,7 +1902,7 @@ export const opdsSearch = <ThrowOnError extends boolean = false>(
  */
 export const opdsShelf = <ThrowOnError extends boolean = false>(
   options?: Options<OpdsShelfData, ThrowOnError>,
-) =>
+): RequestResult<OpdsShelfResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<OpdsShelfResponses, unknown, ThrowOnError>({
     security: [{ scheme: "basic", type: "http" }],
     url: "/api/v1/opds/shelf",
@@ -1446,7 +1914,7 @@ export const opdsShelf = <ThrowOnError extends boolean = false>(
  */
 export const opdsCollections = <ThrowOnError extends boolean = false>(
   options?: Options<OpdsCollectionsData, ThrowOnError>,
-) =>
+): RequestResult<OpdsCollectionsResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<
     OpdsCollectionsResponses,
     unknown,
@@ -1462,7 +1930,7 @@ export const opdsCollections = <ThrowOnError extends boolean = false>(
  */
 export const opdsCollection = <ThrowOnError extends boolean = false>(
   options: Options<OpdsCollectionData, ThrowOnError>,
-) =>
+): RequestResult<OpdsCollectionResponses, OpdsCollectionErrors, ThrowOnError> =>
   (options.client ?? client).get<
     OpdsCollectionResponses,
     OpdsCollectionErrors,
@@ -1478,7 +1946,7 @@ export const opdsCollection = <ThrowOnError extends boolean = false>(
  */
 export const getOpdsFile = <ThrowOnError extends boolean = false>(
   options: Options<GetOpdsFileData, ThrowOnError>,
-) =>
+): RequestResult<GetOpdsFileResponses, GetOpdsFileErrors, ThrowOnError> =>
   (options.client ?? client).get<
     GetOpdsFileResponses,
     GetOpdsFileErrors,
@@ -1494,7 +1962,11 @@ export const getOpdsFile = <ThrowOnError extends boolean = false>(
  */
 export const getOpdsFileThumbnail = <ThrowOnError extends boolean = false>(
   options: Options<GetOpdsFileThumbnailData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetOpdsFileThumbnailResponses,
+  GetOpdsFileThumbnailErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetOpdsFileThumbnailResponses,
     GetOpdsFileThumbnailErrors,

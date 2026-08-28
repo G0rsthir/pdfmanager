@@ -2,7 +2,7 @@ import {
   listFilesOptions,
   listTagsOptions,
 } from "@/api/@tanstack/react-query.gen";
-import type { FileResponse } from "@/api/types.gen";
+import { FileStatusEnum, type FileResponse } from "@/api/types.gen";
 import { QueryView } from "@/components/ui/feedback";
 import { useAPIQuery } from "@/hooks/query";
 import {
@@ -159,11 +159,7 @@ function Section(props: {
 }
 
 function isInProgress(f: FileResponse) {
-  return (
-    f.page_count > 0 &&
-    f.state.current_page > 1 &&
-    f.state.current_page < f.page_count
-  );
+  return f.state.status == FileStatusEnum.READING;
 }
 
 function progressRatio(f: FileResponse) {

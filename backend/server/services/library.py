@@ -7,14 +7,14 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
-from server.const import UNSET, FragmentType, UnsetEnum
+from server.const import UNSET, FileStatusEnum, UnsetEnum
 from server.exceptions import (
     InsufficientPermissionError,
     InvalidActionError,
     UserNotFoundError,
 )
 from server.infrastructure.pdf import PdfFile
-from server.infrastructure.search import ContentFragment, SearchBackend
+from server.infrastructure.search import ContentFragment, FragmentType, SearchBackend
 from server.infrastructure.storage import StorageBackend, stream_bytes, stream_io
 from server.infrastructure.utils import sniff_content_type
 from server.models import (
@@ -245,6 +245,7 @@ class LibraryService:
         current_page: int | None = None,
         scale: str | None = None,
         is_favorite: bool | None = None,
+        status: FileStatusEnum | None = None,
     ):
 
         file = await self._file_repo.get_by_id(file_id)
@@ -264,6 +265,15 @@ class LibraryService:
             if state.current_page != page:
                 state.current_page = page
                 state.last_read_at = datetime.now(UTC)
+            if not status:
+                if page == file.page_count and state.status == FileStatusEnum.READING:
+                    state.status = FileStatusEnum.READ
+
+                if state.status == FileStatusEnum.UNREAD:
+                    state.status = FileStatusEnum.READING
+
+        if status:
+            state.status = status
 
         if scale is not None:
             state.scale = scale
@@ -684,6 +694,7 @@ class LibraryService:
         authors: list[str] | None = None,
         name: str | None = None,
         description: str | None = None,
+        status: FileStatusEnum | None = None,
     ) -> list[FileWithDetails]:
         files = await self._file_repo.list_visible_to_user(
             user_id,
@@ -693,6 +704,7 @@ class LibraryService:
             name=name,
             description=description,
             authors=authors,
+            status=status,
         )
         if not files:
             return []

@@ -1,4 +1,4 @@
-import { formatRelativeTime } from "@/common/date";
+import { formatRelativeTime } from "@/common/format";
 import { PaletteColors } from "@/config/theme";
 import {
   Badge,

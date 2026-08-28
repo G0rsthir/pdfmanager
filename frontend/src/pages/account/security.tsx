@@ -5,8 +5,8 @@ import {
   revokePersonalApiKeyMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { ApiKeyResponse } from "@/api/types.gen";
-import { expiryDatePresets } from "@/common/date";
 import { parseAPIError } from "@/common/error";
+import { expiryDatePresets } from "@/common/format";
 import { GenericIconButton } from "@/components/ui/button";
 import { Block } from "@/components/ui/display";
 import { FormError } from "@/components/ui/error";

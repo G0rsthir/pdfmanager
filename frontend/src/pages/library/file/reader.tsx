@@ -50,7 +50,7 @@ async function saveReadingProgress(params: {
   }
 }
 
-export function FilePage() {
+export function FileReaderPage() {
   const { fileid } = useParams();
 
   const [searchParams] = useSearchParamMulti({

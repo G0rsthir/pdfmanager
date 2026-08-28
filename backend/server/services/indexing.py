@@ -1,9 +1,8 @@
 import asyncio
 from uuid import UUID
 
-from server.const import FragmentType
 from server.infrastructure.pdf import PdfFile
-from server.infrastructure.search import ContentFragment, SearchBackend
+from server.infrastructure.search import ContentFragment, FragmentType, SearchBackend
 from server.infrastructure.storage import StorageBackend
 from server.repositories import FileRepository
 

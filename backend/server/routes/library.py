@@ -138,6 +138,7 @@ async def get_collection_files(
         authors=query.authors,
         description=query.description,
         name=query.name,
+        status=query.status,
     )
 
     return [build_file_response(file, user_id=access_session.user_id) for file in files]
@@ -331,6 +332,7 @@ async def patch_file_state(
         scale=data.scale,
         current_page=data.current_page,
         is_favorite=data.is_favorite,
+        status=data.status,
     )
 
 

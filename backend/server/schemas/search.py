@@ -5,8 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, computed_field
 
-from server.const import FragmentType
-from server.infrastructure.search import SearchHit
+from server.const import FileStatusEnum
+from server.infrastructure.search import FragmentType, SearchHit
 from server.schemas.library import AnnotationResponse, FileResponse
 from server.schemas.query import PaginationQueryParams
 
@@ -58,6 +58,7 @@ class SearchFilesQueryParams(PaginationQueryParams):
     text: str | None = None
     annotation: str | None = None
     label: str | None = None
+    status: FileStatusEnum | None = None
 
     def filters(self) -> list[SearchFilter]:
         out: list[SearchFilter] = []

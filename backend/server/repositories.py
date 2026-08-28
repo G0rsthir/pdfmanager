@@ -8,7 +8,7 @@ from sqlalchemy import and_, delete, exists, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server import models
-from server.const import RESOURCE_PERMISSIONS, SessionTypeEnum
+from server.const import RESOURCE_PERMISSIONS, FileStatusEnum, SessionTypeEnum
 from server.exceptions import (
     AnnotationNotFoundError,
     AuthProviderNotFoundError,
@@ -371,6 +371,7 @@ class FileRepository(Repository):
         authors: list[str] | None = None,
         name: str | None = None,
         description: str | None = None,
+        status: FileStatusEnum | None = None,
     ) -> list[models.ORMFile]:
 
         # Resources the user has ANY direct grant on (collections or files)
@@ -409,6 +410,23 @@ class FileRepository(Repository):
                 models.ORMFileState.is_favorite.is_(True),
             )
             stmt = stmt.where(favorited if is_favorite else ~favorited)
+
+        if status is not None:
+            with_status = exists().where(
+                models.ORMFileState.file_id == models.ORMFile.id,
+                models.ORMFileState.user_id == user_id,
+                models.ORMFileState.status == status,
+            )
+
+            if status == FileStatusEnum.UNREAD:
+                # A file the user never opened has no state row at all
+                has_state = exists().where(
+                    models.ORMFileState.file_id == models.ORMFile.id,
+                    models.ORMFileState.user_id == user_id,
+                )
+                stmt = stmt.where(or_(with_status, ~has_state))
+            else:
+                stmt = stmt.where(with_status)
 
         if tags:
             for tag in tags:
