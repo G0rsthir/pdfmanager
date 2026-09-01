@@ -7,21 +7,21 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard] (>=0.139.0,<1.0.0)",
-    "pydantic-settings (>=2.14.2,<3.0.0)",
-    "typer (>=0.26.8,<1.0.0)",
-    "uvicorn (>=0.50.2,<1.0.0)",
-    "sqlalchemy (>=2.0.51,<3.0.0)",
-    "alembic (>=1.18.5,<2.0.0)",
+    "fastapi[standard] (>=0.141.1,<1.0.0)",
+    "pydantic-settings (>=2.15.0,<3.0.0)",
+    "typer (>=0.27.2,<1.0.0)",
+    "uvicorn (>=0.52.4,<1.0.0)",
+    "sqlalchemy (>=2.0.52,<3.0.0)",
+    "alembic (>=1.19.1,<2.0.0)",
     "aiosqlite (>=0.22.1,<1.0.0)",
     "pyjwt (>=2.13.0,<3.0.0)",
     "bcrypt (>=5.0.0,<6.0.0)",
     "python-multipart (>=0.0.32,<1.0.0)",
     "aiofiles (>=25.1.0,<26.0.0)",
-    "pypdf (>=6.14.2,<7.0.0)",
+    "pypdf (>=6.16.2,<7.0.0)",
     "authlib (>=1.7.2,<2.0.0)",
     "itsdangerous (>=2.2.0,<3.0.0)",
-    "pypdfium2 (>=5.11.0,<6.0.0)",
+    "pypdfium2 (>=5.13.0,<6.0.0)",
     "pillow (>=12.3.0,<13.0.0)",
 ]
 
@@ -73,6 +73,6 @@ pythonpath = ["."]
 
 [dependency-groups]
 dev = [
-    "ruff (>=0.15.20,<0.16.0)",
+    "ruff (>=0.16.5,<0.17.0)",
     "pytest (>=9.1.1,<10.0.0)"
 ]
