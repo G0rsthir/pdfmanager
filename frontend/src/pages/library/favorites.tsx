@@ -5,7 +5,8 @@ import { useAPIQuery } from "@/hooks/query";
 import { Group, Heading, Stack } from "@chakra-ui/react";
 import { LuStar } from "react-icons/lu";
 import { Empty } from "../shared/common";
-import { FileList, LayoutSwitch } from "./shared/layout";
+import { FileBrowser } from "./shared/browser";
+import { LayoutSwitch } from "./shared/layout";
 
 export function FavoritesPage() {
   const query = useAPIQuery({
@@ -41,7 +42,7 @@ function FavoriteFileView({ files }: { files: FileResponse[] }) {
         />
       )}
 
-      {files && <FileList files={files} layoutKey="favorites" />}
+      {files && <FileBrowser files={files} layoutKey="favorites" />}
     </Stack>
   );
 }

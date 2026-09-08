@@ -1,7 +1,7 @@
 import { useGlobalStore } from "@/store";
 import { useShallow } from "zustand/shallow";
 
-import type { AccessScope } from "@/config/const";
+import { AccessScope, ResourcePermissionCapability } from "@/api/types.gen";
 import {
   loadSession,
   logout,
@@ -32,4 +32,29 @@ export function useHasScopes(...scopes: AccessScope[]) {
   return (
     scopes.every((scope) => session?.user.role.scopes.includes(scope)) ?? false
   );
+}
+
+const CAPABILITY_SCOPE: Record<ResourcePermissionCapability, AccessScope> = {
+  [ResourcePermissionCapability.READ]: AccessScope.LIBRARY_READ,
+  [ResourcePermissionCapability.ANNOTATE]: AccessScope.LIBRARY_WRITE,
+  [ResourcePermissionCapability.WRITE]: AccessScope.LIBRARY_WRITE,
+  [ResourcePermissionCapability.DELETE]: AccessScope.LIBRARY_WRITE,
+  [ResourcePermissionCapability.MANAGE_PERMISSIONS]: AccessScope.LIBRARY_WRITE,
+  [ResourcePermissionCapability.SYNC_PROGRESS]: AccessScope.LIBRARY_WRITE,
+};
+
+export function useCan(resource?: {
+  capabilities: readonly ResourcePermissionCapability[];
+}) {
+  const { session } = useAuth();
+
+  const scopes = session?.user.role.scopes;
+  const capabilities = resource?.capabilities;
+
+  return (capability: ResourcePermissionCapability) => {
+    return (
+      (capabilities?.includes(capability) ?? false) &&
+      (scopes?.includes(CAPABILITY_SCOPE[capability]) ?? false)
+    );
+  };
 }

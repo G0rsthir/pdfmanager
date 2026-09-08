@@ -1,12 +1,12 @@
 from datetime import timedelta
 from uuid import UUID
 
+from server.const import RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES, ResourcePermissionCapability, ResourcePermissionLevel
 from server.infrastructure.cache import Cache
 from server.infrastructure.database.interface import SessionFactory
 from server.models import ORMSession, ORMUserRole
 from server.repositories import RoleRepository, SessionRepository
 from server.schemas.security import AccessSessionContext
-from server.schemas.types import Scopes
 
 
 class PermissionResolver:
@@ -45,13 +45,19 @@ class PermissionResolver:
 
         # Service session validation
         if session.scopes is not None:
-            session_scopes = Scopes.from_str(session.scopes).to_list()
-            return all(s in session_scopes for s in scopes)
+            return all(s in session.scopes for s in scopes)
 
         # Interactive session validation
         role = await self.get_role(context.user_id)
         if not role:
             return False
 
-        role_scopes = Scopes.from_str(role.scopes).to_list()
-        return all(s in role_scopes for s in scopes)
+        return all(s in role.scopes for s in scopes)
+
+
+def permission_levels_with(capability: ResourcePermissionCapability) -> list[ResourcePermissionLevel]:
+    return [level for level, caps in RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES.items() if capability in caps]
+
+
+def permission_can(level: ResourcePermissionLevel, capability: ResourcePermissionCapability) -> bool:
+    return capability in RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES[level]

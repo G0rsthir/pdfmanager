@@ -2,7 +2,7 @@ from logging import getLogger
 from typing import Annotated, Optional
 
 import uvicorn
-from typer import Option, Typer
+from typer import Argument, Option, Typer
 
 from server.const import EnvironmentsEnum
 from server.dependencies import get_auth_provider_repository
@@ -71,6 +71,17 @@ def revision(
     """
     container = bootstrap_runtime(enviroment=EnvironmentsEnum.DEVELOPMENT)
     container.migrations.revision(message=message, autogenerate=autogenerate)
+
+
+@database_cli.command()
+def downgrade(
+    revision: Annotated[str, Argument(help="The target revision number to downgrade to")] = "-1",
+):
+    """
+    Downgrade the database to the specified revision.
+    """
+    container = bootstrap_runtime(enviroment=EnvironmentsEnum.DEVELOPMENT)
+    container.migrations.downgrade(revision=revision)
 
 
 @cli.command(name="disable-sso")

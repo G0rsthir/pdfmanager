@@ -32,7 +32,7 @@ export function ColorModeProvider(props: ColorModeProviderProps) {
   );
 }
 
-type ColorModeButtonProps = Omit<IconButtonProps, "aria-label">;
+type ColorModeButtonProps = IconButtonProps;
 
 export const ColorModeButton = function ColorModeButton({
   ref,
@@ -44,7 +44,6 @@ export const ColorModeButton = function ColorModeButton({
       <GenericIconButton
         onClick={toggleColorMode}
         variant="ghost"
-        aria-label="Toggle color mode"
         size="sm"
         ref={ref}
         {...props}
@@ -205,7 +204,6 @@ export function ColorPaletteSelectList(props: ColorPaletteSelectListProps) {
             key={color.value}
             value={color.value}
             colorPalette={color.value}
-            aria-label={color.label}
             title={color.label}
             cursor="pointer"
           >

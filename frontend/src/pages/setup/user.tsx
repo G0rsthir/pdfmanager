@@ -1,8 +1,8 @@
 import { createSetupUser } from "@/api/sdk.gen";
 import type { CreateSetupUserData } from "@/api/types.gen";
 import { useAuth } from "@/common/auth/hooks";
-import { FormError } from "@/components/ui/error";
 import { Form } from "@/components/ui/form/container";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useFormMutation } from "@/hooks/form";
 import {
@@ -132,7 +132,7 @@ export function SetupUser({
                     </Field.Root>
                   )}
                 />
-                <FormError errors={form.state.errorMap.onSubmit} />
+                <SubscribeFormError form={form} />
                 <Button type="submit" w="full">
                   Sign in
                 </Button>

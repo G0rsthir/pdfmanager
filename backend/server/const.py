@@ -7,8 +7,6 @@ LOGGING_LEVEL = Literal["DEBUG", "INFO", "ERROR"]
 
 LOGGING_LEVEL_WITH_DEFAULT = Literal["DEFAULT"] | LOGGING_LEVEL
 
-RESOURCE_PERMISSIONS = Literal["owner", "read", "modify"]
-
 
 class UnsetEnum(Enum):
     UNSET = "UNSET"
@@ -39,11 +37,13 @@ class RefreshScopeEnum(StrEnum):
     TOKEN_REFRESH = "token:refresh"
 
 
-class AccessScopeEnum(StrEnum):
+class AccessScope(StrEnum):
     ADMIN_READ = "admin:read"
     ADMIN_WRITE = "admin:write"
     USER_READ = "user:read"
     USER_WRITE = "user:write"
+    LIBRARY_READ = "library:read"
+    LIBRARY_WRITE = "library:write"
 
 
 class SessionTypeEnum(StrEnum):
@@ -69,3 +69,58 @@ class FileStatusEnum(StrEnum):
     DROPPED = "dropped"
     READ = "read"
     WANT_TO_READ = "want_to_read"
+
+
+class AssignmentLockReason(StrEnum):
+    FORBIDDEN = "forbidden"
+    INHERITED = "inherited"
+    SELF = "self"
+    OWNER = "owner"
+
+
+class ResourcePermissionCapability(StrEnum):
+    READ = "read"
+    ANNOTATE = "annotate"
+    WRITE = "write"
+    DELETE = "delete"
+    MANAGE_PERMISSIONS = "manage_permissions"
+    SYNC_PROGRESS = "sync_progress"
+
+
+class ResourcePermissionLevel(StrEnum):
+    READ = "read"
+    CONTRIBUTE = "contribute"
+    MODIFY = "modify"
+    OWNER = "owner"
+
+
+RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES: Final[
+    dict[ResourcePermissionLevel, frozenset[ResourcePermissionCapability]]
+] = {
+    ResourcePermissionLevel.READ: frozenset(
+        {ResourcePermissionCapability.READ, ResourcePermissionCapability.SYNC_PROGRESS}
+    ),
+    ResourcePermissionLevel.CONTRIBUTE: frozenset(
+        {
+            ResourcePermissionCapability.READ,
+            ResourcePermissionCapability.ANNOTATE,
+            ResourcePermissionCapability.SYNC_PROGRESS,
+        }
+    ),
+    ResourcePermissionLevel.MODIFY: frozenset(
+        {
+            ResourcePermissionCapability.READ,
+            ResourcePermissionCapability.ANNOTATE,
+            ResourcePermissionCapability.WRITE,
+            ResourcePermissionCapability.DELETE,
+            ResourcePermissionCapability.SYNC_PROGRESS,
+        }
+    ),
+    ResourcePermissionLevel.OWNER: frozenset(ResourcePermissionCapability),
+}
+
+RESOURCE_PERMISSIONS_LEVEL_WRITABLE = Literal[
+    ResourcePermissionLevel.READ,
+    ResourcePermissionLevel.CONTRIBUTE,
+    ResourcePermissionLevel.MODIFY,
+]

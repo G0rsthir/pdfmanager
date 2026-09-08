@@ -17,7 +17,6 @@ function createMarker(
   marker.type = "button";
   marker.className = ANNOTATION_MARKER_CLASS;
   marker.title = annotation.body;
-  marker.setAttribute("aria-label", `Open annotation: ${annotation.body}`);
 
   marker.style.top = `${first.top * 100}%`;
   marker.style.height = `${(last.top + last.height - first.top) * 100}%`;

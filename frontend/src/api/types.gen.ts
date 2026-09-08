@@ -5,6 +5,23 @@ export type ClientOptions = {
 };
 
 /**
+ * AccessScope
+ */
+export const AccessScope = {
+  ADMIN_READ: "admin:read",
+  ADMIN_WRITE: "admin:write",
+  USER_READ: "user:read",
+  USER_WRITE: "user:write",
+  LIBRARY_READ: "library:read",
+  LIBRARY_WRITE: "library:write",
+} as const;
+
+/**
+ * AccessScope
+ */
+export type AccessScope = (typeof AccessScope)[keyof typeof AccessScope];
+
+/**
  * AccessToken
  *
  * API access token.
@@ -88,7 +105,7 @@ export type ApiKeyCreateRequest = {
    * User Id
    */
   user_id: string;
-  scopes: Scopes;
+  scopes: RequiredScopeList;
 };
 
 /**
@@ -121,7 +138,7 @@ export type ApiKeyPersonalCreate = {
    * Expires At
    */
   expires_at: Date;
-  scopes: Scopes;
+  scopes: RequiredScopeList;
 };
 
 /**
@@ -158,12 +175,11 @@ export type ApiKeyResponse = {
    * User Id
    */
   user_id: string;
-  scopes: Scopes;
-  user?: UserSummaryResponse | null;
   /**
-   * Scopes Str
+   * Scopes
    */
-  readonly scopes_str: string;
+  scopes: Array<AccessScope>;
+  user?: UserSummaryResponse | null;
   /**
    * Is Expired
    */
@@ -196,6 +212,22 @@ export type AppStateResponse = {
 };
 
 /**
+ * AssignmentLockReason
+ */
+export const AssignmentLockReason = {
+  FORBIDDEN: "forbidden",
+  INHERITED: "inherited",
+  SELF: "self",
+  OWNER: "owner",
+} as const;
+
+/**
+ * AssignmentLockReason
+ */
+export type AssignmentLockReason =
+  (typeof AssignmentLockReason)[keyof typeof AssignmentLockReason];
+
+/**
  * AssignmentResponse
  */
 export type AssignmentResponse = {
@@ -208,16 +240,11 @@ export type AssignmentResponse = {
    * Inherited From
    */
   inherited_from?: string | null;
+  permission: ResourcePermissionLevel;
   /**
-   * Permission
+   * Why the current user cannot change this grant
    */
-  permission: "owner" | "read" | "modify";
-  /**
-   * Is Read Only By Current User
-   *
-   * Whether current user can only read this assignment
-   */
-  readonly is_read_only_by_current_user: boolean;
+  readonly lock_reason: AssignmentLockReason | null;
 };
 
 /**
@@ -443,6 +470,60 @@ export type BodyUploadFile = {
 };
 
 /**
+ * BulkDeleteFilesRequest
+ */
+export type BulkDeleteFilesRequest = {
+  /**
+   * Ids
+   */
+  ids: Array<string>;
+};
+
+/**
+ * BulkPatchFileStateRequest
+ */
+export type BulkPatchFileStateRequest = {
+  /**
+   * Ids
+   */
+  ids: Array<string>;
+  status?: FileStatusEnum | null;
+  /**
+   * Is Favorite
+   */
+  is_favorite?: boolean | null;
+};
+
+/**
+ * BulkPatchFilesRequest
+ */
+export type BulkPatchFilesRequest = {
+  /**
+   * Ids
+   */
+  ids: Array<string>;
+  /**
+   * Collection Id
+   */
+  collection_id?: string | null;
+  tags?: BulkTagsOperation | null;
+};
+
+/**
+ * BulkTagsOperation
+ */
+export type BulkTagsOperation = {
+  /**
+   * Add
+   */
+  add?: Array<string>;
+  /**
+   * Remove
+   */
+  remove?: Array<string>;
+};
+
+/**
  * CollectionResponse
  */
 export type CollectionResponse = {
@@ -486,15 +567,13 @@ export type CollectionWithDetailsResponse = {
   entity_type: "folder" | "group";
   owner: UserSummaryResponse;
   /**
-   * Is Shared With Current User
+   * Capabilities
    */
-  readonly is_shared_with_current_user: boolean;
+  readonly capabilities: Array<ResourcePermissionCapability>;
   /**
-   * Is Read Only By Current User
-   *
-   * Whether current user can only read this collection
+   * Is Shared
    */
-  readonly is_read_only_by_current_user: boolean;
+  readonly is_shared: boolean;
 };
 
 /**
@@ -646,6 +725,10 @@ export type FileResponse = {
    */
   original_name: string;
   /**
+   * Storage Key
+   */
+  storage_key: string;
+  /**
    * File Hash
    */
   file_hash?: string | null;
@@ -663,11 +746,9 @@ export type FileResponse = {
    */
   readonly tags_name_list: Array<string>;
   /**
-   * Is Read Only By Current User
-   *
-   * Whether current user can only read this file
+   * Capabilities
    */
-  readonly is_read_only_by_current_user: boolean;
+  readonly capabilities: Array<ResourcePermissionCapability>;
 };
 
 /**
@@ -763,7 +844,7 @@ export type InviteToCollectionRequest = {
   /**
    * Permission
    */
-  permission: "read" | "modify";
+  permission: "read" | "contribute" | "modify";
 };
 
 /**
@@ -795,9 +876,9 @@ export type LibraryTreeNode = {
    */
   readonly is_shared: boolean;
   /**
-   * Is Read Only By Current User
+   * Capabilities
    */
-  readonly is_read_only_by_current_user: boolean;
+  readonly capabilities: Array<ResourcePermissionCapability>;
 };
 
 /**
@@ -926,6 +1007,42 @@ export type PatchFileStateRequest = {
   status?: FileStatusEnum | null;
 };
 
+export type RequiredScopeList = ScopeList;
+
+/**
+ * ResourcePermissionCapability
+ */
+export const ResourcePermissionCapability = {
+  READ: "read",
+  ANNOTATE: "annotate",
+  WRITE: "write",
+  DELETE: "delete",
+  MANAGE_PERMISSIONS: "manage_permissions",
+  SYNC_PROGRESS: "sync_progress",
+} as const;
+
+/**
+ * ResourcePermissionCapability
+ */
+export type ResourcePermissionCapability =
+  (typeof ResourcePermissionCapability)[keyof typeof ResourcePermissionCapability];
+
+/**
+ * ResourcePermissionLevel
+ */
+export const ResourcePermissionLevel = {
+  READ: "read",
+  CONTRIBUTE: "contribute",
+  MODIFY: "modify",
+  OWNER: "owner",
+} as const;
+
+/**
+ * ResourcePermissionLevel
+ */
+export type ResourcePermissionLevel =
+  (typeof ResourcePermissionLevel)[keyof typeof ResourcePermissionLevel];
+
 /**
  * ResourcePermissionResponse
  */
@@ -982,17 +1099,13 @@ export type RoleResponse = {
    * Entity Type
    */
   entity_type: string;
-  scopes: Scopes;
   /**
-   * Scopes Str
+   * Scopes
    */
-  readonly scopes_str: string;
+  scopes: Array<AccessScope>;
 };
 
-/**
- * Scopes
- */
-export type Scopes = Array<string>;
+export type ScopeList = Array<AccessScope>;
 
 /**
  * SearchHitResponse
@@ -1201,7 +1314,7 @@ export type UpdateCollectionPermissionRequest = {
   /**
    * Permission
    */
-  permission: "read" | "modify";
+  permission: "read" | "contribute" | "modify";
 };
 
 /**
@@ -1425,7 +1538,10 @@ export type ApiKeyResponseWritable = {
    * User Id
    */
   user_id: string;
-  scopes: Scopes;
+  /**
+   * Scopes
+   */
+  scopes: Array<AccessScope>;
   user?: UserSummaryResponse | null;
 };
 
@@ -1461,10 +1577,7 @@ export type AssignmentResponseWritable = {
    * Inherited From
    */
   inherited_from?: string | null;
-  /**
-   * Permission
-   */
-  permission: "owner" | "read" | "modify";
+  permission: ResourcePermissionLevel;
 };
 
 /**
@@ -1581,6 +1694,10 @@ export type FileResponseWritable = {
    */
   original_name: string;
   /**
+   * Storage Key
+   */
+  storage_key: string;
+  /**
    * File Hash
    */
   file_hash?: string | null;
@@ -1658,6 +1775,8 @@ export type PaginatedResponseTaskHistoryResponseWritable = {
   page_index?: number;
 };
 
+export type RequiredScopeListWritable = ScopeListWritable;
+
 /**
  * ResourcePermissionResponse
  */
@@ -1680,32 +1799,7 @@ export type ResourcePermissionResponseWritable = {
   assignments: Array<AssignmentResponseWritable>;
 };
 
-/**
- * RoleResponse
- */
-export type RoleResponseWritable = {
-  /**
-   * Id
-   */
-  id: string;
-  /**
-   * Name
-   */
-  name: string;
-  /**
-   * Description
-   */
-  description: string;
-  /**
-   * Is Protected
-   */
-  is_protected: boolean;
-  /**
-   * Entity Type
-   */
-  entity_type: string;
-  scopes: Scopes;
-};
+export type ScopeListWritable = Array<AccessScope>;
 
 /**
  * SetupUser
@@ -1829,59 +1923,6 @@ export type UserCreateRequestWritable = {
    * Role Id
    */
   role_id: string;
-};
-
-/**
- * UserResponse
- */
-export type UserResponseWritable = {
-  /**
-   * Id
-   */
-  id: string;
-  /**
-   * Name
-   */
-  name: string;
-  /**
-   * Email
-   */
-  email: string;
-  /**
-   * Auth Provider Id
-   */
-  auth_provider_id: string;
-  /**
-   * Is Enabled
-   */
-  is_enabled: boolean;
-  /**
-   * Role Id
-   */
-  role_id: string;
-  role: RoleResponseWritable;
-  /**
-   * Is External
-   */
-  is_external: boolean;
-  auth_provider: AuthProviderResponse;
-};
-
-/**
- * UserSessionResponse
- *
- * Provides relevant information about the logged-in user. Should not include authentication data.
- */
-export type UserSessionResponseWritable = {
-  /**
-   * User Id
-   */
-  user_id: string;
-  user: UserResponseWritable;
-  /**
-   * Session Id
-   */
-  session_id: string;
 };
 
 export type GetCurrentSessionData = {
@@ -2475,6 +2516,78 @@ export type UpdateFileErrors = {
 export type UpdateFileError = UpdateFileErrors[keyof UpdateFileErrors];
 
 export type UpdateFileResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type PatchFilesBulkData = {
+  body: BulkPatchFilesRequest;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/files/patch-bulk";
+};
+
+export type PatchFilesBulkErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type PatchFilesBulkError =
+  PatchFilesBulkErrors[keyof PatchFilesBulkErrors];
+
+export type PatchFilesBulkResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type DeleteFilesBulkData = {
+  body: BulkDeleteFilesRequest;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/files/delete-bulk";
+};
+
+export type DeleteFilesBulkErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type DeleteFilesBulkError =
+  DeleteFilesBulkErrors[keyof DeleteFilesBulkErrors];
+
+export type DeleteFilesBulkResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type PatchFilesStatesBulkData = {
+  body: BulkPatchFileStateRequest;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/files/states/update-bulk";
+};
+
+export type PatchFilesStatesBulkErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type PatchFilesStatesBulkError =
+  PatchFilesStatesBulkErrors[keyof PatchFilesStatesBulkErrors];
+
+export type PatchFilesStatesBulkResponses = {
   /**
    * Successful Response
    */

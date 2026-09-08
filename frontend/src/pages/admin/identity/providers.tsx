@@ -7,18 +7,20 @@ import {
   updateOidcAuthProviderMutation,
 } from "@/api/@tanstack/react-query.gen";
 import { listOidcAuthProviders } from "@/api/sdk.gen";
-import type {
-  AuthProviderOidcResponse,
-  AuthProviderResponse,
-  OidcGroupRuleInput,
-  RoleResponse,
+import {
+  AccessScope,
+  type AuthProviderOidcResponse,
+  type AuthProviderResponse,
+  type OidcGroupRuleInput,
+  type RoleResponse,
 } from "@/api/types.gen";
+import { useHasScopes } from "@/common/auth/hooks";
 import { parseAPIError } from "@/common/error";
 import { AdminWriteButton, GenericIconButton } from "@/components/ui/button";
 import { SettingsOption } from "@/components/ui/display";
-import { FormError } from "@/components/ui/error";
 import { MultiQueryView, QueryView } from "@/components/ui/feedback";
 import { Form } from "@/components/ui/form/container";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import {
@@ -218,6 +220,8 @@ function ProviderOidcCard({ provider }: { provider: AuthProviderResponse }) {
     ...listRolesOptions(),
   });
 
+  const canWrite = useHasScopes(AccessScope.ADMIN_WRITE);
+
   return (
     <Card.Root>
       <Card.Body>
@@ -232,6 +236,7 @@ function ProviderOidcCard({ provider }: { provider: AuthProviderResponse }) {
                 color="fg.error"
                 _hover={{ bg: "bg.error", color: "fg.error" }}
                 onClick={onDeleteOpenToggle}
+                disabled={!canWrite}
               >
                 Delete
               </Menu.Item>
@@ -247,6 +252,7 @@ function ProviderOidcCard({ provider }: { provider: AuthProviderResponse }) {
                   provider={data[0]}
                   onClose={onToggle}
                   roles={data[1]}
+                  readonly={!canWrite}
                 />
               )}
             </MultiQueryView>
@@ -266,8 +272,9 @@ function OidcProviderView(props: {
   provider: AuthProviderOidcResponse;
   onClose: () => void;
   roles: RoleResponse[];
+  readonly?: boolean;
 }) {
-  const { provider, onClose, roles } = props;
+  const { provider, readonly, onClose, roles } = props;
 
   const shouldRedirect = useRef(false);
 
@@ -327,7 +334,11 @@ function OidcProviderView(props: {
             <form.Field
               name="name"
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid} required>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  required
+                  disabled={readonly}
+                >
                   <Input
                     size="sm"
                     value={fieldState.value}
@@ -350,7 +361,11 @@ function OidcProviderView(props: {
             <form.Field
               name="auto_discovery_url"
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid} required>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  required
+                  disabled={readonly}
+                >
                   <Input
                     value={fieldState.value}
                     onChange={(e) => handleChange(e.target.value)}
@@ -374,7 +389,11 @@ function OidcProviderView(props: {
             <form.Field
               name="client_id"
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid} required>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  required
+                  disabled={readonly}
+                >
                   <Input
                     size="sm"
                     value={fieldState.value}
@@ -398,7 +417,11 @@ function OidcProviderView(props: {
             <form.Field
               name="client_secret"
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid} required>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  required
+                  disabled={readonly}
+                >
                   <Input
                     size="sm"
                     value={fieldState.value}
@@ -421,7 +444,10 @@ function OidcProviderView(props: {
             <form.Field
               name="additional_scopes"
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid}>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  disabled={readonly}
+                >
                   <Input
                     value={fieldState.value}
                     onChange={(e) => handleChange(e.target.value)}
@@ -444,7 +470,11 @@ function OidcProviderView(props: {
             <form.Field
               name="group_claim_name"
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid} required>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  required
+                  disabled={readonly}
+                >
                   <Input
                     value={fieldState.value}
                     onChange={(e) => handleChange(e.target.value)}
@@ -464,7 +494,11 @@ function OidcProviderView(props: {
                 Map OIDC group values to application roles
               </Text>
             </Stack>
-            <GroupRulesEditor FormField={form.Field} roles={roles} />
+            <GroupRulesEditor
+              FormField={form.Field}
+              roles={roles}
+              readonly={readonly}
+            />
           </Stack>
           <Separator />
 
@@ -477,7 +511,10 @@ function OidcProviderView(props: {
             <form.Field
               name="is_enabled"
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid}>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  disabled={readonly}
+                >
                   <Switch.Root
                     checked={fieldState.value}
                     onCheckedChange={({ checked }) => handleChange(checked)}
@@ -516,7 +553,10 @@ function OidcProviderView(props: {
                 },
               }}
               children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root invalid={!fieldState.meta.isValid}>
+                <Field.Root
+                  invalid={!fieldState.meta.isValid}
+                  disabled={readonly}
+                >
                   <Switch.Root
                     checked={fieldState.value}
                     onCheckedChange={({ checked }) => handleChange(checked)}
@@ -529,7 +569,7 @@ function OidcProviderView(props: {
               )}
             />
           </SettingsOption>
-          <FormError errors={form.state.errorMap.onSubmit} />
+          <SubscribeFormError form={form} />
           <Group justifyContent="flex-end">
             <AdminWriteButton
               size="sm"
@@ -564,8 +604,9 @@ function GroupRulesEditor(props: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   FormField: React.FC<any>;
   roles: RoleResponse[];
+  readonly?: boolean;
 }) {
-  const { FormField, roles } = props;
+  const { FormField, roles, readonly } = props;
 
   const roleList = useMemo(() => {
     return createListCollection({
@@ -599,7 +640,10 @@ function GroupRulesEditor(props: {
                   handleChange: (value: string) => void;
                   handleBlur: () => void;
                 }) => (
-                  <Field.Root invalid={!subField.state.meta.isValid}>
+                  <Field.Root
+                    invalid={!subField.state.meta.isValid}
+                    disabled={readonly}
+                  >
                     <Input
                       placeholder="Group name"
                       value={subField.state.value}
@@ -620,7 +664,10 @@ function GroupRulesEditor(props: {
                   handleChange: (value: string) => void;
                   handleBlur: () => void;
                 }) => (
-                  <Field.Root invalid={!subField.state.meta.isValid}>
+                  <Field.Root
+                    invalid={!subField.state.meta.isValid}
+                    disabled={readonly}
+                  >
                     <Select.Root
                       collection={roleList}
                       onValueChange={(e) => subField.handleChange(e.value?.[0])}
@@ -657,7 +704,9 @@ function GroupRulesEditor(props: {
                 cursor="pointer"
                 color="fg.muted"
                 _hover={{ color: "fg.error" }}
-                onClick={() => field.removeValue(i)}
+                onClick={() => {
+                  if (!readonly) field.removeValue(i);
+                }}
               >
                 <LuMinus />
               </Icon>
@@ -665,9 +714,10 @@ function GroupRulesEditor(props: {
                 cursor="pointer"
                 color="fg.muted"
                 _hover={{ color: "fg" }}
-                onClick={() =>
-                  field.insertValue(i + 1, { group: "", role_id: "" })
-                }
+                onClick={() => {
+                  if (!readonly)
+                    field.insertValue(i + 1, { group: "", role_id: "" });
+                }}
               >
                 <LuPlus />
               </Icon>
@@ -692,12 +742,18 @@ function GroupRulesEditor(props: {
 function CreateProviderAction() {
   const { open, onClose, onOpen } = useDisclosure();
 
+  const canWrite = useHasScopes(AccessScope.ADMIN_WRITE);
+
   return (
     <>
       <Button size="sm" onClick={onOpen}>
         <LuPlus /> Add Provider
       </Button>
-      <CreateOidcProviderDialog open={open} onClose={onClose} />
+      <CreateOidcProviderDialog
+        open={open}
+        onClose={onClose}
+        readonly={!canWrite}
+      />
     </>
   );
 }
@@ -705,8 +761,9 @@ function CreateProviderAction() {
 function CreateOidcProviderDialog(props: {
   open: boolean;
   onClose: () => void;
+  readonly?: boolean;
 }) {
-  const { open, onClose } = props;
+  const { open, readonly, onClose } = props;
 
   const { form } = useFormMutation({
     formOptions: {
@@ -732,13 +789,17 @@ function CreateOidcProviderDialog(props: {
       title="Create OIDC provider"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
-      confirmBtnType="adminWrite"
       submitOnEnter
+      disabled={readonly}
     >
       <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Name <Field.RequiredIndicator />
             </Field.Label>
@@ -751,7 +812,7 @@ function CreateOidcProviderDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }
@@ -769,11 +830,8 @@ function DeleteOidcProviderDialog(props: {
       showSuccessNotification("Provider deleted successfully");
       onClose();
     },
-    onError(error) {
-      showErrorNotification(
-        "Provider deletion failed",
-        parseAPIError(error).message,
-      );
+    onApiError(error) {
+      showErrorNotification("Provider deletion failed", error.message);
     },
   });
 
@@ -785,7 +843,6 @@ function DeleteOidcProviderDialog(props: {
       onConfirm={() => deleteRequest({ path: { id: providerId } })}
       confirmBtnText="Delete"
       confirmBtnPalette="red"
-      confirmBtnType="adminWrite"
     >
       This action cannot be undone. This will permanently delete this provider.
     </ConfirmModal>

@@ -4,11 +4,8 @@ import type {
   HttpValidationError,
 } from "@/api/types.gen";
 import { expiryDatePresets } from "@/common/format";
-import { FormError } from "@/components/ui/error";
-import {
-  FormModal,
-  type FormModalButtonType,
-} from "@/components/ui/form/modal";
+import { SubscribeFormError } from "@/components/ui/form/fields";
+import { FormModal, type FormModalProps } from "@/components/ui/form/modal";
 import { queryClient } from "@/config/query";
 import { useFormMutation } from "@/hooks/form";
 import { Field } from "@ark-ui/react";
@@ -93,7 +90,7 @@ interface ResetApiKeyDialogProps<TVariables extends ResetApiKeyVariables> {
   open: boolean;
   onClose: () => void;
   keyId: string;
-  confirmBtnType?: FormModalButtonType;
+  confirmBtnType?: FormModalProps["confirmBtnType"];
   mutationOptions: () => UseMutationOptions<
     ApiKeyCreateResultResponse,
     HttpValidationError,
@@ -186,7 +183,7 @@ export function ResetApiKeyDialog<TVariables extends ResetApiKeyVariables>(
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }

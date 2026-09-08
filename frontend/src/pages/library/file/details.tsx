@@ -1,12 +1,16 @@
 import { getCollectionOptions } from "@/api/@tanstack/react-query.gen";
-import type { FileResponse } from "@/api/types.gen";
+import {
+  ResourcePermissionCapability,
+  type FileResponse,
+} from "@/api/types.gen";
+import { useCan } from "@/common/auth/hooks";
 import {
   formatBytes,
   formatDate,
   formatDateTime,
   formatRelativeTime,
 } from "@/common/format";
-import { Section } from "@/components/ui/display";
+import { CopyableValue, Section } from "@/components/ui/display";
 import { useAPIQuery } from "@/hooks/query";
 import {
   Badge,
@@ -22,6 +26,10 @@ import { ReadingStatusSelect, SearchTag } from "../shared/file";
 import { toFolderUrl } from "../shared/path";
 
 export function FileMetadataPanel({ file }: { file: FileResponse }) {
+  const can = useCan(file);
+
+  const readOnly = !can(ResourcePermissionCapability.WRITE);
+
   return (
     <SimpleGrid columns={{ base: 1, lg: 2 }} gap={8}>
       <Section title="File">
@@ -42,10 +50,22 @@ export function FileMetadataPanel({ file }: { file: FileResponse }) {
           </Row>
           <Row label="Checksum">
             {file.file_hash && (
-              <Code size="sm" truncate title={file.file_hash}>
-                {file.file_hash}
-              </Code>
+              <CopyableValue value={file.file_hash} label="checksum">
+                <Code colorPalette="gray">{file.file_hash}</Code>
+              </CopyableValue>
             )}
+          </Row>
+          <Row label="Storage key">
+            <CopyableValue value={file.storage_key} label="storage key">
+              <Text
+                truncate
+                textOverflow="ellipsis"
+                maxWidth="11/12"
+                title={file.storage_key}
+              >
+                {file.storage_key}
+              </Text>
+            </CopyableValue>
           </Row>
         </DataList.Root>
       </Section>
@@ -108,13 +128,8 @@ export function FileMetadataPanel({ file }: { file: FileResponse }) {
       <Section title="Access">
         <DataList.Root orientation="horizontal" size="sm">
           <Row label="Your access">
-            <Badge
-              variant="subtle"
-              colorPalette={
-                file.is_read_only_by_current_user ? "gray" : "green"
-              }
-            >
-              {file.is_read_only_by_current_user ? "Read only" : "Can modify"}
+            <Badge variant="subtle" colorPalette={readOnly ? "gray" : "green"}>
+              {readOnly ? "Read only" : "Can modify"}
             </Badge>
           </Row>
           <Row label="Favorite">{file.state.is_favorite ? "Yes" : "No"}</Row>

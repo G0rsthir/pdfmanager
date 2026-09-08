@@ -1,6 +1,6 @@
+import { AccessScope } from "@/api/types.gen";
 import { StateLoader } from "@/common/state/loader";
 import { Block } from "@/components/ui/display";
-import { AccessScopeEnum } from "@/config/const";
 import { CurrentUserAccountPage } from "@/pages/account";
 import { ApiKeysPage } from "@/pages/admin/api/keys";
 import { AuthProvidersPage } from "@/pages/admin/identity/providers";
@@ -137,7 +137,7 @@ const router = createBrowserRouter([
           {
             path: "admin",
             element: (
-              <AuthGuard scopes={[AccessScopeEnum.ADMIN_READ]}>
+              <AuthGuard scopes={[AccessScope.ADMIN_READ]}>
                 <AdminLayout />
               </AuthGuard>
             ),

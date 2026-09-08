@@ -1,5 +1,5 @@
+import { AccessScope } from "@/api/types.gen";
 import { useHasScopes } from "@/common/auth/hooks";
-import { AccessScopeEnum, type AccessScope } from "@/config/const";
 import {
   Button,
   IconButton,
@@ -39,5 +39,5 @@ export function ScopedButton(props: ScopedButtonProps) {
 }
 
 export function AdminWriteButton(props: Omit<ScopedButtonProps, "scope">) {
-  return <ScopedButton {...props} scope={AccessScopeEnum.ADMIN_WRITE} />;
+  return <ScopedButton {...props} scope={AccessScope.ADMIN_WRITE} />;
 }

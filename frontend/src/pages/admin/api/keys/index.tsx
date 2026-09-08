@@ -2,7 +2,7 @@ import {
   listApiKeysOptions,
   resetApiKeyMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { ApiKeyResponse } from "@/api/types.gen";
+import { AccessScope, type ApiKeyResponse } from "@/api/types.gen";
 import { GenericIconButton } from "@/components/ui/button";
 import { QueryView } from "@/components/ui/feedback";
 import { useAPIQuery } from "@/hooks/query";
@@ -24,6 +24,7 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuKeyRound, LuPlus } from "react-icons/lu";
 import { CreateApiKeyDialog, RevokeApiKeyDialog } from "./forms";
 
+import { useHasScopes } from "@/common/auth/hooks";
 import { TokenExpiresIndicator } from "@/pages/shared/badges";
 import { Empty } from "@/pages/shared/common";
 import { ResetApiKeyDialog } from "@/pages/shared/dialogs";
@@ -61,12 +62,14 @@ export function ApiKeysPage() {
 function CreateApiKeyAction() {
   const { open, onClose, onOpen } = useDisclosure();
 
+  const canWrite = useHasScopes(AccessScope.ADMIN_WRITE);
+
   return (
     <>
       <Button size="sm" onClick={onOpen}>
         <LuPlus /> Add Key
       </Button>
-      <CreateApiKeyDialog open={open} onClose={onClose} />
+      <CreateApiKeyDialog open={open} onClose={onClose} readonly={!canWrite} />
     </>
   );
 }
@@ -124,6 +127,8 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
   const [dialog, setDialog] = useState<RowAction>(null);
   const onClose = () => setDialog(null);
 
+  const canWrite = useHasScopes(AccessScope.ADMIN_WRITE);
+
   return (
     <>
       <Menu.Root>
@@ -135,7 +140,11 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
         <Portal>
           <Menu.Positioner>
             <Menu.Content>
-              <Menu.Item value="reset" onSelect={() => setDialog("reset")}>
+              <Menu.Item
+                value="reset"
+                onSelect={() => setDialog("reset")}
+                disabled={!canWrite}
+              >
                 Reset
               </Menu.Item>
               <Menu.Item
@@ -143,6 +152,7 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
                 color="fg.error"
                 _hover={{ bg: "bg.error", color: "fg.error" }}
                 onSelect={() => setDialog("revoke")}
+                disabled={!canWrite}
               >
                 Revoke
               </Menu.Item>
@@ -159,7 +169,6 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
         open={dialog == "reset"}
         onClose={onClose}
         keyId={apiKey.id}
-        confirmBtnType="adminWrite"
         mutationOptions={resetApiKeyMutation}
       />
     </>

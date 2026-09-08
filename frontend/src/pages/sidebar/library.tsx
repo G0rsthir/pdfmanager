@@ -10,15 +10,19 @@ import {
   updateCollectionMutation,
   updateCollectionPermissionMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type {
-  LibraryTreeNode,
-  ResourcePermissionResponse,
+import {
+  AccessScope,
+  ResourcePermissionCapability,
+  type InviteToCollectionRequest,
+  type LibraryTreeNode,
+  type ResourcePermissionResponse,
 } from "@/api/types.gen";
+import { useCan, useHasScopes } from "@/common/auth/hooks";
 import { parseAPIError } from "@/common/error";
 import { GenericIconButton } from "@/components/ui/button";
-import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
 import { Form } from "@/components/ui/form/container";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import {
@@ -63,6 +67,18 @@ import { useNavigate, useParams } from "react-router";
 import { useShallow } from "zustand/shallow";
 import { PermissionsView } from "../library/shared/permissions";
 
+const ROOT_NODE: LibraryTreeNode = {
+  id: "ROOT",
+  name: "",
+  children: [],
+  entity_type: "group",
+  capabilities: [
+    ResourcePermissionCapability.READ,
+    ResourcePermissionCapability.WRITE,
+  ],
+  is_shared: false,
+};
+
 export function Library() {
   const query = useAPIQuery({
     ...getLibraryTreeOptions(),
@@ -91,18 +107,18 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
         nodeToValue: (node) => node.id,
         nodeToString: (node) => node.id,
         rootNode: {
-          id: "ROOT",
-          name: "",
+          ...ROOT_NODE,
           children: data,
-          entity_type: "group",
-          is_read_only_by_current_user: false,
-          is_shared: false,
         },
       }),
     [data],
   );
 
   const { folderid } = useParams();
+
+  const can = useCan(ROOT_NODE);
+
+  const canModify = can(ResourcePermissionCapability.WRITE);
 
   return (
     <>
@@ -170,7 +186,12 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
           </Link>
         </Text>
       )}
-      <CreateNodeDialog type="folder" open={open} onClose={onClose} />
+      <CreateNodeDialog
+        type="folder"
+        open={open}
+        onClose={onClose}
+        readonly={!canModify}
+      />
     </>
   );
 }
@@ -197,16 +218,24 @@ function TreeNodeActions({
   const [dialog, setDialog] = useState<NodeDialog>(null);
   const onClose = () => setDialog(null);
 
+  const can = useCan(node);
+
+  const canModify = can(ResourcePermissionCapability.WRITE);
+
+  const canAssignPermissions = can(
+    ResourcePermissionCapability.MANAGE_PERMISSIONS,
+  );
+
   return (
     <>
       <TreeNodeMenu opacitySelector=".css-wurrfy:hover &">
         {isGroup && (
           <Menu.Item
-            disabled={node.is_read_only_by_current_user}
+            disabled={!canModify}
             value="createGroup"
             onClick={(e) => {
               e.stopPropagation();
-              if (node.is_read_only_by_current_user) return;
+              if (!canModify) return;
               setDialog({ type: "create", nodeType: "group" });
             }}
           >
@@ -216,10 +245,10 @@ function TreeNodeActions({
         {isGroup && (
           <Menu.Item
             value="createFolder"
-            disabled={node.is_read_only_by_current_user}
+            disabled={!canModify}
             onClick={(e) => {
               e.stopPropagation();
-              if (node.is_read_only_by_current_user) return;
+              if (!canModify) return;
               setDialog({ type: "create", nodeType: "folder" });
             }}
           >
@@ -248,10 +277,10 @@ function TreeNodeActions({
           value="delete"
           color="fg.error"
           _hover={{ bg: "bg.error", color: "fg.error" }}
-          disabled={node.is_read_only_by_current_user}
+          disabled={!canModify}
           onClick={(e) => {
             e.stopPropagation();
-            if (node.is_read_only_by_current_user) return;
+            if (!canModify) return;
             setDialog({ type: "delete", nodeType: node.entity_type });
           }}
         >
@@ -260,26 +289,29 @@ function TreeNodeActions({
       </TreeNodeMenu>
       <CreateNodeDialog
         type={dialog?.nodeType ?? "group"}
-        open={dialog?.type === "create"}
+        open={dialog?.type == "create"}
         onClose={onClose}
         parent_id={node.id}
+        readonly={!canModify}
       />
       <EditNodeDialog
-        open={dialog?.type === "edit"}
+        open={dialog?.type == "edit"}
         onClose={onClose}
         node={node}
+        readonly={!canModify}
       />
       <DeleteNodeDialog
         type={dialog?.nodeType ?? "group"}
-        open={dialog?.type === "delete"}
+        open={dialog?.type == "delete"}
         onClose={onClose}
         node={node}
       />
       <PermissionsDialog
-        open={dialog?.type === "permissions"}
+        open={dialog?.type == "permissions"}
         onClose={onClose}
         resourceId={node.id}
         resourceName={node.name}
+        readonly={!canAssignPermissions}
       />
     </>
   );
@@ -325,6 +357,8 @@ function LibraryActions() {
   const [dialog, setDialog] = useState<NodeDialog>(null);
   const onClose = () => setDialog(null);
 
+  const canWrite = useHasScopes(AccessScope.LIBRARY_WRITE);
+
   return (
     <>
       <TreeNodeMenu opacitySelector=".chakra-group:hover &">
@@ -343,8 +377,9 @@ function LibraryActions() {
       </TreeNodeMenu>
       <CreateNodeDialog
         type={dialog?.nodeType ?? "group"}
-        open={dialog?.type === "create"}
+        open={dialog?.type == "create"}
         onClose={onClose}
+        readonly={!canWrite}
       />
     </>
   );
@@ -364,8 +399,9 @@ function CreateNodeDialog(props: {
   open: boolean;
   onClose: () => void;
   parent_id?: string;
+  readonly?: boolean;
 }) {
-  const { type, open, onClose, parent_id } = props;
+  const { type, open, onClose, parent_id, readonly } = props;
 
   const label = nodeLabel(type);
 
@@ -395,13 +431,17 @@ function CreateNodeDialog(props: {
       title={`New ${label}`}
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
-      confirmBtnType="userWrite"
+      disabled={readonly}
       submitOnEnter
     >
       <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Name <Field.RequiredIndicator />
             </Field.Label>
@@ -414,7 +454,7 @@ function CreateNodeDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }
@@ -517,8 +557,9 @@ function EditNodeDialog(props: {
   open: boolean;
   onClose: () => void;
   node: LibraryTreeNode;
+  readonly?: boolean;
 }) {
-  const { open, onClose, node } = props;
+  const { open, onClose, node, readonly } = props;
 
   const label = nodeLabel(node.entity_type);
 
@@ -544,10 +585,10 @@ function EditNodeDialog(props: {
     onSuccess: onClose,
   });
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     form.reset();
     onClose();
-  }, [onClose, form]);
+  };
 
   return (
     <FormModal
@@ -556,7 +597,7 @@ function EditNodeDialog(props: {
       title={`Edit ${label}`}
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
-      disabled={node.is_read_only_by_current_user}
+      disabled={readonly}
     >
       <form.Field
         name="name"
@@ -567,7 +608,7 @@ function EditNodeDialog(props: {
           <Field.Root
             invalid={!fieldState.meta.isValid}
             required
-            disabled={node.is_read_only_by_current_user}
+            disabled={readonly}
           >
             <Field.Label>
               Name <Field.RequiredIndicator />
@@ -587,7 +628,7 @@ function EditNodeDialog(props: {
           <Field.Root
             invalid={!fieldState.meta.isValid}
             required
-            disabled={node.is_read_only_by_current_user}
+            disabled={readonly}
           >
             <CollectionSelect
               defaultValue={fieldState.value ?? ""}
@@ -602,7 +643,7 @@ function EditNodeDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }
@@ -657,8 +698,9 @@ export function PermissionsDialog(props: {
   onClose: () => void;
   resourceId: string;
   resourceName?: string;
+  readonly?: boolean;
 }) {
-  const { open, onClose, resourceId, resourceName } = props;
+  const { open, onClose, resourceId, resourceName, readonly } = props;
 
   const query = useAPIQuery({
     ...getCollectionPermissionsOptions({
@@ -690,7 +732,12 @@ export function PermissionsDialog(props: {
             </Dialog.Header>
             <Dialog.Body>
               <QueryView query={query}>
-                {(access) => <ManageCollectionPermissions access={access} />}
+                {(access) => (
+                  <ManageCollectionPermissions
+                    access={access}
+                    readonly={readonly}
+                  />
+                )}
               </QueryView>
             </Dialog.Body>
             <Dialog.Footer>
@@ -711,14 +758,9 @@ export function PermissionsDialog(props: {
 
 function ManageCollectionPermissions(props: {
   access: ResourcePermissionResponse;
+  readonly?: boolean;
 }) {
-  const { access } = props;
-
-  const session = useGlobalStore(useShallow((state) => state.session));
-
-  const isReadOnly = access.assignments.some(
-    (p) => p.permission == "read" && p.user.id === session?.user.id,
-  );
+  const { access, readonly } = props;
 
   const { mutate: deletePermission } = useAPIMutation({
     ...deleteCollectionPermissionMutation(),
@@ -748,13 +790,15 @@ function ManageCollectionPermissions(props: {
 
   return (
     <Stack gap={4}>
-      {isReadOnly && (
+      {readonly && (
         <Alert.Root status="warning">
           <Alert.Indicator />
-          <Alert.Title>You have view-only access to this resource</Alert.Title>
+          <Alert.Title>
+            You don't have permissions to modify this resource
+          </Alert.Title>
         </Alert.Root>
       )}
-      <InviteForm collectionId={access.id} readOnly={isReadOnly} />
+      <InviteForm collectionId={access.id} readOnly={readonly} />
       <PermissionsView
         assignments={access.assignments}
         onDelete={(id) =>
@@ -771,10 +815,16 @@ function ManageCollectionPermissions(props: {
   );
 }
 
-const PERMISSION_OPTIONS = createListCollection({
+type ResourcePermissionLevelWritable = InviteToCollectionRequest["permission"];
+
+const PERMISSION_OPTIONS = createListCollection<{
+  value: ResourcePermissionLevelWritable;
+  label: string;
+}>({
   items: [
     { value: "read", label: "Viewer" },
     { value: "modify", label: "Editor" },
+    { value: "contribute", label: "Contributor" },
   ],
 });
 
@@ -785,7 +835,7 @@ function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
     formOptions: {
       defaultValues: {
         email: "",
-        permission: "read" as "read" | "modify",
+        permission: "read" as ResourcePermissionLevelWritable,
       },
     },
     mutationOptions: inviteToCollectionMutation,
@@ -824,7 +874,7 @@ function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
                 collection={PERMISSION_OPTIONS}
                 value={[fieldState.value]}
                 onValueChange={(e) =>
-                  handleChange(e.value[0] as "read" | "modify")
+                  handleChange(e.value[0] as ResourcePermissionLevelWritable)
                 }
                 onInteractOutside={handleBlur}
                 disabled={readOnly}
@@ -859,7 +909,7 @@ function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
             Invite
           </Button>
         </Group>
-        <FormError errors={form.state.errorMap.onSubmit} />
+        <SubscribeFormError form={form} />
       </Stack>
     </Form>
   );

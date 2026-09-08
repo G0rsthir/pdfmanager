@@ -1,6 +1,7 @@
 import { APIError, parseAPIError, parseFormError } from "@/common/error";
 import {
   type DefaultError,
+  type MutationFunctionContext,
   QueryClient,
   type QueryKey,
   useMutation,
@@ -36,6 +37,12 @@ export function useAPIMutation<
   options: UseMutationOptions<TData, TError, TVariables, TOnMutateResult> & {
     // Allows to automatically update form errors using api response
     setErrorMap?: (errorMap: Record<string, unknown>) => void;
+    onApiError?: (
+      error: APIError,
+      variables: TVariables,
+      onMutateResult: TOnMutateResult | undefined,
+      context: MutationFunctionContext,
+    ) => void;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<TData, TError, TVariables, TOnMutateResult> {
@@ -43,6 +50,11 @@ export function useAPIMutation<
     ...options,
     onError: (error, variables, onMutateResult, context) => {
       options.onError?.(error, variables, onMutateResult, context);
+      if (options.onApiError) {
+        const apiError = parseAPIError(error);
+        options.onApiError(apiError, variables, onMutateResult, context);
+      }
+
       if (options.setErrorMap) {
         const formErrors = parseFormError(error);
         options.setErrorMap({

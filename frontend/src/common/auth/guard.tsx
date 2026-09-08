@@ -1,5 +1,5 @@
+import { AccessScope } from "@/api/types.gen";
 import { ForbiddenError } from "@/components/ui/error";
-import { AccessScopeEnum, type AccessScope } from "@/config/const";
 import { useHasScopes } from "./hooks";
 
 /**
@@ -21,7 +21,7 @@ export function AuthGuard({
 }
 
 export function AdminOnly({ children }: { children: React.ReactNode }) {
-  const isAdmin = useHasScopes(AccessScopeEnum.ADMIN_READ);
+  const isAdmin = useHasScopes(AccessScope.ADMIN_READ);
 
   if (!isAdmin) return null;
 

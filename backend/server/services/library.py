@@ -2,12 +2,11 @@ from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime
 from logging import getLogger
 from pathlib import Path
-from typing import Literal
 from uuid import UUID
 
 from fastapi import UploadFile
 
-from server.const import UNSET, FileStatusEnum, UnsetEnum
+from server.const import UNSET, FileStatusEnum, ResourcePermissionCapability, ResourcePermissionLevel, UnsetEnum
 from server.exceptions import (
     InsufficientPermissionError,
     InvalidActionError,
@@ -38,7 +37,13 @@ from server.repositories import (
     UserRepository,
 )
 from server.schemas.general import PdfStorageFile
-from server.schemas.library import CreateCollectionRequest, LibraryTreeNode, NormalizedRect
+from server.schemas.library import (
+    BulkTagsOperation,
+    CreateCollectionRequest,
+    LibraryTreeNode,
+    NormalizedRect,
+)
+from server.security.permissions import permission_levels_with
 
 
 class LibraryService:
@@ -70,7 +75,7 @@ class LibraryService:
         collection = await self._collection_repo.get_by_id(collection_id)
 
         perm = await self._permission_repo.get_effective_for_collection(collection_id=collection_id, user_id=user_id)
-        if not perm or not perm.can_read:
+        if not perm or not perm.can(ResourcePermissionCapability.READ):
             raise InsufficientPermissionError(action="read", resource="Collection", identifier=collection_id)
 
         return collection
@@ -78,7 +83,7 @@ class LibraryService:
     async def create_collection(self, user_id: UUID, data: CreateCollectionRequest):
         if data.parent_id:
             perm = await self._permission_repo.get_effective_for_collection(data.parent_id, user_id)
-            if not perm or not perm.can_modify:
+            if not perm or not perm.can(ResourcePermissionCapability.WRITE):
                 raise InsufficientPermissionError(action="create", resource="Collection", identifier=data.parent_id)
 
         collection = ORMCollection(
@@ -91,7 +96,7 @@ class LibraryService:
 
         # Only roots need a direct grant. Nested collections inherit.
         if not data.parent_id:
-            await self._permission_repo.grant(collection.id, user_id, "owner")
+            await self._permission_repo.grant(collection.id, user_id, ResourcePermissionLevel.OWNER)
 
         await self._collection_repo.commit()
 
@@ -107,10 +112,12 @@ class LibraryService:
         Collections the user can move 'source_id' into.
         """
         perm = await self._permission_repo.get_effective_for_collection(source_id, user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.WRITE):
             return []
 
-        writable_ids = await self._permission_repo.list_accessible_collection_ids(user_id, ["modify", "owner"])
+        writable_ids = await self._permission_repo.list_accessible_collection_ids(
+            user_id, permission_levels_with(ResourcePermissionCapability.WRITE)
+        )
 
         if not writable_ids:
             return []
@@ -122,7 +129,7 @@ class LibraryService:
 
     async def delete_collection(self, user_id: UUID, collection_id: UUID):
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.DELETE):
             raise InsufficientPermissionError(action="delete", resource="Collection", identifier=collection_id)
 
         # Collect what needs external cleanup.
@@ -143,17 +150,41 @@ class LibraryService:
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.DELETE):
             raise InsufficientPermissionError(action="delete", resource="File", identifier=file_id)
+
+        await self._storage_backend.delete(file.thumbnail)
+        await self._storage_backend.delete(file.storage_key)
+        await self._search_engine.delete_by_docs([file_id])
 
         await self._file_repo.delete(file)
         await self._file_repo.commit()
 
-        await self._storage_backend.delete(file.storage_key)
-        await self._search_engine.delete_by_docs([file_id])
+    async def delete_files_bulk(self, file_ids: list[UUID], user_id: UUID):
 
-        if file.thumbnail:
-            await self._storage_backend.delete(file.thumbnail)
+        if not file_ids:
+            return
+
+        files_by_id = await self._file_repo.list_by_ids_all(file_ids)
+
+        file_keys = list(files_by_id.keys())
+        files = list(files_by_id.values())
+
+        perms = await self._permission_repo.get_effective_for_files(files=files, user_id=user_id)
+
+        for file_id in file_keys:
+            perm = perms.get(file_id)
+            if not perm or not perm.can(ResourcePermissionCapability.DELETE):
+                raise InsufficientPermissionError(action="delete", resource="File", identifier=file_id)
+
+        await self._storage_backend.delete_many([file.storage_key for file in files])
+        await self._storage_backend.delete_many([file.thumbnail for file in files])
+
+        await self._search_engine.delete_by_docs(file_keys)
+
+        await self._file_repo.delete_many(file_keys)
+
+        await self._file_repo.commit()
 
     async def move_collection(self, source_id: UUID, parent_id: UUID | None, user_id: UUID):
         source = await self._collection_repo.get_by_id(source_id)
@@ -166,7 +197,7 @@ class LibraryService:
 
         perm = await self._permission_repo.get_effective_for_collection(source_id, user_id)
 
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=source_id)
 
         if parent_id is None:
@@ -182,7 +213,7 @@ class LibraryService:
 
         parent_perm = await self._permission_repo.get_effective_for_collection(parent_id, user_id)
 
-        if not parent_perm or not parent_perm.can_modify:
+        if not parent_perm or not parent_perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=source_id)
 
         source.parent_id = parent_id
@@ -191,7 +222,7 @@ class LibraryService:
         collection = await self._collection_repo.get_by_id(collection_id)
 
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="update", resource="Collection", identifier=collection_id)
 
         if parent_id != collection.parent_id:
@@ -238,7 +269,7 @@ class LibraryService:
         await self._authors_repo.flush()
         return authors
 
-    async def update_file_state(
+    async def patch_file_state(
         self,
         file_id: UUID,
         user_id: UUID,
@@ -251,8 +282,8 @@ class LibraryService:
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_read:
-            raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
+        if not perm or not perm.can(ResourcePermissionCapability.SYNC_PROGRESS):
+            raise InsufficientPermissionError(action="sync_progress", resource="File", identifier=file_id)
 
         state = await self._file_repo.get_state_or_none(file_id=file_id, user_id=user_id)
         if not state:
@@ -277,8 +308,49 @@ class LibraryService:
 
         if scale is not None:
             state.scale = scale
+
         if is_favorite is not None:
             state.is_favorite = is_favorite
+
+        await self._file_repo.commit()
+
+    async def patch_files_states_bulk(
+        self,
+        user_id: UUID,
+        file_ids: list[UUID],
+        status: FileStatusEnum | None = None,
+        is_favorite: bool | None = None,
+    ):
+
+        if not file_ids:
+            return
+
+        files_by_id = await self._file_repo.list_by_ids_all(file_ids)
+
+        file_keys = list(files_by_id.keys())
+        files = list(files_by_id.values())
+
+        perms = await self._permission_repo.get_effective_for_files(files=files, user_id=user_id)
+
+        for file_id in file_keys:
+            perm = perms.get(file_id)
+            if not perm or not perm.can(ResourcePermissionCapability.SYNC_PROGRESS):
+                raise InsufficientPermissionError(action="sync_progress", resource="File", identifier=file_id)
+
+        states = await self._file_repo.list_states_by_file_ids(file_ids=file_keys, user_id=user_id)
+
+        for file_id in file_keys:
+            state = states.get(file_id)
+            if not state:
+                state = ORMFileState(file_id=file_id, user_id=user_id)
+                self._file_repo.save(state)
+                await self._file_repo.flush()
+
+            if status is not None:
+                state.status = status
+
+            if is_favorite is not None:
+                state.is_favorite = is_favorite
 
         await self._file_repo.commit()
 
@@ -293,17 +365,16 @@ class LibraryService:
         published: date | None = None,
         description: str | None = None,
     ):
-
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="update", resource="File", identifier=file_id)
 
         parent_perm = await self._permission_repo.get_effective_for_collection(
             collection_id=collection_id, user_id=user_id
         )
-        if not parent_perm or not parent_perm.can_modify:
+        if not parent_perm or not parent_perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="update", resource="File", identifier=file_id)
 
         collection = await self._collection_repo.get_by_id(collection_id)
@@ -351,6 +422,62 @@ class LibraryService:
 
         await self._file_repo.commit()
 
+    async def patch_files_bulk(
+        self,
+        user_id: UUID,
+        file_ids: list[UUID],
+        collection_id: UUID | None = None,
+        tags: BulkTagsOperation | None = None,
+    ):
+        if not file_ids:
+            return
+
+        files_by_id = await self._file_repo.list_by_ids_all(file_ids)
+
+        perms = await self._permission_repo.get_effective_for_files(files=files_by_id.values(), user_id=user_id)
+
+        for file_id in files_by_id.keys():
+            perm = perms.get(file_id)
+            if not perm or not perm.can(ResourcePermissionCapability.WRITE):
+                raise InsufficientPermissionError(action="update", resource="File", identifier=file_id)
+
+        if collection_id is not None:
+            parent_perm = await self._permission_repo.get_effective_for_collection(
+                collection_id=collection_id, user_id=user_id
+            )
+            if not parent_perm or not parent_perm.can(ResourcePermissionCapability.WRITE):
+                raise InsufficientPermissionError(action="update", resource="Collection", identifier=collection_id)
+
+            collection = await self._collection_repo.get_by_id(collection_id)
+            if collection.entity_type != "folder":
+                raise InvalidActionError(rule="file_collection_must_be_folder", msg="File can only be added to folders")
+
+            for file in files_by_id.values():
+                file.collection_id = collection_id
+
+        if tags is not None:
+            await self._apply_bulk_tags(file_ids=list(files_by_id), user_id=user_id, operation=tags)
+
+        await self._file_repo.commit()
+
+    async def _apply_bulk_tags(self, file_ids: list[UUID], user_id: UUID, operation: BulkTagsOperation):
+        added = await self.resolve_tags(operation.add)
+        removed = await self.resolve_tags(operation.remove)
+
+        added_ids = [tag.id for tag in added]
+        removed_ids = {tag.id for tag in removed}
+
+        current = await self._tags_repo.list_personalized_by_files(file_ids=file_ids, user_id=user_id)
+
+        for file_id in file_ids:
+            kept = {tag.id: None for tag in current.get(file_id, []) if tag.id not in removed_ids}
+            for tag_id in added_ids:
+                kept[tag_id] = None
+
+            await self._tags_repo.replace_file_tags(file_id=file_id, tags=list(kept))
+
+        await self._tags_repo.delete_orphaned()
+
     async def upload_pdf_file(
         self,
         file: UploadFile,
@@ -361,8 +488,8 @@ class LibraryService:
         description: str | None = None,
     ) -> ORMFile:
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
-        if not perm or not perm.can_modify:
-            raise InsufficientPermissionError(action="modify", resource="Collection", identifier=collection_id)
+        if not perm or not perm.can(ResourcePermissionCapability.WRITE):
+            raise InsufficientPermissionError(action="upload_file", resource="Collection", identifier=collection_id)
 
         stored_file = await self._store_pdf_file(file=file, user_id=user_id)
 
@@ -502,10 +629,12 @@ class LibraryService:
         """
         file = await self._file_repo.get_by_id(source_id)
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.WRITE):
             return []
 
-        writable_ids = await self._permission_repo.list_accessible_collection_ids(user_id, ["modify", "owner"])
+        writable_ids = await self._permission_repo.list_accessible_collection_ids(
+            user_id, permission_levels_with(ResourcePermissionCapability.WRITE)
+        )
 
         if not writable_ids:
             return []
@@ -526,7 +655,7 @@ class LibraryService:
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_read:
+        if not perm or not perm.can(ResourcePermissionCapability.READ):
             raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
 
         return await self._annotation_repo.list_by_file(file_id)
@@ -551,8 +680,8 @@ class LibraryService:
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
-            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
+        if not perm or not perm.can(ResourcePermissionCapability.ANNOTATE):
+            raise InsufficientPermissionError(action="create_annotation", resource="File", identifier=file_id)
 
         annotation = ORMAnnotation(
             page=page,
@@ -604,8 +733,8 @@ class LibraryService:
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
-            raise InsufficientPermissionError(action="write", resource="File", identifier=file_id)
+        if not perm or not perm.can(ResourcePermissionCapability.ANNOTATE):
+            raise InsufficientPermissionError(action="update_annotation", resource="File", identifier=file_id)
 
         annotation = await self._annotation_repo.get_by_id(annotation_id)
         if annotation.file_id != file_id:
@@ -650,8 +779,8 @@ class LibraryService:
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_modify:
-            raise InsufficientPermissionError(action="modify", resource="File", identifier=file_id)
+        if not perm or not perm.can(ResourcePermissionCapability.ANNOTATE):
+            raise InsufficientPermissionError(action="delete_annotation", resource="File", identifier=file_id)
 
         annotation = await self._annotation_repo.get_by_id(annotation_id)
 
@@ -668,7 +797,7 @@ class LibraryService:
         file = await self._file_repo.get_by_id(file_id)
 
         perm = await self._permission_repo.get_effective_for_file(file=file, user_id=user_id)
-        if not perm or not perm.can_read:
+        if not perm or not perm.can(ResourcePermissionCapability.READ):
             raise InsufficientPermissionError(action="read", resource="File", identifier=file_id)
 
         state = await self._file_repo.get_state_or_none(file_id, user_id)
@@ -681,7 +810,7 @@ class LibraryService:
             file=file,
             state=state,
             tags=tags_by_file.get(file.id, []),
-            permissions=[perm],
+            target_resource_permission=perm,
             authors=authors_by_file.get(file.id, []),
         )
 
@@ -713,12 +842,14 @@ class LibraryService:
         tags_by_file = await self._tags_repo.list_personalized_by_files(file_ids, user_id)
         authors_by_file = await self._authors_repo.list_by_files(file_ids)
 
+        permissions = await self._permission_repo.get_effective_for_files(files, user_id)
+
         return [
             FileWithDetails(
                 file=f,
                 state=states.get(f.id),
                 tags=tags_by_file.get(f.id, []),
-                permissions=[],
+                target_resource_permission=permissions[f.id],
                 authors=authors_by_file.get(f.id, []),
             )
             for f in files
@@ -786,7 +917,7 @@ class LibraryService:
 
     async def list_collection_permissions(self, user_id: UUID, collection_id: UUID) -> list[PermissionAssignment]:
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
-        if not perm or not perm.can_read:
+        if not perm or not perm.can(ResourcePermissionCapability.READ):
             raise InsufficientPermissionError(
                 action="read",
                 resource="Permissions",
@@ -798,7 +929,7 @@ class LibraryService:
     async def delete_collection_permission(self, user_id: UUID, collection_id: UUID, assignment_id: UUID):
 
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.MANAGE_PERMISSIONS):
             raise InsufficientPermissionError(
                 action="modify",
                 resource="Permissions",
@@ -823,10 +954,10 @@ class LibraryService:
         await self._permission_repo.commit()
 
     async def update_collection_permission(
-        self, user_id: UUID, collection_id: UUID, assignment_id: UUID, permission: Literal["read", "modify"]
+        self, user_id: UUID, collection_id: UUID, assignment_id: UUID, permission: ResourcePermissionLevel
     ):
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.MANAGE_PERMISSIONS):
             raise InsufficientPermissionError(
                 action="modify",
                 resource="Permissions",
@@ -851,11 +982,11 @@ class LibraryService:
         await self._permission_repo.commit()
 
     async def invite_to_collection(
-        self, user_id: UUID, collection_id: UUID, email: str, permission: Literal["read", "modify"]
+        self, user_id: UUID, collection_id: UUID, email: str, permission: ResourcePermissionLevel
     ):
 
         perm = await self._permission_repo.get_effective_for_collection(collection_id, user_id)
-        if not perm or not perm.can_modify:
+        if not perm or not perm.can(ResourcePermissionCapability.MANAGE_PERMISSIONS):
             raise InsufficientPermissionError(
                 action="invite",
                 resource="Permissions",

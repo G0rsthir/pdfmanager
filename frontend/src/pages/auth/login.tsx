@@ -6,8 +6,8 @@ import type {
 import { useAuth } from "@/common/auth/hooks";
 import { useAppState } from "@/common/state/hooks";
 import { GenericIconButton } from "@/components/ui/button";
-import { FormError } from "@/components/ui/error";
 import { Form } from "@/components/ui/form/container";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useFormMutation } from "@/hooks/form";
 import {
@@ -167,7 +167,7 @@ export function LoginPage() {
                     </Field.Root>
                   )}
                 />
-                <FormError errors={form.state.errorMap.onSubmit} />
+                <SubscribeFormError form={form} />
               </Stack>
             </Card.Body>
             <Card.Footer>

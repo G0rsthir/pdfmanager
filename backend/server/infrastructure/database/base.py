@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
+from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import MetaData
+from sqlalchemy import JSON, MetaData, String
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -45,6 +46,56 @@ class DateTimeUTC(TypeDecorator[datetime]):
         if value.tzinfo is None:
             return value.replace(tzinfo=UTC)
         return value
+
+
+class EnumList[E: Enum](TypeDecorator[list[E]]):
+    """
+    List of enums, stored as a JSON array
+    """
+
+    impl = JSON
+    cache_ok = True
+
+    def __init__(self, enum: type[E], *args, **kwargs):
+        self.enum = enum
+        super().__init__(*args, **kwargs)
+
+    @property
+    def python_type(self) -> type[list[E]]:
+        return list
+
+    def process_bind_param(self, value: list[E] | None, dialect) -> list | None:
+        if value is None:
+            return None
+        return list(dict.fromkeys(self.enum(member).value for member in value))
+
+    def process_result_value(self, value: list | None, dialect) -> list[E] | None:
+        if value is None:
+            return None
+        return [self.enum(item) for item in value]
+
+
+class EnumValue[E: Enum](TypeDecorator[E]):
+    """
+    A single enum, stored as string
+    """
+
+    impl = String
+    cache_ok = True
+
+    def __init__(self, enum: type[E], *args, **kwargs):
+        self.enum = enum
+        super().__init__(*args, **kwargs)
+
+    @property
+    def python_type(self) -> type[E]:
+        return self.enum
+
+    def process_bind_param(self, value: E | None, dialect) -> str | None:
+        return None if value is None else self.enum(value).value
+
+    def process_result_value(self, value: str | None, dialect) -> E | None:
+        return None if value is None else self.enum(value)
 
 
 class AuditMixin:

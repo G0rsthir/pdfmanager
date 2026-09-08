@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import HTTPBasic, OAuth2PasswordBearer, SecurityScopes
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.const import AccessScopeEnum, RefreshScopeEnum
+from server.const import AccessScope, RefreshScopeEnum
 from server.exceptions import InsufficientPermissionsException, InvalidBasicCredentialsException
 from server.infrastructure.search import Fts5SearchBackend, SearchBackend
 from server.infrastructure.storage import StorageBackend
@@ -100,7 +100,7 @@ _refresh_manager_dependency = RefreshManagerDependency()
 _basic_auth_manager_dependency = BasicAuthManagerDependency()
 
 
-def AccessSecurity(*, scopes: list[AccessScopeEnum] | None = None):
+def AccessSecurity(*, scopes: list[AccessScope] | None = None):
     return Security(_access_manager_dependency, scopes=scopes)
 
 
@@ -108,7 +108,7 @@ def RefreshSecurity(*, scopes: list[RefreshScopeEnum] | None = None):
     return Security(_refresh_manager_dependency, scopes=scopes)
 
 
-def BasicAuthSecurity(*, scopes: list[AccessScopeEnum] | None = None):
+def BasicAuthSecurity(*, scopes: list[AccessScope] | None = None):
     return Security(_basic_auth_manager_dependency, scopes=scopes)
 
 

@@ -66,6 +66,9 @@ import type {
   DeleteFileData,
   DeleteFileErrors,
   DeleteFileResponses,
+  DeleteFilesBulkData,
+  DeleteFilesBulkErrors,
+  DeleteFilesBulkResponses,
   DeleteOidcAuthProviderData,
   DeleteOidcAuthProviderErrors,
   DeleteOidcAuthProviderResponses,
@@ -176,6 +179,12 @@ import type {
   PatchAnnotationData,
   PatchAnnotationErrors,
   PatchAnnotationResponses,
+  PatchFilesBulkData,
+  PatchFilesBulkErrors,
+  PatchFilesBulkResponses,
+  PatchFilesStatesBulkData,
+  PatchFilesStatesBulkErrors,
+  PatchFilesStatesBulkResponses,
   PatchFileStateData,
   PatchFileStateErrors,
   PatchFileStateResponses,
@@ -760,6 +769,92 @@ export const updateFile = <ThrowOnError extends boolean = false>(
       },
     ],
     url: "/api/v1/library/files/{id}",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Patch Files Bulk
+ */
+export const patchFilesBulk = <ThrowOnError extends boolean = false>(
+  options: Options<PatchFilesBulkData, ThrowOnError>,
+): RequestResult<PatchFilesBulkResponses, PatchFilesBulkErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    PatchFilesBulkResponses,
+    PatchFilesBulkErrors,
+    ThrowOnError
+  >({
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
+    url: "/api/v1/library/files/patch-bulk",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete Files Bulk
+ */
+export const deleteFilesBulk = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteFilesBulkData, ThrowOnError>,
+): RequestResult<
+  DeleteFilesBulkResponses,
+  DeleteFilesBulkErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    DeleteFilesBulkResponses,
+    DeleteFilesBulkErrors,
+    ThrowOnError
+  >({
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
+    url: "/api/v1/library/files/delete-bulk",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Patch Files States Bulk
+ */
+export const patchFilesStatesBulk = <ThrowOnError extends boolean = false>(
+  options: Options<PatchFilesStatesBulkData, ThrowOnError>,
+): RequestResult<
+  PatchFilesStatesBulkResponses,
+  PatchFilesStatesBulkErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PatchFilesStatesBulkResponses,
+    PatchFilesStatesBulkErrors,
+    ThrowOnError
+  >({
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
+    url: "/api/v1/library/files/states/update-bulk",
     ...options,
     headers: {
       "Content-Type": "application/json",

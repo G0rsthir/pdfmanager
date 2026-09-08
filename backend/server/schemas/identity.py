@@ -1,9 +1,10 @@
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, PlainSerializer, SecretStr, StrictStr, computed_field
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, PlainSerializer, SecretStr, StrictStr
 
-from server.schemas.types import MaskedStr, Scopes
+from server.const import AccessScope
+from server.schemas.types import MaskedStr
 
 
 class SetupUser(BaseModel):
@@ -27,12 +28,7 @@ class RoleResponse(BaseModel):
     description: str
     is_protected: bool
     entity_type: str
-    scopes: Scopes
-
-    @computed_field
-    @property
-    def scopes_str(self) -> str:
-        return self.scopes.to_str()
+    scopes: list[AccessScope]
 
 
 class AuthProviderResponse(BaseModel):

@@ -55,10 +55,11 @@ interface ReactPDFViewerProps {
   initialScaleValue: string;
   fileName?: string;
   startInPreviewPage?: number;
-  readOnly?: boolean;
   onPageChange?: (value: number) => void;
   onScaleChange?: (value: string) => void;
   annotations: AnnotationsApi;
+  canAnnotate?: boolean;
+  canSaveProgress?: boolean;
 }
 
 export function ReactPDFViewer(props: ReactPDFViewerProps) {
@@ -67,11 +68,12 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     intialPage,
     initialScaleValue = "1",
     fileName = "document.pdf",
+    canAnnotate = true,
+    canSaveProgress = true,
     startInPreviewPage,
     annotations,
     onPageChange,
     onScaleChange,
-    readOnly,
   } = props;
 
   const [numPages, setNumPages] = useState(0);
@@ -164,7 +166,8 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
 
     eventBus.on("pagechanging", (e: { pageNumber: number }) => {
       setCurrentPage(e.pageNumber);
-      if (isPeekingRef.current !== true) onPageChange?.(e.pageNumber);
+      if (isPeekingRef.current !== true && canSaveProgress == true)
+        onPageChange?.(e.pageNumber);
       setPageInputValue(String(e.pageNumber));
     });
 
@@ -172,7 +175,8 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
       "scalechanging",
       (e: { scale: number; presetValue?: string }) => {
         setScaleValue(e.presetValue ?? String(e.scale));
-        onScaleChange?.(e.presetValue ?? String(e.scale));
+        if (canSaveProgress == true)
+          onScaleChange?.(e.presetValue ?? String(e.scale));
       },
     );
 
@@ -335,8 +339,8 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const continueFromPeek = useCallback(() => {
     isPeekingRef.current = false;
     setBookmark(null);
-    onPageChange?.(currentPage);
-  }, [onPageChange, currentPage]);
+    if (canSaveProgress == true) onPageChange?.(currentPage);
+  }, [onPageChange, currentPage, canSaveProgress]);
 
   const handleDownload = useCallback(async () => {
     const pdfDoc = pdfViewerRef.current?.pdfDocument;
@@ -624,7 +628,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
             <SelectionPopover
               containerRef={containerRef}
               onSelect={handleSelectionAction}
-              readOnly={readOnly}
+              disabled={!canAnnotate}
             />
           </Box>
           <PagePeekBar
@@ -637,7 +641,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
         </Box>
         {showAnnotations && (
           <SidePanel
-            readOnly={readOnly}
+            canAnnotate={canAnnotate}
             annotations={annotationApi}
             draftAnnotation={draftAnnotation}
             currentPage={currentPage}

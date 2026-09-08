@@ -6,12 +6,16 @@ import { useLocation, useNavigate } from "react-router";
  * By default, it looks for the "form" field. This field is automatically set using the parseFormError function.
  */
 export function FormError(props: {
-  errors?: Record<string, React.ReactNode>;
+  errors?: Record<string, React.ReactNode> | React.ReactNode;
   errorField?: string;
 }) {
   const { errors, errorField = "form", ...other } = props;
 
-  const errorMessage = errors?.[errorField];
+  const errorMessage =
+    errors && typeof errors == "object" && errorField in errors
+      ? (errors as Record<string, React.ReactNode>)[errorField]
+      : (errors as React.ReactNode);
+
   if (!errorMessage) return null;
 
   return (

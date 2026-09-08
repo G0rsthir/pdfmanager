@@ -1,7 +1,25 @@
 import { showSuccessNotification } from "@/components/ui/toaster";
 import { useAPIMutation } from "@/hooks/query";
-import { useForm } from "@tanstack/react-form";
+import {
+  useForm,
+  type FormAsyncValidateOrFn,
+  type FormValidateOrFn,
+  type FormValidators,
+} from "@tanstack/react-form";
 import type { MutationMeta, UseMutationOptions } from "@tanstack/react-query";
+
+type AnyFormValidators<TFormValues> = FormValidators<
+  TFormValues,
+  FormValidateOrFn<TFormValues>,
+  FormValidateOrFn<TFormValues>,
+  FormAsyncValidateOrFn<TFormValues>,
+  FormValidateOrFn<TFormValues>,
+  FormAsyncValidateOrFn<TFormValues>,
+  FormValidateOrFn<TFormValues>,
+  FormAsyncValidateOrFn<TFormValues>,
+  FormValidateOrFn<TFormValues>,
+  FormAsyncValidateOrFn<TFormValues>
+>;
 
 export function useFormMutation<
   TFormValues extends object,
@@ -9,7 +27,10 @@ export function useFormMutation<
   TMutationError = unknown,
   TMutationVariables = unknown,
 >(props: {
-  formOptions: { defaultValues: TFormValues } & Record<string, unknown>;
+  formOptions: {
+    defaultValues: TFormValues;
+    validators?: AnyFormValidators<TFormValues>;
+  } & Record<string, unknown>;
   mutationOptions: () => UseMutationOptions<
     TMutationData,
     TMutationError,

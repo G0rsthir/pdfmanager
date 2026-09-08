@@ -50,7 +50,7 @@ interface SidePanelProps {
   currentPage: number;
   tab: SidePanelTab;
   outline: OutlineItem[] | null;
-  readOnly?: boolean;
+  canAnnotate?: boolean;
   onTabChange: (tab: SidePanelTab) => void;
   onClose: () => void;
   onJumpToAnnotation: (annotation: AnnotationItem) => void;
@@ -65,7 +65,7 @@ export function SidePanel(props: SidePanelProps) {
     currentPage,
     tab,
     outline,
-    readOnly,
+    canAnnotate = true,
     onTabChange,
     onClose,
     onJumpToAnnotation,
@@ -84,12 +84,7 @@ export function SidePanel(props: SidePanelProps) {
       borderColor="border"
     >
       <Group justify="flex-end" align="center" px="3" py="2">
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Close Panel"
-          onClick={onClose}
-        >
+        <GenericIconButton size="xs" variant="ghost" onClick={onClose}>
           <LuX />
         </GenericIconButton>
       </Group>
@@ -134,7 +129,7 @@ export function SidePanel(props: SidePanelProps) {
             )}
             <AnnotationList
               items={annotations.items}
-              readOnly={readOnly}
+              readOnly={!canAnnotate}
               onJump={onJumpToAnnotation}
               onDelete={annotations.delete}
               onUpdate={annotations.update}
@@ -321,7 +316,6 @@ function AnnotationList(props: {
               <GenericIconButton
                 size="2xs"
                 variant="ghost"
-                aria-label="Delete annotation"
                 colorPalette="red"
                 onClick={() => {
                   onDelete(annotation.id);
@@ -383,7 +377,6 @@ function ColorSwatchMenu(props: {
           cursor="pointer"
           _hover={{ w: "7px" }}
           transition="width 0.15s"
-          aria-label="Change color"
         />
       </Menu.Trigger>
       <Portal>

@@ -5,19 +5,20 @@ import {
   revokePersonalApiKeyMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { ApiKeyResponse } from "@/api/types.gen";
+import { AccessScope } from "@/api/types.gen";
+import { useHasScopes } from "@/common/auth/hooks";
 import { parseAPIError } from "@/common/error";
 import { expiryDatePresets } from "@/common/format";
 import { GenericIconButton } from "@/components/ui/button";
 import { Block } from "@/components/ui/display";
-import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import {
   showErrorNotification,
   showSuccessNotification,
 } from "@/components/ui/toaster";
-import { AccessScopeEnum } from "@/config/const";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import { Empty } from "@/pages/shared/common";
@@ -203,12 +204,14 @@ function CreatePersonalApiKeyDialog(props: {
 
   const [keyType, setKeyType] = useState<KeyType>("standard");
 
+  const canWrite = useHasScopes(AccessScope.USER_WRITE);
+
   const { form, mutation } = useFormMutation({
     formOptions: {
       defaultValues: {
         description: "",
         expires_at: [] as DateValue[],
-        scopes: [] as string[],
+        scopes: [] as AccessScope[],
       },
     },
     mutationOptions: createPersonalApiKeyMutation,
@@ -217,7 +220,7 @@ function CreatePersonalApiKeyDialog(props: {
         return {
           body: {
             description: value.description,
-            scopes: [AccessScopeEnum.USER_READ],
+            scopes: [AccessScope.LIBRARY_READ],
             expires_at: today(getLocalTimeZone())
               .add({ years: 10 })
               .toDate(getLocalTimeZone()),
@@ -257,13 +260,17 @@ function CreatePersonalApiKeyDialog(props: {
       title="New API Key"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
-      confirmBtnType="userWrite"
+      disabled={!canWrite}
       size="lg"
     >
       <form.Field
         name="description"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={!canWrite}
+          >
             <Field.Label>
               Description <Field.RequiredIndicator />
             </Field.Label>
@@ -326,12 +333,12 @@ function CreatePersonalApiKeyDialog(props: {
       )}
 
       {keyType == "standard" ? (
-        <PersonalApiKeyForm FormField={form.Field} />
+        <PersonalApiKeyForm FormField={form.Field} readonly={!canWrite} />
       ) : (
         <OpdsInstructions />
       )}
 
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }
@@ -343,16 +350,17 @@ interface ExpiryDateSelectField {
 }
 
 interface ScopesSelectField {
-  state: { value: string[]; meta: { isValid: boolean; errors?: string } };
-  handleChange: (value: string[]) => void;
+  state: { value: AccessScope[]; meta: { isValid: boolean; errors?: string } };
+  handleChange: (value: AccessScope[]) => void;
   handleBlur: () => void;
 }
 
 export function PersonalApiKeyForm(props: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   FormField: React.FC<any>;
+  readonly?: boolean;
 }) {
-  const { FormField } = props;
+  const { FormField, readonly } = props;
 
   const userScopes = useGlobalStore(
     useShallow((state) => state.session?.user.role.scopes ?? []),
@@ -371,7 +379,11 @@ export function PersonalApiKeyForm(props: {
           handleChange,
           handleBlur,
         }: ExpiryDateSelectField) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Expiry Date <Field.RequiredIndicator />
             </Field.Label>
@@ -384,6 +396,7 @@ export function PersonalApiKeyForm(props: {
                   value={fieldState.value}
                   invalid={ctx.invalid}
                   presets={expiryDatePresets}
+                  disabled={ctx.disabled}
                   ids={{
                     label: () => ctx.ids.label,
                     input: () => ctx.ids.control,
@@ -408,7 +421,11 @@ export function PersonalApiKeyForm(props: {
           handleChange,
           handleBlur,
         }: ScopesSelectField) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Permissions <Field.RequiredIndicator />
             </Field.Label>
@@ -437,12 +454,7 @@ function OpdsURL() {
       <InputGroup
         endElement={
           <Clipboard.Trigger asChild>
-            <GenericIconButton
-              size="xs"
-              variant="ghost"
-              me="-2"
-              aria-label="Copy catalog URL"
-            >
+            <GenericIconButton size="xs" variant="ghost" me="-2">
               <Clipboard.Indicator />
             </GenericIconButton>
           </Clipboard.Trigger>
@@ -499,6 +511,8 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
   const [dialog, setDialog] = useState<RowAction>(null);
   const onClose = () => setDialog(null);
 
+  const canWrite = useHasScopes(AccessScope.USER_WRITE);
+
   return (
     <>
       <Menu.Root>
@@ -510,7 +524,11 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
         <Portal>
           <Menu.Positioner>
             <Menu.Content>
-              <Menu.Item value="reset" onSelect={() => setDialog("reset")}>
+              <Menu.Item
+                value="reset"
+                onSelect={() => setDialog("reset")}
+                disabled={!canWrite}
+              >
                 Reset
               </Menu.Item>
               <Menu.Item
@@ -518,6 +536,7 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
                 color="fg.error"
                 _hover={{ bg: "bg.error", color: "fg.error" }}
                 onSelect={() => setDialog("revoke")}
+                disabled={!canWrite}
               >
                 Revoke
               </Menu.Item>
@@ -534,7 +553,6 @@ function TableRowActions({ apiKey }: { apiKey: ApiKeyResponse }) {
         open={dialog == "reset"}
         onClose={onClose}
         keyId={apiKey.id}
-        confirmBtnType="userWrite"
         mutationOptions={resetPersonalApiKeyMutation}
       />
     </>
@@ -571,7 +589,6 @@ export function RevokeApiKeyDialog(props: {
       onConfirm={() => remokeRequest({ path: { id: keyId } })}
       confirmBtnText="Revoke"
       confirmBtnPalette="red"
-      confirmBtnType="userWrite"
     >
       This action cannot be undone. This will revoke token
     </ConfirmModal>

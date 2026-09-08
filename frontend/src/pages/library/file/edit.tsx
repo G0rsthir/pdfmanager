@@ -4,10 +4,14 @@ import {
   listTagsOptions,
   updateFileMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { FileResponse } from "@/api/types.gen";
+import {
+  ResourcePermissionCapability,
+  type FileResponse,
+} from "@/api/types.gen";
+import { useCan } from "@/common/auth/hooks";
 import { Section } from "@/components/ui/display";
-import { FormError } from "@/components/ui/error";
 import { Form } from "@/components/ui/form/container";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIQuery } from "@/hooks/query";
 import { TokensInput } from "@/pages/shared/input";
@@ -30,12 +34,19 @@ const MAX_NAME_LENGTH = 255;
 const MAX_DESCRIPTION_LENGTH = 255;
 
 export function EditFilePanel({ file }: { file: FileResponse }) {
-  return <EditFileForm file={file} />;
+  const can = useCan(file);
+  const canWrite = can(ResourcePermissionCapability.WRITE);
+
+  return <EditFileForm file={file} readOnly={!canWrite} />;
 }
 
-function EditFileForm({ file }: { file: FileResponse }) {
-  const readOnly = file.is_read_only_by_current_user;
-
+function EditFileForm({
+  file,
+  readOnly,
+}: {
+  file: FileResponse;
+  readOnly?: boolean;
+}) {
   const { form, mutation } = useFormMutation({
     formOptions: {
       defaultValues: {
@@ -233,6 +244,7 @@ function EditFileForm({ file }: { file: FileResponse }) {
                           label: () => ctx.ids.label,
                           input: () => ctx.ids.control,
                         }}
+                        disabled={readOnly}
                       />
                     )}
                   </Field.Context>
@@ -243,7 +255,7 @@ function EditFileForm({ file }: { file: FileResponse }) {
           </Section>
         </SimpleGrid>
 
-        <FormError errors={form.state.errorMap.onSubmit} />
+        <SubscribeFormError form={form} />
 
         <form.Subscribe
           selector={(state) => [state.isDefaultValue, state.canSubmit]}

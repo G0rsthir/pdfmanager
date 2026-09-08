@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Path, Query, Request
 from fastapi.responses import JSONResponse
 
-from server.const import AccessScopeEnum
+from server.const import AccessScope
 from server.dependencies import (
     AccessSecurity,
     ApiKeyServiceDependency,
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/general")
 
 @router.get(path="/api/docs", operation_id="GetApiDocs")
 async def get_api_docs(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.ADMIN_READ])],
     request: Request,
 ):
     """
@@ -41,7 +41,7 @@ async def get_api_docs(
 
 @router.get(path="/api/keys", response_model=list[ApiKeyResponse], operation_id="ListApiKeys")
 async def list_api_keys(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.ADMIN_READ])],
     api_key_service: ApiKeyServiceDependency,
     user_repo: UserRepositoryDependency,
 ):
@@ -54,7 +54,7 @@ async def list_api_keys(
 @router.post(path="/api/keys", response_model=ApiKeyCreateResultResponse, operation_id="CreateApiKey")
 async def create_api_key(
     data: ApiKeyCreateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.ADMIN_WRITE])],
     token_service: TokenServiceDependency,
     api_key_service: ApiKeyServiceDependency,
 ):
@@ -80,7 +80,7 @@ async def create_api_key(
 @router.delete(path="/api/keys/{id}", operation_id="RevokeApiKey")
 async def revoke_api_key(
     item_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.ADMIN_WRITE])],
     api_key_service: ApiKeyServiceDependency,
 ):
     await api_key_service.revoke_api_key(item_id)
@@ -90,7 +90,7 @@ async def revoke_api_key(
 async def reset_api_key(
     item_id: Annotated[UUID, Path(alias="id")],
     data: ApiKeyResetRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.ADMIN_WRITE])],
     token_service: TokenServiceDependency,
     api_key_service: ApiKeyServiceDependency,
 ):
@@ -113,7 +113,7 @@ async def reset_api_key(
 
 @router.get(path="/tasks/active", response_model=list[TaskActiveResponse], operation_id="ListActiveTasks")
 async def list_active_tasks(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.ADMIN_READ])],
     task_status_store: TaskStatusStoreDependency,
 ):
 
@@ -125,7 +125,7 @@ async def list_active_tasks(
 )
 async def list_task_history(
     query: Annotated[PaginationQueryParams, Query()],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.ADMIN_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.ADMIN_READ])],
     task_history_store: TaskHistoryStoreDependency,
 ):
     result = await task_history_store.list_recent(limit=query.limit, offset=query.offset)

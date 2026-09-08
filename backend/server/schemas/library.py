@@ -6,8 +6,16 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field
 
-from server.const import RESOURCE_PERMISSIONS, FileStatusEnum
+from server.const import (
+    RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES,
+    RESOURCE_PERMISSIONS_LEVEL_WRITABLE,
+    AssignmentLockReason,
+    FileStatusEnum,
+    ResourcePermissionCapability,
+    ResourcePermissionLevel,
+)
 from server.schemas.identity import UserSummaryResponse
+from server.security.permissions import permission_can
 
 
 class ListFilesQueryParams(BaseModel):
@@ -34,11 +42,11 @@ class UpdateCollectionRequest(BaseModel):
 
 class InviteToCollectionRequest(BaseModel):
     email: str
-    permission: Literal["read", "modify"]
+    permission: RESOURCE_PERMISSIONS_LEVEL_WRITABLE
 
 
 class UpdateCollectionPermissionRequest(BaseModel):
-    permission: Literal["read", "modify"]
+    permission: RESOURCE_PERMISSIONS_LEVEL_WRITABLE
 
 
 class CollectionResponse(BaseModel):
@@ -56,24 +64,17 @@ class CollectionWithDetailsResponse(CollectionResponse):
     owner: UserSummaryResponse
 
     # Helpful for permission calculation, but not part of the actual response
-    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+    target_permission: ResourcePermissionLevel = Field(exclude=True)
 
     @computed_field
     @property
-    def is_shared_with_current_user(self) -> bool:
-        if self.target_permission and self.target_permission != "owner":
-            return True
-
-        return False
+    def capabilities(self) -> list[ResourcePermissionCapability]:
+        return sorted(RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES[self.target_permission])
 
     @computed_field
     @property
-    def is_read_only_by_current_user(self) -> bool:
-        """
-        Whether current user can only read this collection
-        """
-
-        if self.target_permission == "read":
+    def is_shared(self) -> bool:
+        if self.target_permission != ResourcePermissionLevel.OWNER:
             return True
 
         return False
@@ -94,6 +95,7 @@ class FileResponse(BaseModel):
     file_size: int
     content_type: str
     original_name: str
+    storage_key: str
     file_hash: str | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -101,7 +103,7 @@ class FileResponse(BaseModel):
     state: FileStateResponse
 
     # Helpful for permission calculation, but not part of the actual response
-    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+    target_permission: ResourcePermissionLevel = Field(exclude=True)
 
     @computed_field
     @property
@@ -110,15 +112,8 @@ class FileResponse(BaseModel):
 
     @computed_field
     @property
-    def is_read_only_by_current_user(self) -> bool:
-        """
-        Whether current user can only read this file
-        """
-
-        if self.target_permission == "read":
-            return True
-
-        return False
+    def capabilities(self) -> list[ResourcePermissionCapability]:
+        return sorted(RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES[self.target_permission])
 
 
 class FileStateResponse(BaseModel):
@@ -149,6 +144,29 @@ class PatchFileStateRequest(BaseModel):
     status: FileStatusEnum | None = None
 
 
+class BulkTagsOperation(BaseModel):
+    add: list[str] = Field(default_factory=list)
+    remove: list[str] = Field(default_factory=list)
+
+
+class BulkPatchFilesRequest(BaseModel):
+    ids: list[UUID]
+
+    collection_id: UUID | None = None
+    tags: BulkTagsOperation | None = None
+
+
+class BulkPatchFileStateRequest(BaseModel):
+    ids: list[UUID]
+
+    status: FileStatusEnum | None = None
+    is_favorite: bool | None = None
+
+
+class BulkDeleteFilesRequest(BaseModel):
+    ids: list[UUID]
+
+
 class UpdateFileRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=255)
@@ -167,7 +185,7 @@ class LibraryTreeNode(BaseModel):
 
     # Helpful for permission calculation, but not part of the actual response
     target_parent: LibraryTreeNode | None = Field(default=None, exclude=True)
-    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+    target_permission: ResourcePermissionLevel | None = Field(default=None, exclude=True)
     target_permission_count: int | None = Field(default=None, exclude=True)
 
     @computed_field
@@ -183,17 +201,14 @@ class LibraryTreeNode(BaseModel):
 
     @computed_field
     @property
-    def is_read_only_by_current_user(self) -> bool:
-        if self.target_permission == "read":
-            return True
+    def capabilities(self) -> list[ResourcePermissionCapability]:
+        if self.target_permission:
+            return sorted(RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES[self.target_permission])
 
-        if self.target_permission in ("owner", "modify"):
-            return False
+        if self.target_parent:
+            return self.target_parent.capabilities
 
-        if self.target_parent and self.target_parent.is_read_only_by_current_user:
-            return True
-
-        return False
+        return []
 
 
 class UpdateTagRequest(BaseModel):
@@ -227,32 +242,33 @@ class AssignmentResponse(BaseModel):
     id: UUID
     user: UserSummaryResponse
     inherited_from: UUID | None = None
-    permission: RESOURCE_PERMISSIONS
+    permission: ResourcePermissionLevel
 
     # Helpful for permission calculation, but not part of the actual response
     target_user_id: UUID = Field(exclude=True)
-    target_permission: RESOURCE_PERMISSIONS | None = Field(default=None, exclude=True)
+    target_permission: ResourcePermissionLevel | None = Field(default=None, exclude=True)
 
     @computed_field
     @property
-    def is_read_only_by_current_user(self) -> bool:
+    def lock_reason(self) -> AssignmentLockReason | None:
         """
-        Whether current user can only read this assignment
+        Why the current user cannot change this grant
         """
+        if not self.target_permission or not permission_can(
+            self.target_permission, ResourcePermissionCapability.MANAGE_PERMISSIONS
+        ):
+            return AssignmentLockReason.FORBIDDEN
 
         if self.inherited_from is not None:
-            return True
+            return AssignmentLockReason.INHERITED
 
         if self.target_user_id == self.user.id:
-            return True
+            return AssignmentLockReason.SELF
 
-        if self.target_permission == "read":
-            return True
+        if self.permission == ResourcePermissionLevel.OWNER:
+            return AssignmentLockReason.OWNER
 
-        if self.permission == "owner":
-            return True
-
-        return False
+        return None
 
 
 class ResourcePermissionResponse(BaseModel):

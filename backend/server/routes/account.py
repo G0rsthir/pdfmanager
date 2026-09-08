@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Path
 
-from server.const import AccessScopeEnum
+from server.const import AccessScope
 from server.dependencies import (
     AccessSecurity,
     ApiKeyServiceDependency,
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/account")
 @router.put(path="/details", operation_id="UpdateUserAccountDetails")
 async def update_details(
     details_update: DetailsUpdate,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
     """
@@ -50,7 +50,7 @@ async def update_details(
 @router.put(path="/password", operation_id="UpdateUserPassword")
 async def update_password(
     credentials: CredentialsUpdate,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_WRITE])],
     identity_service: IdentityServiceDependency,
 ):
     """
@@ -71,7 +71,7 @@ async def update_password(
 
 @router.get(path="/keys", response_model=list[ApiKeyResponse], operation_id="ListPersonalApiKeys")
 async def list_api_keys(
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_READ])],
     api_key_service: ApiKeyServiceDependency,
 ):
     keys = await api_key_service.list_all_by_user(user_id=access_session.user_id)
@@ -82,7 +82,7 @@ async def list_api_keys(
 @router.post(path="/keys", response_model=ApiKeyCreateResultResponse, operation_id="CreatePersonalApiKey")
 async def create_api_key(
     data: ApiKeyPersonalCreate,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_WRITE])],
     api_key_service: ApiKeyServiceDependency,
     token_service: TokenServiceDependency,
     auth_service: AuthServiceDependency,
@@ -123,7 +123,7 @@ async def create_api_key(
 @router.delete(path="/keys/{id}", operation_id="RevokePersonalApiKey")
 async def revoke_api_key(
     item_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_WRITE])],
     api_key_service: ApiKeyServiceDependency,
 ):
 
@@ -134,7 +134,7 @@ async def revoke_api_key(
 async def reset_api_key(
     item_id: Annotated[UUID, Path(alias="id")],
     data: ApiKeyResetRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_WRITE])],
     token_service: TokenServiceDependency,
     api_key_service: ApiKeyServiceDependency,
 ):

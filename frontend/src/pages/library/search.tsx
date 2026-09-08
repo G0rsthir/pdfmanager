@@ -195,7 +195,7 @@ interface SearchResultsProps {
 function SearchResults(props: SearchResultsProps) {
   const { results, textQuery } = props;
 
-  if (results.length === 0) {
+  if (results.length == 0) {
     return (
       <Empty
         icon={<LuSearch />}
@@ -292,7 +292,7 @@ export function SearchFileHitsCard(props: {
               <Group gap={3} justifyContent="end" wrap="wrap" mt={1}>
                 {textQuery.length && (
                   <Badge colorPalette="blue" variant="subtle" size="xs">
-                    {hits.length} {hits.length === 1 ? "match" : "matches"}
+                    {hits.length} {hits.length == 1 ? "match" : "matches"}
                   </Badge>
                 )}
                 <Group gap={1.5}>
@@ -361,7 +361,7 @@ function SearchHitItem(props: {
 }) {
   const { hit, fileId, folderId } = props;
 
-  if (hit.fragment_type === "annotation" && hit.annotation) {
+  if (hit.fragment_type == "annotation" && hit.annotation) {
     return (
       <AnnotationHitItem
         hit={hit}
@@ -490,7 +490,7 @@ function AnnotationHitItem(props: {
               pl={2}
             >
               "
-              {hit.field === "excerpt"
+              {hit.field == "excerpt"
                 ? highlightSnippet(hit.snippet)
                 : annotation.excerpt}
               "
@@ -498,7 +498,7 @@ function AnnotationHitItem(props: {
           )}
 
           <Text textStyle="sm" lineClamp={2}>
-            {hit.field === "body"
+            {hit.field == "body"
               ? highlightSnippet(hit.snippet)
               : annotation.body}
           </Text>

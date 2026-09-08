@@ -1,5 +1,10 @@
 import { getFile } from "@/api/sdk.gen";
-import { FileStatusEnum, type FileResponse } from "@/api/types.gen";
+import {
+  FileStatusEnum,
+  ResourcePermissionCapability,
+  type FileResponse,
+} from "@/api/types.gen";
+import { useCan } from "@/common/auth/hooks";
 import { parseAPIError } from "@/common/error";
 import { showErrorNotification } from "@/components/ui/toaster";
 import { useFileThumbnail } from "@/hooks/asset";
@@ -171,6 +176,10 @@ export function HeaderActions(props: { file: FileResponse }) {
 
   const navigate = useNavigate();
 
+  const can = useCan(file);
+
+  const canDelete = can(ResourcePermissionCapability.DELETE);
+
   return (
     <>
       <GenericFileActionsMenu>
@@ -179,7 +188,7 @@ export function HeaderActions(props: { file: FileResponse }) {
           color="fg.error"
           _hover={{ bg: "bg.error", color: "fg.error" }}
           onSelect={() => setDialog("delete")}
-          disabled={file.is_read_only_by_current_user}
+          disabled={!canDelete}
         >
           Delete
         </Menu.Item>

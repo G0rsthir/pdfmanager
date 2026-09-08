@@ -6,11 +6,15 @@ import {
   resetUserPasswordMutation,
   updateUserMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { RoleResponse, UserResponse } from "@/api/types.gen";
-import { parseAPIError } from "@/common/error";
+import {
+  AccessScope,
+  type RoleResponse,
+  type UserResponse,
+} from "@/api/types.gen";
+import { useHasScopes } from "@/common/auth/hooks";
 import { GenericIconButton } from "@/components/ui/button";
-import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -121,6 +125,8 @@ function TableRowActions({ user }: { user: UserResponse }) {
   const [dialog, setDialog] = useState<RowAction>(null);
   const onClose = useCallback(() => setDialog(null), []);
 
+  const canWrite = useHasScopes(AccessScope.ADMIN_WRITE);
+
   return (
     <>
       <Menu.Root>
@@ -135,14 +141,14 @@ function TableRowActions({ user }: { user: UserResponse }) {
               <Menu.Item
                 value="edit"
                 onSelect={() => setDialog("edit")}
-                disabled={user.is_external}
+                disabled={user.is_external || !canWrite}
               >
                 Edit
               </Menu.Item>
               <Menu.Item
                 value="password"
                 onSelect={() => setDialog("password")}
-                disabled={user.is_external}
+                disabled={user.is_external || !canWrite}
               >
                 Reset password
               </Menu.Item>
@@ -151,6 +157,7 @@ function TableRowActions({ user }: { user: UserResponse }) {
                 color="fg.error"
                 _hover={{ bg: "bg.error", color: "fg.error" }}
                 onSelect={() => setDialog("delete")}
+                disabled={!canWrite}
               >
                 Delete
               </Menu.Item>
@@ -176,12 +183,14 @@ function TableRowActions({ user }: { user: UserResponse }) {
 function CreateUserAction() {
   const { open, onClose, onOpen } = useDisclosure();
 
+  const canWrite = useHasScopes(AccessScope.ADMIN_WRITE);
+
   return (
     <>
       <Button size="sm" onClick={onOpen}>
         <LuPlus /> Add User
       </Button>
-      <CreateUserDialog open={open} onClose={onClose} />
+      <CreateUserDialog open={open} onClose={onClose} readonly={!canWrite} />
     </>
   );
 }
@@ -199,12 +208,9 @@ function DeleteUserDialog(props: {
       showSuccessNotification("User deleted successfully");
       onClose();
     },
-    onError(error) {
+    onApiError(error) {
       onClose();
-      showErrorNotification(
-        "User deletion failed",
-        parseAPIError(error).message,
-      );
+      showErrorNotification("User deletion failed", error.message);
     },
   });
 
@@ -216,15 +222,18 @@ function DeleteUserDialog(props: {
       onConfirm={() => deleteRequest({ path: { id: userId } })}
       confirmBtnText="Delete"
       confirmBtnPalette="red"
-      confirmBtnType="adminWrite"
     >
       This action cannot be undone. This will permanently delete this user.
     </ConfirmModal>
   );
 }
 
-function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
-  const { open, onClose } = props;
+function CreateUserDialog(props: {
+  open: boolean;
+  onClose: () => void;
+  readonly?: boolean;
+}) {
+  const { open, readonly, onClose } = props;
 
   const { form } = useFormMutation({
     formOptions: {
@@ -265,12 +274,16 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
       title="Create User"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
-      confirmBtnType="adminWrite"
+      disabled={readonly}
     >
       <form.Field
         name="name"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Name <Field.RequiredIndicator />
             </Field.Label>
@@ -286,7 +299,11 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
       <form.Field
         name="email"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Email <Field.RequiredIndicator />
             </Field.Label>
@@ -302,7 +319,11 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
       <form.Field
         name="password"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root required invalid={!fieldState.meta.isValid}>
+          <Field.Root
+            required
+            invalid={!fieldState.meta.isValid}
+            disabled={readonly}
+          >
             <Field.Label>
               Password <Field.RequiredIndicator />
             </Field.Label>
@@ -319,7 +340,11 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
       <form.Field
         name="password_confirm"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root required invalid={!fieldState.meta.isValid}>
+          <Field.Root
+            required
+            invalid={!fieldState.meta.isValid}
+            disabled={readonly}
+          >
             <Field.Label>
               Confirm Password <Field.RequiredIndicator />
             </Field.Label>
@@ -339,7 +364,11 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           onChange: ({ value }) => (!value ? "Role is required" : undefined),
         }}
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <RoleSelect
               onValueChange={handleChange}
               onBlur={handleBlur}
@@ -354,7 +383,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
       <form.Field
         name="is_enabled"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
+          <Field.Root invalid={!fieldState.meta.isValid} disabled={readonly}>
             <Switch.Root
               checked={fieldState.value}
               onCheckedChange={({ checked }) => handleChange(checked)}
@@ -367,7 +396,7 @@ function CreateUserDialog(props: { open: boolean; onClose: () => void }) {
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }
@@ -465,7 +494,6 @@ function EditUserDialog(props: {
       title="Edit User"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
-      confirmBtnType="adminWrite"
     >
       <form.Field
         name="name"
@@ -533,7 +561,7 @@ function EditUserDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }
@@ -570,7 +598,6 @@ function ResetPasswordDialog(props: {
       title="Reset password"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
-      confirmBtnType="adminWrite"
     >
       <form.Field
         name="password"
@@ -606,7 +633,7 @@ function ResetPasswordDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }

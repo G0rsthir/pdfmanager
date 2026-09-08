@@ -1,5 +1,5 @@
+import { AccessScope } from "@/api/types.gen";
 import { useHasScopes } from "@/common/auth/hooks";
-import { AccessScopeEnum } from "@/config/const";
 import {
   Button,
   CloseButton,
@@ -9,22 +9,22 @@ import {
   type DialogRootProps,
 } from "@chakra-ui/react";
 
-export type FormModalButtonType = "generic" | "adminWrite" | "userWrite";
-
-export function FormModal(props: {
+export interface FormModalProps {
   open: boolean;
   close: () => void;
   children: React.ReactNode;
   title: React.ReactNode;
   confirmBtnText?: string;
-  confirmBtnType?: FormModalButtonType;
+  confirmBtnType?: "generic" | AccessScope;
   confirmBtnPalette?: string;
   onSubmit: () => void;
   isPending?: boolean;
   submitOnEnter?: boolean;
   disabled?: boolean;
   size?: DialogRootProps["size"];
-}) {
+}
+
+export function FormModal(props: FormModalProps) {
   const {
     open,
     children,
@@ -33,7 +33,7 @@ export function FormModal(props: {
     disabled,
     submitOnEnter = false,
     confirmBtnPalette,
-    confirmBtnType,
+    confirmBtnType = "generic",
     confirmBtnText = "Confirm",
     size = "sm",
     onSubmit,
@@ -41,9 +41,7 @@ export function FormModal(props: {
   } = props;
 
   const haScope = useHasScopes(
-    confirmBtnType == "adminWrite"
-      ? AccessScopeEnum.ADMIN_WRITE
-      : AccessScopeEnum.USER_WRITE,
+    confirmBtnType != "generic" ? confirmBtnType : AccessScope.USER_WRITE,
   );
 
   const isDisabled = disabled || (confirmBtnType != "generic" && !haScope);

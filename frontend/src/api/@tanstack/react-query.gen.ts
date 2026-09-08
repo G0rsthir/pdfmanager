@@ -20,6 +20,7 @@ import {
   deleteCollection,
   deleteCollectionPermission,
   deleteFile,
+  deleteFilesBulk,
   deleteOidcAuthProvider,
   deleteUser,
   getApiDocs,
@@ -65,6 +66,8 @@ import {
   opdsShelf,
   type Options,
   patchAnnotation,
+  patchFilesBulk,
+  patchFilesStatesBulk,
   patchFileState,
   refreshAuthToken,
   resetApiKey,
@@ -113,6 +116,8 @@ import type {
   DeleteCollectionPermissionError,
   DeleteFileData,
   DeleteFileError,
+  DeleteFilesBulkData,
+  DeleteFilesBulkError,
   DeleteOidcAuthProviderData,
   DeleteOidcAuthProviderError,
   DeleteUserData,
@@ -205,6 +210,10 @@ import type {
   OpdsShelfData,
   PatchAnnotationData,
   PatchAnnotationError,
+  PatchFilesBulkData,
+  PatchFilesBulkError,
+  PatchFilesStatesBulkData,
+  PatchFilesStatesBulkError,
   PatchFileStateData,
   PatchFileStateError,
   RefreshAuthTokenData,
@@ -841,6 +850,87 @@ export const updateFileMutation = (
   > = {
     mutationFn: async (fnOptions) => {
       const { data } = await updateFile({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Patch Files Bulk
+ */
+export const patchFilesBulkMutation = (
+  options?: Partial<Options<PatchFilesBulkData>>,
+): UseMutationOptions<
+  unknown,
+  PatchFilesBulkError,
+  Options<PatchFilesBulkData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    PatchFilesBulkError,
+    Options<PatchFilesBulkData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await patchFilesBulk({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Delete Files Bulk
+ */
+export const deleteFilesBulkMutation = (
+  options?: Partial<Options<DeleteFilesBulkData>>,
+): UseMutationOptions<
+  unknown,
+  DeleteFilesBulkError,
+  Options<DeleteFilesBulkData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    DeleteFilesBulkError,
+    Options<DeleteFilesBulkData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await deleteFilesBulk({
+        ...options,
+        ...fnOptions,
+        throwOnError: true,
+      });
+      return data;
+    },
+  };
+  return mutationOptions;
+};
+
+/**
+ * Patch Files States Bulk
+ */
+export const patchFilesStatesBulkMutation = (
+  options?: Partial<Options<PatchFilesStatesBulkData>>,
+): UseMutationOptions<
+  unknown,
+  PatchFilesStatesBulkError,
+  Options<PatchFilesStatesBulkData>
+> => {
+  const mutationOptions: UseMutationOptions<
+    unknown,
+    PatchFilesStatesBulkError,
+    Options<PatchFilesStatesBulkData>
+  > = {
+    mutationFn: async (fnOptions) => {
+      const { data } = await patchFilesStatesBulk({
         ...options,
         ...fnOptions,
         throwOnError: true,

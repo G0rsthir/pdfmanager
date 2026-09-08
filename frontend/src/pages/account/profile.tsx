@@ -2,12 +2,12 @@ import {
   updateUserAccountDetailsMutation,
   updateUserPasswordMutation,
 } from "@/api/@tanstack/react-query.gen";
+import { AccessScope } from "@/api/types.gen";
 import { useAuth, useHasScopes } from "@/common/auth/hooks";
 import { Block, SettingsOption } from "@/components/ui/display";
-import { FormError } from "@/components/ui/error";
 import { Form } from "@/components/ui/form/container";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { PasswordInput } from "@/components/ui/password-input";
-import { AccessScopeEnum } from "@/config/const";
 import { useFormMutation } from "@/hooks/form";
 import {
   Alert,
@@ -78,7 +78,7 @@ function EditAccountDetails() {
     },
   });
 
-  const hasScope = useHasScopes(AccessScopeEnum.USER_WRITE);
+  const hasScope = useHasScopes(AccessScope.USER_WRITE);
 
   const isReadOnly = session?.user.is_external || !hasScope;
 
@@ -125,7 +125,7 @@ function EditAccountDetails() {
             </Field.Root>
           )}
         />
-        <FormError errors={form.state.errorMap.onSubmit} />
+        <SubscribeFormError form={form} />
         <form.Subscribe
           selector={(state) => state.isDirty}
           children={(isDirty) => {
@@ -165,7 +165,7 @@ function ChangePassword() {
     onSuccess: onClose,
   });
 
-  const hasScope = useHasScopes(AccessScopeEnum.USER_WRITE);
+  const hasScope = useHasScopes(AccessScope.USER_WRITE);
 
   const isReadOnly = session?.user.is_external || !hasScope;
 
@@ -246,7 +246,7 @@ function ChangePassword() {
             </Field.Root>
           )}
         />
-        <FormError errors={form.state.errorMap.onSubmit} />
+        <SubscribeFormError form={form} />
         <Group justifyContent="flex-end">
           <Button type="submit">Update</Button>
         </Group>

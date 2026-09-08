@@ -14,9 +14,10 @@ from pydantic import (
     computed_field,
 )
 
-from server.schemas._validation import access_scope_validator, expiration_in_future_validator
+from server.const import AccessScope, RefreshScopeEnum
+from server.schemas._validation import expiration_in_future_validator
 from server.schemas.identity import UserSummaryResponse
-from server.schemas.types import ExcludedField, Scopes
+from server.schemas.types import ExcludedField, RequiredScopeList
 
 
 class AuthSessionContextBase(BaseModel):
@@ -24,7 +25,6 @@ class AuthSessionContextBase(BaseModel):
 
     user_id: UUID = Field(validation_alias=AliasChoices("user_id", "sub"), serialization_alias="sub")
     session_id: UUID = Field(validation_alias=AliasChoices("session_id", "sid"), serialization_alias="sid")
-    scopes: Scopes | None = None
 
 
 class AccessSessionContext(AuthSessionContextBase):
@@ -32,7 +32,7 @@ class AccessSessionContext(AuthSessionContextBase):
     Stores data about user's active (current) access session.
     """
 
-    pass
+    scopes: list[AccessScope] | None = None
 
 
 class RefreshSessionContext(AuthSessionContextBase):
@@ -40,7 +40,7 @@ class RefreshSessionContext(AuthSessionContextBase):
     Stores data about user's active (current) refresh session.
     """
 
-    pass
+    scopes: list[RefreshScopeEnum] | None = None
 
 
 class AccessToken(BaseModel):
@@ -119,12 +119,7 @@ class ApiKeyResponse(BaseModel):
     expires_at: datetime
     is_revoked: bool
     user_id: UUID
-    scopes: Scopes
-
-    @computed_field
-    @property
-    def scopes_str(self) -> str:
-        return self.scopes.to_str()
+    scopes: list[AccessScope]
 
     @computed_field
     @property
@@ -140,7 +135,7 @@ class ApiKeyCreateRequest(BaseModel):
     description: str
     expires_at: Annotated[AwareDatetime, AfterValidator(expiration_in_future_validator)]
     user_id: UUID
-    scopes: Annotated[Scopes, AfterValidator(access_scope_validator)]
+    scopes: RequiredScopeList
 
 
 class ApiKeyPersonalCreate(ApiKeyCreateRequest):
@@ -164,6 +159,6 @@ class ApiKeyCreateResult(BaseModel):
     created_at: AwareDatetime
     auth_provider_id: UUID
 
-    scopes: Scopes
+    scopes: list[AccessScope]
     session_expires_at: AwareDatetime
     is_service: bool = True

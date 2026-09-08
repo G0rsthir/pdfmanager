@@ -2,10 +2,11 @@ import {
   listTagsOptions,
   updateTagMutation,
 } from "@/api/@tanstack/react-query.gen";
-import type { TagWithDetailsResponse } from "@/api/types.gen";
+import { AccessScope, type TagWithDetailsResponse } from "@/api/types.gen";
+import { useHasScopes } from "@/common/auth/hooks";
 import { GenericIconButton } from "@/components/ui/button";
-import { FormError } from "@/components/ui/error";
 import { QueryView } from "@/components/ui/feedback";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { PaletteColors } from "@/config/theme";
 import { useFormMutation } from "@/hooks/form";
@@ -26,7 +27,7 @@ import {
   Text,
   parseColor,
 } from "@chakra-ui/react";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuCheck, LuFile, LuTag } from "react-icons/lu";
 import { Empty } from "../shared/common";
@@ -49,7 +50,7 @@ function TagsView({ tags }: { tags: TagWithDetailsResponse[] }) {
         Tags
       </Heading>
 
-      {tags.length === 0 && (
+      {tags.length == 0 && (
         <Empty
           icon={<LuTag />}
           title="No tags available. Tags will appear here when you add them to files."
@@ -87,7 +88,7 @@ function TagCard({ tag }: { tag: TagWithDetailsResponse }) {
           <Group gap="1" color="fg.muted" textStyle="xs">
             <LuFile size={12} />
             <Text>
-              {tag.file_count} {tag.file_count === 1 ? "file" : "files"}
+              {tag.file_count} {tag.file_count == 1 ? "file" : "files"}
             </Text>
           </Group>
         </Stack>
@@ -100,6 +101,8 @@ type TagDialog = "edit" | null;
 
 function TagActions({ tag }: { tag: TagWithDetailsResponse }) {
   const [dialog, setDialog] = useState<TagDialog>(null);
+
+  const canWrite = useHasScopes(AccessScope.LIBRARY_WRITE);
 
   return (
     <>
@@ -125,9 +128,10 @@ function TagActions({ tag }: { tag: TagWithDetailsResponse }) {
       </Menu.Root>
 
       <EditTagDialog
-        open={dialog === "edit"}
+        open={dialog == "edit"}
         onClose={() => setDialog(null)}
         tag={tag}
+        readonly={!canWrite}
       />
     </>
   );
@@ -139,8 +143,9 @@ function EditTagDialog(props: {
   tag: TagWithDetailsResponse;
   open: boolean;
   onClose: () => void;
+  readonly?: boolean;
 }) {
-  const { tag, open, onClose } = props;
+  const { tag, open, readonly, onClose } = props;
 
   const { form } = useFormMutation({
     formOptions: {
@@ -163,10 +168,10 @@ function EditTagDialog(props: {
     onSuccess: onClose,
   });
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     form.reset();
     onClose();
-  }, [onClose, form]);
+  };
 
   const swatchesColors = useMemo(() => {
     const colors: Record<string, string> = {};
@@ -183,6 +188,7 @@ function EditTagDialog(props: {
       title="Edit Tag"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Update"
+      disabled={readonly}
     >
       <Stack gap="4">
         <form.Field
@@ -208,7 +214,7 @@ function EditTagDialog(props: {
         <form.Field
           name="color"
           children={({ state: fieldState, handleChange }) => (
-            <Field.Root invalid={!fieldState.meta.isValid}>
+            <Field.Root invalid={!fieldState.meta.isValid} disabled={readonly}>
               <ColorPicker.Root
                 defaultValue={parseColor(fieldState.value)}
                 maxW="200px"
@@ -245,7 +251,7 @@ function EditTagDialog(props: {
             </Field.Root>
           )}
         />
-        <FormError errors={form.state.errorMap.onSubmit} />
+        <SubscribeFormError form={form} />
 
         <Group gap="2" align="center">
           <Text textStyle="sm" color="fg.muted">

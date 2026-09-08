@@ -1,12 +1,11 @@
 from datetime import datetime
 from uuid import UUID
 
-from server.const import SessionTypeEnum
+from server.const import AccessScope, SessionTypeEnum
 from server.exceptions import AuthenticationError, InvalidActionError, SessionNotFoundError
 from server.models import ORMSession
 from server.repositories import SessionRepository, UserRepository
 from server.schemas.security import ApiKeyCreateResult
-from server.schemas.types import Scopes
 
 
 class ApiKeyService:
@@ -24,14 +23,14 @@ class ApiKeyService:
     async def list_all_by_user(self, user_id: UUID) -> list[ORMSession]:
         return await self._session_repo.get_list(session_type=[SessionTypeEnum.SERVICE], user_id=user_id)
 
-    async def create_personal_api_key(self, user_id: UUID, description: str, expires_at: datetime, scopes: Scopes):
+    async def create_personal_api_key(
+        self, user_id: UUID, description: str, expires_at: datetime, scopes: list[AccessScope]
+    ):
         user = await self._user_repo.get_by_id(user_id)
-
-        user_scopes = Scopes.from_str(user.role.scopes)
 
         # A user who creates a token cannot assign scopes they do not have
         for scope in scopes:
-            if scope not in user_scopes:
+            if scope not in user.role.scopes:
                 raise InvalidActionError(rule="scope_not_granted_to_user", msg=f"Forbidden scope '{scope}'")
 
         return await self.create_api_key(
@@ -42,7 +41,7 @@ class ApiKeyService:
         )
 
     async def create_api_key(
-        self, user_id: UUID, description: str, expires_at: datetime, scopes: Scopes
+        self, user_id: UUID, description: str, expires_at: datetime, scopes: list[AccessScope]
     ) -> ApiKeyCreateResult:
         """
         Creates a long-lived API key for a user
@@ -52,7 +51,7 @@ class ApiKeyService:
         if not user.can_authenticate():
             raise AuthenticationError("User account is disabled or does not support authentication")
 
-        if not scopes.to_list():
+        if not scopes:
             raise ValueError("Cannot create an API key with no scopes")
 
         auth_token = ORMSession.build_service(
@@ -132,15 +131,13 @@ class ApiKeyService:
         if token.scopes is None:
             raise ValueError("Cannot reset an API key with no scopes")
 
-        scopes = Scopes.from_str(token.scopes)
-
         # Create a new long-lived token
         auth_token = ORMSession.build_service(
             user_id=user.id,
             expires_at=expires_at,
             auth_provider_id=user.auth_provider_id,
             description=token.description,
-            scopes=scopes,
+            scopes=token.scopes,
         )
 
         self._session_repo.create(auth_token)
@@ -153,7 +150,7 @@ class ApiKeyService:
         return ApiKeyCreateResult(
             session_id=auth_token.id,
             user_id=user.id,
-            scopes=scopes,
+            scopes=token.scopes,
             auth_provider_id=user.auth_provider_id,
             session_expires_at=expires_at,
             created_at=auth_token.created_at,

@@ -1,4 +1,8 @@
-import type { AssignmentResponse } from "@/api/types.gen";
+import type {
+  AssignmentResponse,
+  ResourcePermissionLevel as ResourcePermissionLevelType,
+  UpdateCollectionPermissionRequest,
+} from "@/api/types.gen";
 import { GenericIconButton } from "@/components/ui/button";
 import {
   Avatar,
@@ -8,41 +12,55 @@ import {
   Portal,
   Stack,
   Text,
+  type BadgeProps,
 } from "@chakra-ui/react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
-type PermissionValue = "owner" | "read" | "modify";
+export type ResourcePermissionLevelWritable =
+  UpdateCollectionPermissionRequest["permission"];
 
 const PERMISSION_META: Record<
-  PermissionValue,
+  ResourcePermissionLevelType,
   { label: string; color: string }
 > = {
   owner: { label: "Owner", color: "purple" },
   modify: { label: "Editor", color: "blue" },
   read: { label: "Viewer", color: "teal" },
+  contribute: { label: "Contributor", color: "cyan" },
 };
 
+export function PermissionBadge(
+  props: BadgeProps &
+    React.RefAttributes<HTMLSpanElement> & {
+      permission: ResourcePermissionLevelType;
+    },
+) {
+  const { permission, ...other } = props;
+
+  const meta = PERMISSION_META[permission];
+
+  return (
+    <Badge variant="subtle" {...other} colorPalette={meta.color}>
+      {meta.label}
+    </Badge>
+  );
+}
+
 function PermissionBadgeMenu(props: {
-  current: PermissionValue;
+  current: ResourcePermissionLevelType;
   readOnly?: boolean;
-  onChange: (permission: "read" | "modify") => void;
+  onChange: (permission: ResourcePermissionLevelWritable) => void;
 }) {
   const { current, readOnly, onChange } = props;
-  const meta = PERMISSION_META[current];
 
   if (readOnly) {
-    return (
-      <Badge colorPalette={meta.color} variant="subtle" size="sm">
-        {meta.label}
-      </Badge>
-    );
+    return <PermissionBadge permission={current} variant="subtle" size="sm" />;
   }
 
   return (
     <Menu.Root positioning={{ placement: "bottom-end" }}>
       <Menu.Trigger asChild>
-        <Badge
-          colorPalette={meta.color}
+        <PermissionBadge
           variant="subtle"
           size="sm"
           cursor="pointer"
@@ -51,19 +69,18 @@ function PermissionBadgeMenu(props: {
             bg: "colorPalette.solid",
             color: "colorPalette.contrast",
           }}
-        >
-          {meta.label}
-        </Badge>
+          permission={current}
+        />
       </Menu.Trigger>
       <Portal>
         <Menu.Positioner>
           <Menu.Content>
-            {(["read", "modify"] as const).map((value) => (
+            {(["read", "modify", "contribute"] as const).map((value) => (
               <Menu.Item
                 key={value}
                 value={value}
                 onClick={() => onChange(value)}
-                disabled={value === current}
+                disabled={value == current}
               >
                 {PERMISSION_META[value].label}
               </Menu.Item>
@@ -114,7 +131,10 @@ function PermissionViewActions(props: {
 interface PermissionsViewProps {
   assignments: AssignmentResponse[];
   onDelete: (permissionId: string) => void;
-  onModify: (permissionId: string, permission: "read" | "modify") => void;
+  onModify: (
+    permissionId: string,
+    permission: ResourcePermissionLevelWritable,
+  ) => void;
 }
 
 export function PermissionsView(props: PermissionsViewProps) {
@@ -143,12 +163,12 @@ export function PermissionsView(props: PermissionsViewProps) {
             )}
             <PermissionBadgeMenu
               current={p.permission}
-              readOnly={p.is_read_only_by_current_user}
+              readOnly={p.lock_reason != null}
               onChange={(permission) => onModify(p.id, permission)}
             />
 
             <PermissionViewActions
-              readOnly={p.is_read_only_by_current_user}
+              readOnly={p.lock_reason != null}
               onDelete={() => onDelete(p.id)}
             />
           </Group>

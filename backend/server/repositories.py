@@ -8,7 +8,7 @@ from sqlalchemy import and_, delete, exists, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server import models
-from server.const import RESOURCE_PERMISSIONS, FileStatusEnum, SessionTypeEnum
+from server.const import FileStatusEnum, ResourcePermissionLevel, SessionTypeEnum
 from server.exceptions import (
     AnnotationNotFoundError,
     AuthProviderNotFoundError,
@@ -205,14 +205,9 @@ class FileWithDetails:
     file: models.ORMFile
     state: models.ORMFileState | None
     tags: list[PersonalizedTag]
-    permissions: list[models.ORMResourcePermission]
+    # Permission of the user who requested this file
+    target_resource_permission: models.ORMResourcePermission
     authors: list[models.ORMAuthor]
-
-    def get_effective_permission(self, user_id: UUID) -> RESOURCE_PERMISSIONS | None:
-        direct = next((p for p in self.permissions if p.user_id == user_id), None)
-        if direct:
-            return direct.permission
-        return None
 
 
 class CollectionRepository(Repository):
@@ -361,6 +356,20 @@ class FileRepository(Repository):
         stmt = select(models.ORMFile).where(models.ORMFile.id.in_(ids))
         records = await self.session.scalars(stmt)
         return {c.id: c for c in records}
+
+    async def list_by_ids_all(self, ids: list[UUID]) -> dict[UUID, models.ORMFile]:
+        """
+        List files by IDs, and raise error if any are missing
+
+        Raises:
+            LibraryFileNotFoundError: If any of the requested IDs are not found
+        """
+        files = await self.list_by_ids(ids)
+
+        missing_ids = set(ids) - set(files.keys())
+        if missing_ids:
+            raise LibraryFileNotFoundError(missing_ids.pop())
+        return files
 
     async def list_visible_to_user(
         self,
@@ -536,11 +545,18 @@ class FileRepository(Repository):
         )
         return list(await self.session.scalars(stmt))
 
-    def save(self, record: models.ORMFile | models.ORMFileState) -> None:
+    def save(self, record: models.ORMFile | models.ORMFileState):
         self.session.add(record)
 
-    async def delete(self, file: models.ORMFile) -> None:
+    async def delete(self, file: models.ORMFile):
         await self.session.delete(file)
+
+    async def delete_many(self, file_ids: Iterable[UUID]):
+        ids = set(file_ids)
+        if not ids:
+            return
+
+        await self.session.execute(delete(models.ORMFile).where(models.ORMFile.id.in_(ids)))
 
     async def get_state_or_none(self, file_id: UUID, user_id: UUID) -> models.ORMFileState | None:
         return await self.session.scalar(
@@ -888,7 +904,7 @@ class PermissionRepository(Repository):
         self,
         resource_id: UUID,
         user_id: UUID,
-        permission: RESOURCE_PERMISSIONS,
+        permission: ResourcePermissionLevel,
     ):
 
         stmt = select(models.ORMResourcePermission).where(
@@ -972,7 +988,7 @@ class PermissionRepository(Repository):
         return await self.session.scalar(stmt)
 
     async def list_accessible_collection_ids(
-        self, user_id: UUID, permission: list[RESOURCE_PERMISSIONS] | None = None
+        self, user_id: UUID, permission: list[ResourcePermissionLevel] | None = None
     ) -> list[UUID]:
         """
         All collection IDs the user can access (anything they have a grant on, plus all descendants).
@@ -1045,7 +1061,7 @@ class PermissionRepository(Repository):
 
     async def get_effective_for_file(self, file: models.ORMFile, user_id: UUID) -> models.ORMResourcePermission | None:
         """
-        Closest grant for user, walking from file up to root.
+        Closest grant for user, walking from file up to root
         """
         direct = await self.session.scalar(
             select(models.ORMResourcePermission).where(
@@ -1058,6 +1074,76 @@ class PermissionRepository(Repository):
         if file.collection_id:
             return await self.get_effective_for_collection(file.collection_id, user_id)
         return None
+
+    async def get_effective_for_files(
+        self, files: Iterable[models.ORMFile], user_id: UUID
+    ) -> dict[UUID, models.ORMResourcePermission]:
+        """
+        Closest grant for user per file, walking from each file up to root
+        """
+        files = list(files)
+        if not files:
+            return {}
+
+        direct = await self.session.scalars(
+            select(models.ORMResourcePermission).where(
+                models.ORMResourcePermission.resource_id.in_({file.id for file in files}),
+                models.ORMResourcePermission.user_id == user_id,
+            )
+        )
+        effective = {record.resource_id: record for record in direct.all()}
+
+        start_ids = {file.collection_id for file in files if file.id not in effective}
+        if not start_ids:
+            return effective
+
+        anc = (
+            select(
+                models.ORMCollection.id.label("start_id"),
+                models.ORMCollection.id.label("ancestor_id"),
+                models.ORMCollection.parent_id,
+                literal(0).label("depth"),
+            )
+            .where(models.ORMCollection.id.in_(start_ids))
+            .cte("anc", recursive=True)
+        )
+        anc = anc.union_all(
+            select(
+                anc.c.start_id,
+                models.ORMCollection.id,
+                models.ORMCollection.parent_id,
+                anc.c.depth + 1,
+            ).join(anc, models.ORMCollection.id == anc.c.parent_id)
+        )
+
+        # Closest grant wins, one row per starting collection
+        ranked = (
+            select(
+                anc.c.start_id,
+                models.ORMResourcePermission.id.label("permission_id"),
+                func.row_number().over(partition_by=anc.c.start_id, order_by=anc.c.depth.asc()).label("rn"),
+            )
+            .join(anc, anc.c.ancestor_id == models.ORMResourcePermission.resource_id)
+            .where(models.ORMResourcePermission.user_id == user_id)
+            .subquery()
+        )
+
+        rows = await self.session.execute(
+            select(ranked.c.start_id, models.ORMResourcePermission)
+            .join(models.ORMResourcePermission, models.ORMResourcePermission.id == ranked.c.permission_id)
+            .where(ranked.c.rn == 1)
+        )
+        by_collection = {start_id: permission for start_id, permission in rows}
+
+        for file in files:
+            if file.id in effective:
+                continue
+
+            permission = by_collection.get(file.collection_id)
+            if permission:
+                effective[file.id] = permission
+
+        return effective
 
     async def revoke(self, resource_id: UUID, user_id: UUID):
         await self.session.execute(

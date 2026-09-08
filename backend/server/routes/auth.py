@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import SecretStr
 
-from server.const import AccessScopeEnum, RefreshScopeEnum
+from server.const import AccessScope, RefreshScopeEnum
 from server.dependencies import (
     AccessSecurity,
     AuthProviderRepositoryDependency,
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/auth")
 
 @router.get(path="/session", response_model=UserSessionResponse, operation_id="GetCurrentSession")
 async def get_current_session(
-    auth_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScopeEnum.USER_READ])],
+    auth_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_READ])],
     user_repo: UserRepositoryDependency,
 ):
     """

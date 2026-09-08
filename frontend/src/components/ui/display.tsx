@@ -1,12 +1,15 @@
 import {
   Box,
+  Clipboard,
   Grid,
   GridItem,
+  Group,
   Span,
   Stack,
   Text,
   type BoxProps,
 } from "@chakra-ui/react";
+import { GenericIconButton } from "./button";
 
 export function Block(props: BoxProps & React.RefAttributes<HTMLDivElement>) {
   const { ref, children, ...other } = props;
@@ -87,5 +90,30 @@ export function Section(props: {
       <SectionLabel>{title}</SectionLabel>
       {children}
     </Stack>
+  );
+}
+
+export function CopyableValue(props: {
+  value: string;
+  label: string;
+  children?: React.ReactNode;
+}) {
+  const { value, label, children } = props;
+
+  return (
+    <Clipboard.Root value={value}>
+      <Group>
+        {children}
+        <Clipboard.Trigger asChild>
+          <GenericIconButton
+            size="2xs"
+            variant="surface"
+            title={`Copy ${label}`}
+          >
+            <Clipboard.Indicator />
+          </GenericIconButton>
+        </Clipboard.Trigger>
+      </Group>
+    </Clipboard.Root>
   );
 }

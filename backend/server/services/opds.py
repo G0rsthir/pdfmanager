@@ -4,6 +4,7 @@ from typing import Any
 from urllib.parse import quote_plus
 from uuid import UUID
 
+from server.const import ResourcePermissionCapability
 from server.exceptions import InsufficientPermissionError
 from server.infrastructure.opds.document import (
     OpdsAuthor,
@@ -281,7 +282,7 @@ class OpdsCatalogService:
 
     async def _get_readable_collection(self, *, user_id: UUID, collection_id: UUID) -> ORMCollection:
         perm = await self._permission_repo.get_effective_for_collection(collection_id=collection_id, user_id=user_id)
-        if not perm or not perm.can_read:
+        if not perm or not perm.can(ResourcePermissionCapability.READ):
             raise InsufficientPermissionError(action="read", resource="Collection", identifier=collection_id)
 
         collection = await self._collection_repo.get_by_id(collection_id)

@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, SecretStr
 
-from server.schemas.types import Scopes
+from server.const import AccessScope
 
 
 class AuthenticateOidcRequest(BaseModel):
@@ -32,7 +32,7 @@ class AuthResult(BaseModel):
     user_id: UUID
     auth_provider_id: UUID
     created_at: AwareDatetime
-    scopes: Scopes | None = None
+    scopes: list[AccessScope] | None = None
     session_expires_at: AwareDatetime
     session_revalidate_at: AwareDatetime
 

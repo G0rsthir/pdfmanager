@@ -13,7 +13,7 @@ from uuid import uuid4
 import sqlalchemy as sa
 from alembic import op
 
-from server.const import AccessScopeEnum, AuthProviderTypesEnum, RolesEnum
+from server.const import AccessScope, AuthProviderTypesEnum, RolesEnum
 from server.infrastructure.database.base import DateTimeUTC
 
 # revision identifiers, used by Alembic.
@@ -251,10 +251,10 @@ def upgrade() -> None:
                 "is_protected": True,
                 "scopes": " ".join(
                     [
-                        AccessScopeEnum.ADMIN_READ,
-                        AccessScopeEnum.ADMIN_WRITE,
-                        AccessScopeEnum.USER_READ,
-                        AccessScopeEnum.USER_WRITE,
+                        AccessScope.ADMIN_READ,
+                        AccessScope.ADMIN_WRITE,
+                        AccessScope.USER_READ,
+                        AccessScope.USER_WRITE,
                     ]
                 ),
             },
@@ -263,14 +263,14 @@ def upgrade() -> None:
                 "name": RolesEnum.USER,
                 "description": "Basic access for app usage, allowing reading and writing user-related data",
                 "is_protected": True,
-                "scopes": " ".join([AccessScopeEnum.USER_READ, AccessScopeEnum.USER_WRITE]),
+                "scopes": " ".join([AccessScope.USER_READ, AccessScope.USER_WRITE]),
             },
             {
                 "id": uuid4(),
                 "name": RolesEnum.AUDIT,
                 "description": "Read-only access",
                 "is_protected": True,
-                "scopes": " ".join([AccessScopeEnum.USER_READ, AccessScopeEnum.ADMIN_READ]),
+                "scopes": " ".join([AccessScope.USER_READ, AccessScope.ADMIN_READ]),
             },
         ],
     )

@@ -29,7 +29,7 @@ export default function SetupPage() {
   switch (true) {
     case data?.is_initial_user_created !== true:
       return <SetupUser progress={30} successCallback={setupStepCallback} />;
-    case data?.is_setup_complete === true:
+    case data?.is_setup_complete == true:
       return <Navigate to="/" />;
     default:
       return (

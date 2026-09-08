@@ -7,10 +7,12 @@ import {
 } from "@/api/@tanstack/react-query.gen";
 import {
   FileStatusEnum,
+  ResourcePermissionCapability,
   type CollectionWithDetailsResponse,
 } from "@/api/types.gen";
-import { FormError } from "@/components/ui/error";
+import { useCan } from "@/common/auth/hooks";
 import { QueryView } from "@/components/ui/feedback";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { SearchBar } from "@/components/ui/searchBar";
 import { useFormMutation } from "@/hooks/form";
@@ -29,7 +31,7 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import {
   LuFileText,
   LuFilter,
@@ -43,7 +45,8 @@ import {
   useUrlSearchBar,
   type SearchFilterDef,
 } from "../shared/smartSearchBar/hooks";
-import { FileList, LayoutSwitch } from "./shared/layout";
+import { FileBrowser } from "./shared/browser";
+import { LayoutSwitch } from "./shared/layout";
 
 export function FolderPage() {
   const { folderid } = useParams();
@@ -119,6 +122,10 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
     }),
   });
 
+  const can = useCan(collection);
+
+  const canWrite = can(ResourcePermissionCapability.WRITE);
+
   return (
     <Stack gap={6}>
       <Group justify="space-between" align="center">
@@ -126,7 +133,7 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
           <Heading size="3xl" fontWeight="normal">
             {collection.name}
           </Heading>
-          {collection.is_shared_with_current_user && (
+          {collection.is_shared && (
             <Text color="fg.muted" fontSize="sm">
               {collection.owner.name}'s files
             </Text>
@@ -144,10 +151,7 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
           />
 
           <LayoutSwitch layoutKey={collection.id} />
-          <UploadFileAction
-            folder_id={collection.id}
-            readOnly={collection.is_read_only_by_current_user}
-          />
+          <UploadFileAction folder_id={collection.id} readOnly={!canWrite} />
         </Group>
       </Group>
 
@@ -171,7 +175,11 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
             );
 
           return (
-            <FileList files={data} layoutKey={collection.id} tagType="filter" />
+            <FileBrowser
+              files={data}
+              layoutKey={collection.id}
+              tagType="filter"
+            />
           );
         }}
       </QueryView>
@@ -244,10 +252,10 @@ function UploadFileDialog(props: {
     onSuccess: onClose,
   });
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     form.reset();
     onClose();
-  }, [onClose, form]);
+  };
 
   const listTagsQ = useAPIQuery({
     ...listTagsOptions(),
@@ -348,7 +356,7 @@ function UploadFileDialog(props: {
         )}
       />
 
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }

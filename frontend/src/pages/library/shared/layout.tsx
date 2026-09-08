@@ -1,15 +1,6 @@
-import type { FileResponse } from "@/api/types.gen";
 import { useLibraryLayout } from "@/hooks/layout";
-import {
-  HStack,
-  Icon,
-  RadioCard,
-  SegmentGroup,
-  SimpleGrid,
-  Stack,
-} from "@chakra-ui/react";
+import { HStack, Icon, RadioCard, SegmentGroup } from "@chakra-ui/react";
 import { LuLayoutGrid, LuTable2 } from "react-icons/lu";
-import { FileCard, FileTable } from "./file";
 
 export type LibraryLayout = "grid" | "table";
 
@@ -46,7 +37,6 @@ export function LayoutSegment(props: {
         <SegmentGroup.Item
           key={option.value}
           value={option.value}
-          aria-label={option.label}
           title={option.label}
           cursor="pointer"
         >
@@ -101,34 +91,4 @@ export function LayoutRadioCards(props: {
 export function LayoutSwitch({ layoutKey }: { layoutKey: string }) {
   const [layout, setLayout] = useLibraryLayout(layoutKey);
   return <LayoutSegment value={layout} onChange={setLayout} />;
-}
-
-export function FileList({
-  files,
-  layoutKey,
-  tagType,
-}: {
-  files: FileResponse[];
-  layoutKey: string;
-  tagType?: "search" | "filter";
-}) {
-  const [layout] = useLibraryLayout(layoutKey);
-
-  if (files.length == 0) return null;
-
-  if (layout === "grid") {
-    return (
-      <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
-        {files.map((file) => (
-          <FileCard file={file} key={file.id} tagType={tagType} />
-        ))}
-      </SimpleGrid>
-    );
-  }
-
-  return (
-    <Stack gap={4}>
-      <FileTable tagType={tagType} files={files} />
-    </Stack>
-  );
 }

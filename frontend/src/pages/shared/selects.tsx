@@ -1,5 +1,5 @@
 import { listUsersOptions } from "@/api/@tanstack/react-query.gen";
-import { AccessScopeEnum } from "@/config/const";
+import { AccessScope } from "@/api/types.gen";
 import { useAPIQuery } from "@/hooks/query";
 import {
   Button,
@@ -145,15 +145,15 @@ export function ExpiryDateSelect(props: ExpiryDateSelectProps) {
   );
 }
 
-const DefaultScopes = Object.values(AccessScopeEnum);
+const DefaultScopes = Object.values(AccessScope);
 
 export interface ScopeSelectProps {
-  onValueChange: (value: string[]) => void;
-  value: string[];
+  onValueChange: (value: AccessScope[]) => void;
+  value: AccessScope[];
   onBlur: () => void;
   required?: boolean;
-  excludedScopes?: string[];
-  scopes?: string[];
+  excludedScopes?: AccessScope[];
+  scopes?: AccessScope[];
 }
 
 export function ScopeSelect(props: ScopeSelectProps) {
@@ -175,7 +175,7 @@ export function ScopeSelect(props: ScopeSelectProps) {
   return (
     <Select.Root
       collection={collection}
-      onValueChange={(e) => onValueChange(e.value)}
+      onValueChange={(e) => onValueChange(e.value as AccessScope[])}
       required={required}
       onInteractOutside={onBlur}
       value={value}

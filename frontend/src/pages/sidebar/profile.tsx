@@ -32,7 +32,7 @@ export function UserProfileHeader() {
       </HStack>
       <Menu.Root>
         <Menu.Trigger asChild>
-          <GenericIconButton variant="ghost" size="xs" aria-label="User menu">
+          <GenericIconButton variant="ghost" size="xs">
             <LuGripVertical />
           </GenericIconButton>
         </Menu.Trigger>

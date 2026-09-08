@@ -2,9 +2,9 @@ import {
   createApiKeyMutation,
   revokeApiKeyMutation,
 } from "@/api/@tanstack/react-query.gen";
-import { parseAPIError } from "@/common/error";
+import { AccessScope } from "@/api/types.gen";
 import { expiryDatePresets } from "@/common/format";
-import { FormError } from "@/components/ui/error";
+import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import {
@@ -25,8 +25,9 @@ import { getLocalTimeZone, type DateValue } from "@internationalized/date";
 export function CreateApiKeyDialog(props: {
   open: boolean;
   onClose: () => void;
+  readonly?: boolean;
 }) {
-  const { open, onClose } = props;
+  const { open, readonly, onClose } = props;
 
   const { form, mutation } = useFormMutation({
     formOptions: {
@@ -34,7 +35,7 @@ export function CreateApiKeyDialog(props: {
         description: "",
         user_id: "",
         expires_at: [] as DateValue[],
-        scopes: [] as string[],
+        scopes: [] as AccessScope[],
       },
     },
     mutationOptions: createApiKeyMutation,
@@ -69,12 +70,16 @@ export function CreateApiKeyDialog(props: {
       title="Create API Key"
       onSubmit={() => form.handleSubmit()}
       confirmBtnText="Create"
-      confirmBtnType="adminWrite"
+      disabled={readonly}
     >
       <form.Field
         name="description"
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Description <Field.RequiredIndicator />
             </Field.Label>
@@ -93,7 +98,11 @@ export function CreateApiKeyDialog(props: {
           onChange: ({ value }) => (!value ? "User is required" : undefined),
         }}
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               User <Field.RequiredIndicator />
             </Field.Label>
@@ -114,7 +123,11 @@ export function CreateApiKeyDialog(props: {
             value.length == 0 ? "Date is required" : undefined,
         }}
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Expiry Date <Field.RequiredIndicator />
             </Field.Label>
@@ -126,6 +139,7 @@ export function CreateApiKeyDialog(props: {
                   required
                   value={fieldState.value}
                   invalid={ctx.invalid}
+                  disabled={ctx.disabled}
                   presets={expiryDatePresets}
                   ids={{
                     label: () => ctx.ids.label,
@@ -146,7 +160,11 @@ export function CreateApiKeyDialog(props: {
             !value ? "At least one scope is required" : undefined,
         }}
         children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
+          <Field.Root
+            invalid={!fieldState.meta.isValid}
+            required
+            disabled={readonly}
+          >
             <Field.Label>
               Scopes <Field.RequiredIndicator />
             </Field.Label>
@@ -160,7 +178,7 @@ export function CreateApiKeyDialog(props: {
           </Field.Root>
         )}
       />
-      <FormError errors={form.state.errorMap.onSubmit} />
+      <SubscribeFormError form={form} />
     </FormModal>
   );
 }
@@ -178,12 +196,9 @@ export function RevokeApiKeyDialog(props: {
       showSuccessNotification("Token revoked successfully");
       onClose();
     },
-    onError(error) {
+    onApiError(error) {
       onClose();
-      showErrorNotification(
-        "Token revoketion failed",
-        parseAPIError(error).message,
-      );
+      showErrorNotification("Token revoketion failed", error.message);
     },
   });
 
@@ -195,7 +210,6 @@ export function RevokeApiKeyDialog(props: {
       onConfirm={() => remokeRequest({ path: { id: keyId } })}
       confirmBtnText="Revoke"
       confirmBtnPalette="red"
-      confirmBtnType="adminWrite"
     >
       This action cannot be undone. This will revoke token
     </ConfirmModal>

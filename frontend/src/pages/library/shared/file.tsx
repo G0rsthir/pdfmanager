@@ -4,7 +4,8 @@ import {
   patchFileStateMutation,
 } from "@/api/@tanstack/react-query.gen";
 import type { FileResponse, TagResponse } from "@/api/types.gen";
-import { FileStatusEnum } from "@/api/types.gen";
+import { FileStatusEnum, ResourcePermissionCapability } from "@/api/types.gen";
+import { useCan } from "@/common/auth/hooks";
 import { parseAPIError } from "@/common/error";
 import { formatDateTime, formatRelativeTime } from "@/common/format";
 import { GenericIconButton } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   Badge,
   Box,
   Card,
+  Checkbox,
   Combobox,
   createListCollection,
   Field,
@@ -43,6 +45,7 @@ import {
   useFilter,
   useListCollection,
   useSelectContext,
+  type SelectRootProps,
 } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -67,12 +70,28 @@ export type FileClickAction = "reader" | "details";
 
 export const DEFAULT_FILE_CLICK_ACTION: FileClickAction = "details";
 
+export interface FileSelection {
+  ids: ReadonlySet<string>;
+  isSelected: (id: string) => boolean;
+  toggle: (id: string) => void;
+  setMany: (ids: string[], selected: boolean) => void;
+  clear: () => void;
+}
+
+interface FileViewProps {
+  selection?: FileSelection;
+  files: FileResponse[];
+  includeReadDate?: boolean;
+  tagType?: "search" | "filter";
+}
+
 interface FileFolderSelectProps {
   onValueChange: (values: string) => void;
   defaultValue?: string;
   onBlur: () => void;
   required?: boolean;
   allowedFolderIds?: string[];
+  disabled?: boolean;
 }
 
 export function FileFolderSelect(props: FileFolderSelectProps) {
@@ -80,6 +99,7 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
     onValueChange,
     defaultValue,
     required,
+    disabled,
     allowedFolderIds = [],
     onBlur,
   } = props;
@@ -100,15 +120,15 @@ export function FileFolderSelect(props: FileFolderSelectProps) {
     collection,
     onInputValueChange: (e) =>
       filter(
-        e.reason === "item-select" || e.reason === undefined
-          ? ""
-          : e.inputValue,
+        e.reason == "item-select" || e.reason == undefined ? "" : e.inputValue,
       ),
     onValueChange: ({ value }) => onValueChange(value[0] || ""),
     openOnClick: true,
     defaultValue: defaultValue ? [defaultValue] : [],
     onInteractOutside: () => onBlur(),
-    required: required,
+    // Works with Field.Root
+    ...(required !== undefined && { required }),
+    ...(disabled !== undefined && { disabled }),
   });
 
   const query = useAPIQuery({
@@ -258,19 +278,43 @@ export function FileRow(props: {
   );
 }
 
-export function FileTable(props: {
-  files: FileResponse[];
-  includeReadDate?: boolean;
-  tagType?: "search" | "filter";
-}) {
-  const { files, includeReadDate = true, tagType = "search" } = props;
+export function FileTable(props: FileViewProps) {
+  const {
+    files,
+    includeReadDate = true,
+    tagType = "search",
+    selection,
+  } = props;
 
   const [clickAction] = useFileClickAction();
+
+  const indeterminate =
+    selection && selection.ids.size > 0 && selection.ids.size < files.length;
 
   return (
     <Table.Root size="sm" variant="outline" interactive colorPalette="gray">
       <Table.Header>
         <Table.Row>
+          {selection && (
+            <Table.ColumnHeader w="6">
+              <Checkbox.Root
+                size="sm"
+                mt="0.5"
+                checked={
+                  indeterminate ? "indeterminate" : selection.ids.size > 0
+                }
+                onCheckedChange={(changes) =>
+                  selection.setMany(
+                    files.map((item) => item.id),
+                    Boolean(changes.checked),
+                  )
+                }
+              >
+                <Checkbox.HiddenInput />
+                <Checkbox.Control cursor="pointer" />
+              </Checkbox.Root>
+            </Table.ColumnHeader>
+          )}
           <Table.ColumnHeader>Name</Table.ColumnHeader>
           <Table.ColumnHeader>Tags</Table.ColumnHeader>
           <Table.ColumnHeader>Status</Table.ColumnHeader>
@@ -282,6 +326,19 @@ export function FileTable(props: {
       <Table.Body>
         {files.map((file) => (
           <Table.Row key={file.id}>
+            {selection && (
+              <Table.Cell>
+                <Checkbox.Root
+                  size="sm"
+                  mt="0.5"
+                  checked={selection.isSelected(file.id)}
+                  onCheckedChange={() => selection.toggle(file.id)}
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control cursor="pointer" />
+                </Checkbox.Root>
+              </Table.Cell>
+            )}
             <Table.Cell>
               <Group gap={3}>
                 <FileThumbnail fileId={file.id} height="32px" width="24px" />
@@ -353,12 +410,47 @@ export function FileTable(props: {
   );
 }
 
+function CardSelectCheckbox(props: {
+  selection: FileSelection;
+  fileId: string;
+}) {
+  const { selection, fileId } = props;
+
+  const selected = selection.isSelected(fileId);
+  const pinned = selected || selection.ids.size > 0;
+
+  return (
+    <Box
+      position="absolute"
+      top="2"
+      left="2"
+      opacity={pinned ? 1 : 0}
+      _groupHover={{ opacity: 1 }}
+      css={{ "@media (hover: none)": { opacity: 1 } }}
+      transition="opacity 0.15s"
+    >
+      <Checkbox.Root
+        size="sm"
+        checked={selected}
+        onCheckedChange={() => selection.toggle(fileId)}
+        rounded="sm"
+        colorPalette="gray"
+        variant="subtle"
+      >
+        <Checkbox.HiddenInput />
+        <Checkbox.Control cursor="pointer" />
+      </Checkbox.Root>
+    </Box>
+  );
+}
+
 export function FileCard(props: {
   file: FileResponse;
+  selection?: FileSelection;
   includeReadDate?: boolean;
   tagType?: "search" | "filter";
 }) {
-  const { file, includeReadDate = true, tagType = "search" } = props;
+  const { file, selection, includeReadDate = true, tagType = "search" } = props;
 
   const [clickAction] = useFileClickAction();
 
@@ -368,20 +460,29 @@ export function FileCard(props: {
     action: clickAction,
   });
 
+  const selected = selection?.isSelected(file.id) ?? false;
+
   return (
     <Card.Root
+      className="group"
       variant="outline"
-      _hover={{ borderColor: "border.emphasized" }}
+      borderColor={selected ? "colorPalette.solid" : undefined}
+      _hover={{
+        borderColor: selected ? "colorPalette.solid" : "border.emphasized",
+      }}
       transition="border-color 0.2s"
       overflow="hidden"
       size="sm"
     >
       <Card.Body>
         <Grid templateColumns="auto 1fr" gap={5}>
-          <GridItem>
+          <GridItem position="relative">
             <NavLink to={fileUrl}>
               <FileThumbnail fileId={file.id} height="160px" width="120px" />
             </NavLink>
+            {selection && (
+              <CardSelectCheckbox selection={selection} fileId={file.id} />
+            )}
           </GridItem>
 
           <GridItem minW={0}>
@@ -513,13 +614,13 @@ export function FilterTag({ tag }: { tag: TagResponse }) {
 export function FavoriteButton({ file }: { file: FileResponse }) {
   const { mutate } = useAPIMutation({
     ...patchFileStateMutation(),
-    onError(error) {
-      showErrorNotification(
-        "Favorite update failed",
-        parseAPIError(error).message,
-      );
+    onApiError(error) {
+      showErrorNotification("Favorite update failed", error.message);
     },
   });
+
+  const can = useCan(file);
+  const canSyncProgress = can(ResourcePermissionCapability.SYNC_PROGRESS);
 
   return (
     <GenericIconButton
@@ -540,6 +641,7 @@ export function FavoriteButton({ file }: { file: FileResponse }) {
           path: { id: file.id },
         })
       }
+      disabled={!canSyncProgress}
     >
       <LuStar />
     </GenericIconButton>
@@ -555,17 +657,17 @@ export function GenericFileActions(props: { file: FileResponse }) {
 
   const target = { folderId: file.collection_id, fileId: file.id };
 
+  const can = useCan(file);
+  const canModify = can(ResourcePermissionCapability.WRITE);
+  const canDelete = can(ResourcePermissionCapability.DELETE);
+
   return (
     <>
       <GenericFileActionsMenu>
         <Menu.Item value="details" asChild>
           <NavLink to={toFileDetailsUrl(target)}>Details</NavLink>
         </Menu.Item>
-        <Menu.Item
-          value="edit"
-          asChild
-          disabled={file.is_read_only_by_current_user}
-        >
+        <Menu.Item value="edit" asChild disabled={!canModify}>
           <NavLink to={toFileDetailsUrl({ ...target, tab: "edit" })}>
             Edit
           </NavLink>
@@ -575,7 +677,7 @@ export function GenericFileActions(props: { file: FileResponse }) {
           color="fg.error"
           _hover={{ bg: "bg.error", color: "fg.error" }}
           onSelect={() => setDialog("delete")}
-          disabled={file.is_read_only_by_current_user}
+          disabled={!canDelete}
         >
           Delete
         </Menu.Item>
@@ -687,29 +789,37 @@ const statusCollection = createListCollection({
   })),
 });
 
-export function ReadingStatusSelect({ file }: { file: FileResponse }) {
-  const { mutate } = useAPIMutation({
-    ...patchFileStateMutation(),
-    onError(error) {
-      showErrorNotification(
-        "Status update failed",
-        parseAPIError(error).message,
-      );
-    },
-  });
+export function StatusSelect(props: {
+  value?: FileStatusEnum;
+  onChange: (status: FileStatusEnum) => void;
+  onBlur?: () => void;
+  size?: SelectRootProps["size"];
+  width?: string;
+  disabled?: boolean;
+}) {
+  const {
+    value,
+    disabled,
+    onChange,
+    onBlur,
+    size = "xs",
+    width = "150px",
+  } = props;
 
   return (
     <Select.Root
       collection={statusCollection}
-      size="xs"
-      width="150px"
+      size={size}
+      width={width}
       positioning={{ sameWidth: true }}
-      value={[file.state.status]}
-      onValueChange={({ value }) => {
-        const next = value[0] as FileStatusEnum | undefined;
-        if (!next || next == file.state.status) return;
-        mutate({ body: { status: next }, path: { id: file.id } });
+      value={value ? [value] : []}
+      onValueChange={({ value: next }) => {
+        const status = next[0] as FileStatusEnum | undefined;
+        if (!status || status == value) return;
+        onChange(status);
       }}
+      onInteractOutside={onBlur}
+      disabled={disabled}
     >
       <Select.HiddenSelect />
       <Select.Control>
@@ -733,6 +843,27 @@ export function ReadingStatusSelect({ file }: { file: FileResponse }) {
         </Select.Positioner>
       </Portal>
     </Select.Root>
+  );
+}
+
+export function ReadingStatusSelect({ file }: { file: FileResponse }) {
+  const { mutate } = useAPIMutation({
+    ...patchFileStateMutation(),
+    onApiError(error) {
+      showErrorNotification("Status update failed", error.message);
+    },
+  });
+
+  const can = useCan(file);
+
+  const canWrite = can(ResourcePermissionCapability.WRITE);
+
+  return (
+    <StatusSelect
+      value={file.state.status}
+      onChange={(status) => mutate({ body: { status }, path: { id: file.id } })}
+      disabled={!canWrite}
+    />
   );
 }
 

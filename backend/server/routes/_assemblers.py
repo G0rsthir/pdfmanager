@@ -32,7 +32,6 @@ def build_oidc_provider_response(provider: ORMAuthProviderOidc, request: Request
 
 
 def build_file_response(file_details: FileWithDetails, user_id: UUID) -> FileResponse:
-    permission = file_details.get_effective_permission(user_id)
     return FileResponse(
         **file_details.file.__dict__,
         state=FileStateResponse.model_validate(file_details.state)
@@ -40,7 +39,7 @@ def build_file_response(file_details: FileWithDetails, user_id: UUID) -> FileRes
         else FileStateResponse.with_defaults(),
         tags=[TagResponse.model_validate(tag) for tag in file_details.tags],
         authors=[AuthorResponse.model_validate(author) for author in file_details.authors],
-        target_permission=permission,
+        target_permission=file_details.target_resource_permission.permission,
     )
 
 

@@ -12,6 +12,14 @@ export function showSuccessNotification(message: string) {
   });
 }
 
+export function showInfoNotification(message: string, description?: string) {
+  toaster.create({
+    title: message,
+    type: "info",
+    description: description,
+  });
+}
+
 export function showErrorNotification(message: string, description?: string) {
   toaster.create({
     title: message,

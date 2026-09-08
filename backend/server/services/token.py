@@ -3,9 +3,8 @@ from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 
-from server.const import RefreshScopeEnum
+from server.const import AccessScope, RefreshScopeEnum
 from server.schemas.security import AccessSessionContext, Cookie, RefreshSessionContext
-from server.schemas.types import Scopes
 from server.security.loader import AUTH_URL
 from server.security.manager import AuthManager
 
@@ -26,7 +25,7 @@ class TokenResponseService:
         user_id: UUID,
         session_id: UUID,
         expires_at: datetime,
-        scopes: Scopes | None = None,
+        scopes: list[AccessScope] | None = None,
     ) -> str:
 
         access_ctx = AccessSessionContext(
@@ -42,9 +41,9 @@ class TokenResponseService:
 
     def issue_refresh_token(self, user_id: UUID, session_id: UUID, expires_at: datetime) -> str:
 
-        scopes = Scopes([RefreshScopeEnum.TOKEN_REFRESH])
-
-        refresh_ctx = RefreshSessionContext(user_id=user_id, session_id=session_id, scopes=scopes)
+        refresh_ctx = RefreshSessionContext(
+            user_id=user_id, session_id=session_id, scopes=[RefreshScopeEnum.TOKEN_REFRESH]
+        )
 
         return self.refresh_manager.create_access_token(
             data=jsonable_encoder(refresh_ctx.model_dump(exclude_none=True, exclude_defaults=True)),

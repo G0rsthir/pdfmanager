@@ -2,12 +2,19 @@ from datetime import UTC, date, datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, ForeignKey, UniqueConstraint
+from sqlalchemy import JSON, Enum, ForeignKey, UniqueConstraint
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from server.const import FileStatusEnum, SessionTypeEnum
-from server.infrastructure.database.base import AuditMixin, Base, DateTimeUTC
-from server.schemas.types import Scopes
+from server.const import (
+    RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES,
+    AccessScope,
+    FileStatusEnum,
+    ResourcePermissionCapability,
+    ResourcePermissionLevel,
+    SessionTypeEnum,
+)
+from server.infrastructure.database.base import AuditMixin, Base, DateTimeUTC, EnumList, EnumValue
 
 
 class ORMUserRole(Base):
@@ -15,7 +22,7 @@ class ORMUserRole(Base):
 
     name: Mapped[str] = mapped_column(unique=True)
     description: Mapped[str]
-    scopes: Mapped[str]
+    scopes: Mapped[list[AccessScope]] = mapped_column(MutableList.as_mutable(EnumList(AccessScope)))
 
     # Classification
     entity_type: Mapped[str] = mapped_column(default="role", server_default="role")
@@ -250,19 +257,14 @@ class ORMResourcePermission(Base):
 
     resource_id: Mapped[UUID]
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    permission: Mapped[Literal["owner", "read", "modify"]]
+    permission: Mapped[ResourcePermissionLevel] = mapped_column(EnumValue(ResourcePermissionLevel))
 
-    @property
-    def can_modify(self):
-        return self.permission in ("owner", "modify")
-
-    @property
-    def can_read(self):
-        return True
+    def can(self, capability: ResourcePermissionCapability) -> bool:
+        return capability in RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES[self.permission]
 
     @property
     def is_owner(self) -> bool:
-        return self.permission == "owner"
+        return self.permission == ResourcePermissionLevel.OWNER
 
     def __repr__(self):
         return f"ORMResourcePermission(id={self.id}, user_id={self.user_id} permission='{self.permission}')"
@@ -302,7 +304,9 @@ class ORMSession(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(type_=DateTimeUTC(timezone=True), default=None, nullable=True)
 
     description: Mapped[str | None] = mapped_column(default=None, nullable=True)
-    scopes: Mapped[str | None] = mapped_column(default=None, nullable=True)
+    scopes: Mapped[list[AccessScope] | None] = mapped_column(
+        MutableList.as_mutable(EnumList(AccessScope)), default=None, nullable=True
+    )
 
     # Classification
     entity_type: Mapped[str] = mapped_column(default="session", server_default="session")
@@ -366,7 +370,7 @@ class ORMSession(Base):
         user_id: UUID,
         auth_provider_id: UUID,
         expires_at: datetime,
-        scopes: Scopes,
+        scopes: list[AccessScope],
         description: str | None = None,
     ):
         if expires_at < datetime.now(UTC):
@@ -379,5 +383,5 @@ class ORMSession(Base):
             expires_at=expires_at,
             session_type=SessionTypeEnum.SERVICE,
             description=description,
-            scopes=scopes.to_str(),
+            scopes=scopes,
         )
