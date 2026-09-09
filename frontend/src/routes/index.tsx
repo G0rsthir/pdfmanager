@@ -1,28 +1,28 @@
 import { AccessScope } from "@/api/types.gen";
 import { StateLoader } from "@/common/state/loader";
 import { Block } from "@/components/ui/display";
-import { CurrentUserAccountPage } from "@/pages/account";
-import { ApiKeysPage } from "@/pages/admin/api/keys";
-import { AuthProvidersPage } from "@/pages/admin/identity/providers";
-import { RolesPage } from "@/pages/admin/identity/roles";
-import { UsersPage } from "@/pages/admin/identity/users";
-import { AdminLayout } from "@/pages/admin/layout";
-import { TasksPage } from "@/pages/admin/tools/tasks";
-import { SessionExpiredPage } from "@/pages/auth/expired";
-import { LoginPage } from "@/pages/auth/login";
-import { LogoutPage } from "@/pages/auth/logout";
-import { DashboardPage } from "@/pages/dashboard";
-import { Error404Page } from "@/pages/error/404";
-import { Error500Page } from "@/pages/error/500";
-import { DynamicErrorPage } from "@/pages/error/dynamic";
-import { Layout } from "@/pages/layout";
-import { FavoritesPage } from "@/pages/library/favorites";
-import { FileDetailsPage } from "@/pages/library/file";
-import { FileReaderPage } from "@/pages/library/file/reader";
-import { FolderPage } from "@/pages/library/folder";
-import { SearchPage } from "@/pages/library/search";
-import { TagsPage } from "@/pages/library/tags";
-import SetupPage from "@/pages/setup";
+import { CurrentUserAccountPage } from "@/features/account";
+import { ApiKeysPage } from "@/features/admin/api/keys";
+import { AuthProvidersPage } from "@/features/admin/identity/providers";
+import { RolesPage } from "@/features/admin/identity/roles";
+import { UsersPage } from "@/features/admin/identity/users";
+import { AdminLayout } from "@/features/admin/layout";
+import { TasksPage } from "@/features/admin/tools/tasks";
+import { SessionExpiredPage } from "@/features/auth/expired";
+import { LoginPage } from "@/features/auth/login";
+import { LogoutPage } from "@/features/auth/logout";
+import { DashboardPage } from "@/features/dashboard";
+import { Error404Page } from "@/features/error/404";
+import { Error500Page } from "@/features/error/500";
+import { DynamicErrorPage } from "@/features/error/dynamic";
+import { Layout } from "@/features/layout";
+import { FavoritesPage } from "@/features/library/favorites";
+import { FileDetailsPage } from "@/features/library/file";
+import { FileReaderPage } from "@/features/library/file/reader";
+import { FolderPage } from "@/features/library/folder";
+import { SearchPage } from "@/features/library/search";
+import { TagsPage } from "@/features/library/tags";
+import SetupPage from "@/features/setup";
 import { lazy } from "react";
 import {
   createBrowserRouter,
@@ -51,7 +51,7 @@ function makeLazyLoad<C extends React.ComponentType<any>>(
 }
 
 const APIDocumentationPage = makeLazyLoad(
-  () => import("@/pages/admin/api/docs"),
+  () => import("@/features/admin/api/docs"),
 );
 
 const router = createBrowserRouter([

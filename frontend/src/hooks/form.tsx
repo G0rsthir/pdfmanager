@@ -37,7 +37,7 @@ export function useFormMutation<
     TMutationVariables
   >;
   onMutate: (value: TFormValues) => TMutationVariables;
-  successMessage?: string;
+  successNotification?: string;
   onSuccess?: () => void;
   resetForm?: boolean;
   mutationMeta?: MutationMeta;
@@ -46,7 +46,7 @@ export function useFormMutation<
     formOptions,
     mutationOptions,
     onMutate,
-    successMessage,
+    successNotification,
     onSuccess,
     resetForm = true,
     mutationMeta,
@@ -62,7 +62,7 @@ export function useFormMutation<
   const mutation = useAPIMutation({
     ...mutationOptions(),
     onSuccess() {
-      if (successMessage) showSuccessNotification(successMessage);
+      if (successNotification) showSuccessNotification(successNotification);
       if (resetForm) form.reset();
       onSuccess?.();
     },

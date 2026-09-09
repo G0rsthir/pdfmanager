@@ -1,0 +1,274 @@
+import {
+  listTagsOptions,
+  updateTagMutation,
+} from "@/api/@tanstack/react-query.gen";
+import { AccessScope, type TagWithDetailsResponse } from "@/api/types.gen";
+import { useHasScopes } from "@/common/auth/hooks";
+import { GenericIconButton } from "@/components/ui/button";
+import { Empty } from "@/components/ui/display";
+import { QueryView } from "@/components/ui/feedback";
+import { SubscribeFormError } from "@/components/ui/form/fields";
+import { FormModal } from "@/components/ui/form/modal";
+import { PaletteColors } from "@/config/theme";
+import { useFormMutation } from "@/hooks/form";
+import { useAPIQuery } from "@/hooks/query";
+import {
+  Badge,
+  Box,
+  Card,
+  ColorPicker,
+  Field,
+  Group,
+  Heading,
+  Input,
+  Menu,
+  Portal,
+  SimpleGrid,
+  Stack,
+  Text,
+  parseColor,
+} from "@chakra-ui/react";
+import { useMemo, useState } from "react";
+import { BsThreeDotsVertical } from "react-icons/bs";
+import { LuCheck, LuFile, LuTag } from "react-icons/lu";
+import { SearchTag } from "./file/tags";
+
+export function TagsPage() {
+  const query = useAPIQuery({
+    ...listTagsOptions(),
+  });
+
+  return (
+    <QueryView query={query}>{(data) => <TagsView tags={data} />}</QueryView>
+  );
+}
+
+function TagsView({ tags }: { tags: TagWithDetailsResponse[] }) {
+  return (
+    <Stack gap={6}>
+      <Heading size="3xl" fontWeight="normal">
+        Tags
+      </Heading>
+
+      {tags.length == 0 && (
+        <Empty
+          icon={<LuTag />}
+          title="No tags available. Tags will appear here when you add them to files."
+        />
+      )}
+
+      <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} gap="4">
+        {tags.map((tag) => (
+          <TagCard key={tag.id} tag={tag} />
+        ))}
+      </SimpleGrid>
+    </Stack>
+  );
+}
+
+function TagCard({ tag }: { tag: TagWithDetailsResponse }) {
+  return (
+    <Card.Root
+      variant="outline"
+      cursor="pointer"
+      _hover={{ backgroundColor: "bg.muted" }}
+      transition="all 0.15s"
+    >
+      <Card.Body p="4">
+        <Stack gap="3">
+          <Group align="center" justify="space-between">
+            <Group>
+              <Box color={`${tag.color}.500`}>
+                <LuTag size={16} />
+              </Box>
+              <SearchTag tag={tag} />
+            </Group>
+            <TagActions tag={tag} />
+          </Group>
+          <Group gap="1" color="fg.muted" textStyle="xs">
+            <LuFile size={12} />
+            <Text>
+              {tag.file_count} {tag.file_count == 1 ? "file" : "files"}
+            </Text>
+          </Group>
+        </Stack>
+      </Card.Body>
+    </Card.Root>
+  );
+}
+
+type TagDialog = "edit" | null;
+
+function TagActions({ tag }: { tag: TagWithDetailsResponse }) {
+  const [dialog, setDialog] = useState<TagDialog>(null);
+
+  const canWrite = useHasScopes(AccessScope.LIBRARY_WRITE);
+
+  return (
+    <>
+      <Menu.Root>
+        <Menu.Trigger asChild>
+          <GenericIconButton
+            variant="ghost"
+            size="sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <BsThreeDotsVertical />
+          </GenericIconButton>
+        </Menu.Trigger>
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content>
+              <Menu.Item value="edit" onClick={() => setDialog("edit")}>
+                Edit
+              </Menu.Item>
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      </Menu.Root>
+
+      <EditTagDialog
+        open={dialog == "edit"}
+        onClose={() => setDialog(null)}
+        tag={tag}
+        readonly={!canWrite}
+      />
+    </>
+  );
+}
+
+const tagColors = PaletteColors.map((color) => color.value);
+
+function EditTagDialog(props: {
+  tag: TagWithDetailsResponse;
+  open: boolean;
+  onClose: () => void;
+  readonly?: boolean;
+}) {
+  const { tag, open, readonly, onClose } = props;
+
+  const { form } = useFormMutation({
+    formOptions: {
+      defaultValues: {
+        name: tag.name ?? "grey",
+        color: tag.color,
+      },
+    },
+    mutationOptions: updateTagMutation,
+    onMutate: (value) => ({
+      body: {
+        name: value.name,
+        color: value.color,
+      },
+      path: {
+        id: tag.id,
+      },
+    }),
+    successNotification: "Tag updated successfully",
+    onSuccess: onClose,
+  });
+
+  const handleClose = () => {
+    form.reset();
+    onClose();
+  };
+
+  const swatchesColors = useMemo(() => {
+    const colors: Record<string, string> = {};
+    for (const color of tagColors) {
+      colors[parseColor(color).toString("hex")] = color;
+    }
+    return colors;
+  }, []);
+
+  return (
+    <FormModal
+      open={open}
+      close={handleClose}
+      title="Edit Tag"
+      onSubmit={() => form.handleSubmit()}
+      confirmBtnText="Update"
+      disabled={readonly}
+    >
+      <Stack gap="4">
+        <form.Field
+          name="name"
+          children={({ state: fieldState, handleChange, handleBlur }) => (
+            <Field.Root invalid={!fieldState.meta.isValid} required disabled>
+              <Field.Label>
+                Name <Field.RequiredIndicator />
+              </Field.Label>
+              <Input
+                value={fieldState.value}
+                onChange={(e) => handleChange(e.target.value)}
+                onBlur={handleBlur}
+              />
+              <Field.HelperText>
+                To rename a tag, remove it from your files and add it again with
+                the new name.
+              </Field.HelperText>
+              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+            </Field.Root>
+          )}
+        />
+        <form.Field
+          name="color"
+          children={({ state: fieldState, handleChange }) => (
+            <Field.Root invalid={!fieldState.meta.isValid} disabled={readonly}>
+              <ColorPicker.Root
+                defaultValue={parseColor(fieldState.value)}
+                maxW="200px"
+                onValueChange={(e) => {
+                  const colorName =
+                    swatchesColors?.[e.value.toString("hex")] ?? "grey";
+                  handleChange(colorName);
+                }}
+                positioning={{ placement: "top" }}
+              >
+                <ColorPicker.HiddenInput />
+                <ColorPicker.Label>Color</ColorPicker.Label>
+                <ColorPicker.Control>
+                  <ColorPicker.Trigger />
+                </ColorPicker.Control>
+
+                <ColorPicker.Positioner>
+                  <ColorPicker.Content>
+                    <ColorPicker.SwatchGroup>
+                      {Object.keys(swatchesColors).map((item) => (
+                        <ColorPicker.SwatchTrigger key={item} value={item}>
+                          <ColorPicker.Swatch boxSize="7" value={item}>
+                            <ColorPicker.SwatchIndicator>
+                              <LuCheck />
+                            </ColorPicker.SwatchIndicator>
+                          </ColorPicker.Swatch>
+                        </ColorPicker.SwatchTrigger>
+                      ))}
+                    </ColorPicker.SwatchGroup>
+                  </ColorPicker.Content>
+                </ColorPicker.Positioner>
+              </ColorPicker.Root>
+              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
+            </Field.Root>
+          )}
+        />
+        <SubscribeFormError form={form} />
+
+        <Group gap="2" align="center">
+          <Text textStyle="sm" color="fg.muted">
+            Preview:
+          </Text>
+          <form.Subscribe
+            selector={(state) => state.values}
+            children={(state) => {
+              return (
+                <Badge colorPalette={state.color} variant="subtle" size="sm">
+                  {state.name || "Tag"}
+                </Badge>
+              );
+            }}
+          />
+        </Group>
+      </Stack>
+    </FormModal>
+  );
+}

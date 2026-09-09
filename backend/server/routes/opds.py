@@ -22,7 +22,7 @@ router = APIRouter(prefix="/opds")
 
 @router.get(path="/", operation_id="OpdsRoot")
 async def get_opds_root(
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     opds_service: OpdsCatalogServiceDependency,
 ) -> Response:
     return build_opds_response(opds_service.root_feed())
@@ -30,7 +30,7 @@ async def get_opds_root(
 
 @router.get(path="/all", operation_id="OpdsAll")
 async def get_opds_all_files(
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     opds_service: OpdsCatalogServiceDependency,
 ) -> Response:
 
@@ -39,7 +39,7 @@ async def get_opds_all_files(
 
 @router.get(path="/opensearch.xml", operation_id="OpdsOpenSearch")
 async def get_opds_opensearch(
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     opds_service: OpdsCatalogServiceDependency,
 ) -> Response:
 
@@ -48,7 +48,7 @@ async def get_opds_opensearch(
 
 @router.get(path="/search", operation_id="OpdsSearch")
 async def get_opds_search(
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     opds_service: OpdsCatalogServiceDependency,
     q: Annotated[str, Query()] = "",
 ) -> Response:
@@ -57,7 +57,7 @@ async def get_opds_search(
 
 @router.get(path="/shelf", operation_id="OpdsShelf")
 async def get_opds_shelf(
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     opds_service: OpdsCatalogServiceDependency,
 ) -> Response:
     return build_opds_response(await opds_service.get_shelf_feed(user_id=access_session.user_id))
@@ -65,7 +65,7 @@ async def get_opds_shelf(
 
 @router.get(path="/collections", operation_id="OpdsCollections")
 async def get_opds_collections(
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     opds_service: OpdsCatalogServiceDependency,
 ) -> Response:
     return build_opds_response(await opds_service.get_ollections_feed(user_id=access_session.user_id))
@@ -74,7 +74,7 @@ async def get_opds_collections(
 @router.get(path="/collections/{collection_id}", operation_id="OpdsCollection")
 async def get_opds_collection(
     collection_id: Annotated[UUID, Path()],
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     opds_service: OpdsCatalogServiceDependency,
 ) -> Response:
 
@@ -88,7 +88,7 @@ async def get_opds_collection(
 async def download_opds_file(
     file_id: Annotated[UUID, Path(alias="id")],
     ext: Annotated[str, Path()],
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     library_service: LibraryServiceDependency,
 ) -> FastAPIFileResponse:
 
@@ -106,7 +106,7 @@ async def download_opds_file(
 @router.get(path="/file/{id}/thumbnail", response_class=FastAPIFileResponse, operation_id="GetOpdsFileThumbnail")
 async def download_opds_thumbnail(
     file_id: Annotated[UUID, Path(alias="id")],
-    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, BasicAuthSecurity(scopes=[AccessScope.LIBRARY_READ])],
     library_service: LibraryServiceDependency,
 ) -> FastAPIFileResponse:
 

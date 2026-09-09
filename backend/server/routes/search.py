@@ -18,7 +18,7 @@ router = APIRouter(prefix="/search")
 @router.get(path="/files", response_model=list[FileSearchResponse], operation_id="SearchFiles")
 async def search_files(
     query: Annotated[SearchFilesQueryParams, Query()],
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.USER_READ])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.LIBRARY_READ])],
     library_service: LibraryServiceDependency,
     search_service: SearchServiceDependency,
 ):

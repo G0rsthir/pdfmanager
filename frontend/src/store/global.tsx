@@ -1,15 +1,13 @@
 import { create } from "zustand";
 
 import type { AppStateResponse, UserSessionResponse } from "@/api/types.gen";
+import { persist } from "zustand/middleware";
 import {
   DEFAULT_FILE_CLICK_ACTION,
-  type FileClickAction,
-} from "@/pages/library/shared/file";
-import {
   DEFAULT_LIBRARY_LAYOUT,
+  type FileClickAction,
   type LibraryLayout,
-} from "@/pages/library/shared/layout";
-import { persist } from "zustand/middleware";
+} from "./preferences";
 
 export interface State {
   session?: UserSessionResponse;

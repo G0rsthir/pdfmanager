@@ -1,5 +1,9 @@
 import { APIError, parseAPIError, parseFormError } from "@/common/error";
 import {
+  showErrorNotification,
+  showSuccessNotification,
+} from "@/components/ui/toaster";
+import {
   type DefaultError,
   type MutationFunctionContext,
   QueryClient,
@@ -43,6 +47,10 @@ export function useAPIMutation<
       onMutateResult: TOnMutateResult | undefined,
       context: MutationFunctionContext,
     ) => void;
+    // Show toast
+    errorNotification?: string;
+    // Show toast
+    successNotification?: string;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<TData, TError, TVariables, TOnMutateResult> {
@@ -50,10 +58,14 @@ export function useAPIMutation<
     ...options,
     onError: (error, variables, onMutateResult, context) => {
       options.onError?.(error, variables, onMutateResult, context);
+      const apiError = parseAPIError(error);
+
       if (options.onApiError) {
-        const apiError = parseAPIError(error);
         options.onApiError(apiError, variables, onMutateResult, context);
       }
+
+      if (options.errorNotification)
+        showErrorNotification(options.errorNotification, apiError.message);
 
       if (options.setErrorMap) {
         const formErrors = parseFormError(error);
@@ -61,6 +73,12 @@ export function useAPIMutation<
           onSubmit: formErrors,
         });
       }
+    },
+    onSuccess(data, variables, onMutateResult, context) {
+      options.onSuccess?.(data, variables, onMutateResult, context);
+
+      if (options.successNotification)
+        showSuccessNotification(options.successNotification);
     },
   };
 

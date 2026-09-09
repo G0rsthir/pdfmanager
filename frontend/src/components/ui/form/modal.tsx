@@ -1,5 +1,3 @@
-import { AccessScope } from "@/api/types.gen";
-import { useHasScopes } from "@/common/auth/hooks";
 import {
   Button,
   CloseButton,
@@ -15,7 +13,6 @@ export interface FormModalProps {
   children: React.ReactNode;
   title: React.ReactNode;
   confirmBtnText?: string;
-  confirmBtnType?: "generic" | AccessScope;
   confirmBtnPalette?: string;
   onSubmit: () => void;
   isPending?: boolean;
@@ -33,18 +30,11 @@ export function FormModal(props: FormModalProps) {
     disabled,
     submitOnEnter = false,
     confirmBtnPalette,
-    confirmBtnType = "generic",
     confirmBtnText = "Confirm",
     size = "sm",
     onSubmit,
     close,
   } = props;
-
-  const haScope = useHasScopes(
-    confirmBtnType != "generic" ? confirmBtnType : AccessScope.USER_WRITE,
-  );
-
-  const isDisabled = disabled || (confirmBtnType != "generic" && !haScope);
 
   return (
     <Dialog.Root
@@ -64,7 +54,7 @@ export function FormModal(props: FormModalProps) {
                 !e.shiftKey &&
                 !(e.target instanceof HTMLTextAreaElement) &&
                 !isPending &&
-                !isDisabled
+                !disabled
               ) {
                 e.preventDefault();
                 onSubmit();
@@ -89,7 +79,7 @@ export function FormModal(props: FormModalProps) {
                 Cancel
               </Button>
               <Button
-                disabled={isDisabled}
+                disabled={disabled}
                 colorPalette={confirmBtnPalette}
                 onClick={onSubmit}
                 loading={isPending}

@@ -1,5 +1,5 @@
-import type { LibraryLayout } from "@/pages/library/shared/layout";
 import { useGlobalStore } from "@/store";
+import type { LibraryLayout } from "@/store/preferences";
 import { useShallow } from "zustand/shallow";
 
 export function useLibraryLayout(key: string) {

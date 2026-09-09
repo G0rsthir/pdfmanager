@@ -1,5 +1,3 @@
-import { AccessScope } from "@/api/types.gen";
-import { useHasScopes } from "@/common/auth/hooks";
 import { Button, CloseButton, Dialog, Portal, Stack } from "@chakra-ui/react";
 
 export function ConfirmModal(props: {
@@ -10,7 +8,6 @@ export function ConfirmModal(props: {
   confirmBtnText?: string;
   confirmBtnPalette?: string;
   disabled?: boolean;
-  confirmBtnType?: "generic" | AccessScope;
   onConfirm: () => void;
   isPending?: boolean;
 }) {
@@ -20,18 +17,11 @@ export function ConfirmModal(props: {
     children,
     title,
     confirmBtnPalette,
-    confirmBtnType = "generic",
     confirmBtnText = "Confirm",
     disabled,
     onConfirm,
     isPending,
   } = props;
-
-  const haScope = useHasScopes(
-    confirmBtnType != "generic" ? confirmBtnType : AccessScope.USER_WRITE,
-  );
-
-  const isDisabled = disabled || (confirmBtnType != "generic" && !haScope);
 
   return (
     <Dialog.Root
@@ -65,7 +55,7 @@ export function ConfirmModal(props: {
                 colorPalette={confirmBtnPalette}
                 onClick={onConfirm}
                 loading={isPending}
-                disabled={isDisabled}
+                disabled={disabled}
               >
                 {confirmBtnText}
               </Button>
