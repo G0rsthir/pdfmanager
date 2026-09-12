@@ -10,6 +10,7 @@ import {
   Text,
   VStack,
   type BoxProps,
+  type TextProps,
 } from "@chakra-ui/react";
 import { GenericIconButton } from "./button";
 
@@ -66,9 +67,14 @@ export function SettingsOption(props: SettingsOptionProps) {
   );
 }
 
-export function SectionLabel({ children }: { children: React.ReactNode }) {
+export function SectionLabel(
+  props: TextProps & React.RefAttributes<HTMLParagraphElement>,
+) {
+  const { children, ...other } = props;
+
   return (
     <Text
+      {...other}
       fontSize="sm"
       fontWeight="medium"
       color="fg.muted"

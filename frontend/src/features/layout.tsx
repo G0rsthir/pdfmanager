@@ -20,9 +20,9 @@ export function Layout() {
         bg="bg.panel"
         borderRightWidth="1px"
         justify="space-between"
-        p="4"
+        py="4"
       >
-        <Stack gap="4" overflow="auto">
+        <Stack gap="4" px="4" overflowY="scroll" className="scrollbar-stable">
           <NavLink to="/">
             <Text fontWeight="bold" fontSize="lg">
               PDF Manager
@@ -33,7 +33,7 @@ export function Layout() {
             <Library />
           </Stack>
         </Stack>
-        <Stack gap="2">
+        <Stack gap="2" px="4">
           <AdminOnly>
             <Separator />
             <ReactNavLink

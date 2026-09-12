@@ -233,6 +233,23 @@ class CollectionRepository(Repository):
         stmt = select(models.ORMCollection).where(models.ORMCollection.id.in_(ids))
         return list(await self.session.scalars(stmt))
 
+    async def list_subtree_ids(self, collection_id: UUID) -> set[UUID]:
+        """
+        The collection and all of its (nested) descendants
+        """
+        subtree = (
+            select(models.ORMCollection.id)
+            .where(models.ORMCollection.id == collection_id)
+            .cte(name="subtree", recursive=True)
+        )
+        subtree = subtree.union(
+            select(models.ORMCollection.id).join(subtree, models.ORMCollection.parent_id == subtree.c.id)
+        )
+
+        result = await self.session.scalars(select(subtree.c.id))
+
+        return set(result)
+
     async def list_visible_to_user(
         self,
         user_id: UUID,

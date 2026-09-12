@@ -59,7 +59,7 @@ export function TokensInput(props: TokensInputProps) {
   return (
     <Combobox.RootProvider value={comobobox}>
       <TagsInput.RootProvider value={tags} colorPalette={props.colorPalette}>
-        <TagsInput.Control ref={controlRef} bg="bg.subtle">
+        <TagsInput.Control ref={controlRef} bg="transparent">
           {tags.value.map((tag, index) => (
             <TagsInput.Item key={index} index={index} value={tag}>
               <TagsInput.ItemPreview>

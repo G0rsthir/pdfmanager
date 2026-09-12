@@ -118,6 +118,8 @@ import type {
   InviteToCollectionData,
   InviteToCollectionErrors,
   InviteToCollectionResponses,
+  KoreaderAuthData,
+  KoreaderAuthResponses,
   ListActiveTasksData,
   ListActiveTasksResponses,
   ListAnnotationLabelsData,
@@ -2071,3 +2073,17 @@ export const getOpdsFileThumbnail = <ThrowOnError extends boolean = false>(
     url: "/api/v1/opds/file/{id}/thumbnail",
     ...options,
   });
+
+/**
+ * Koreader Auth
+ */
+export const koreaderAuth = <ThrowOnError extends boolean = false>(
+  options?: Options<KoreaderAuthData, ThrowOnError>,
+): RequestResult<KoreaderAuthResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<KoreaderAuthResponses, unknown, ThrowOnError>(
+    {
+      security: [{ name: "x-auth-user", type: "apiKey" }],
+      url: "/api/v1/reader/koreader/users/auth",
+      ...options,
+    },
+  );

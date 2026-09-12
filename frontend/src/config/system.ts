@@ -8,6 +8,16 @@ export const createAppConfig = (primaryColor: string) =>
       body: {
         colorPalette: primaryColor,
       },
+      ".scrollbar-stable": {
+        scrollbarWidth: "thin",
+        scrollbarColor: "var(--chakra-colors-border-emphasized) transparent",
+        "&::-webkit-scrollbar": { width: "8px" },
+        "&::-webkit-scrollbar-track": { bg: "transparent" },
+        "&::-webkit-scrollbar-thumb": {
+          bg: "border.emphasized",
+          borderRadius: "full",
+        },
+      },
     },
     theme: {
       tokens: {

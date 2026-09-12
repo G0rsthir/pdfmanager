@@ -26,12 +26,11 @@ export function EditCollectionDialog(props: {
   onClose: () => void;
   collection: PartialCollectionResponse;
   readonly?: boolean;
+  canMove?: boolean;
 }) {
-  const { open, onClose, collection, readonly } = props;
+  const { open, onClose, collection, readonly, canMove = true } = props;
 
   const label = collectionLabel(collection.entity_type);
-
-  const required = collection.entity_type == "folder";
 
   const moveTargetsQ = useAPIQuery({
     ...listCollectionMoveTargetsOptions({
@@ -97,21 +96,18 @@ export function EditCollectionDialog(props: {
         children={({ state: fieldState, handleChange, handleBlur }) => (
           <Field.Root
             invalid={!fieldState.meta.isValid}
-            required={required}
-            disabled={readonly}
+            disabled={readonly || !canMove}
           >
-            <Field.Label>
-              Parent {required && <Field.RequiredIndicator />}
-            </Field.Label>
+            <Field.Label>Parent</Field.Label>
             <CollectionSelect
               defaultValue={fieldState.value ?? ""}
-              onValueChange={handleChange}
+              onValueChange={(value) => handleChange(value || null)}
               onBlur={handleBlur}
               allowedCollectionIds={moveTargetsQ.data?.map((c) => c.id)}
               type="group"
             />
             <Field.HelperText>
-              Only collections you can write to are selectable
+              Only groups you can write to in the same library are selectable
             </Field.HelperText>
             <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
           </Field.Root>

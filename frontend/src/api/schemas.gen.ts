@@ -9,6 +9,7 @@ export const AccessScopeSchema = {
     "user:write",
     "library:read",
     "library:write",
+    "library:sync",
   ],
   title: "AccessScope",
 } as const;
@@ -851,14 +852,27 @@ export const CollectionWithDetailsResponseSchema = {
       title: "Capabilities",
       readOnly: true,
     },
-    is_shared: {
+    is_shared_by_me: {
       type: "boolean",
-      title: "Is Shared",
+      title: "Is Shared By Me",
+      readOnly: true,
+    },
+    is_shared_with_me: {
+      type: "boolean",
+      title: "Is Shared With Me",
       readOnly: true,
     },
   },
   type: "object",
-  required: ["id", "name", "entity_type", "owner", "capabilities", "is_shared"],
+  required: [
+    "id",
+    "name",
+    "entity_type",
+    "owner",
+    "capabilities",
+    "is_shared_by_me",
+    "is_shared_with_me",
+  ],
   title: "CollectionWithDetailsResponse",
 } as const;
 
@@ -1268,9 +1282,29 @@ export const LibraryTreeNodeSchema = {
       ],
       title: "Parent Id",
     },
-    is_shared: {
+    is_root: {
       type: "boolean",
-      title: "Is Shared",
+      title: "Is Root",
+      default: false,
+    },
+    owner: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/UserSummaryResponse",
+        },
+        {
+          type: "null",
+        },
+      ],
+    },
+    is_shared_with_me: {
+      type: "boolean",
+      title: "Is Shared With Me",
+      readOnly: true,
+    },
+    is_shared_by_me: {
+      type: "boolean",
+      title: "Is Shared By Me",
       readOnly: true,
     },
     capabilities: {
@@ -1283,7 +1317,14 @@ export const LibraryTreeNodeSchema = {
     },
   },
   type: "object",
-  required: ["id", "name", "entity_type", "is_shared", "capabilities"],
+  required: [
+    "id",
+    "name",
+    "entity_type",
+    "is_shared_with_me",
+    "is_shared_by_me",
+    "capabilities",
+  ],
   title: "LibraryTreeNode",
 } as const;
 
@@ -2587,6 +2628,21 @@ export const LibraryTreeNodeWritableSchema = {
         },
       ],
       title: "Parent Id",
+    },
+    is_root: {
+      type: "boolean",
+      title: "Is Root",
+      default: false,
+    },
+    owner: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/UserSummaryResponse",
+        },
+        {
+          type: "null",
+        },
+      ],
     },
   },
   type: "object",

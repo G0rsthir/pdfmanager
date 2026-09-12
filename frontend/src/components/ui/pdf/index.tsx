@@ -13,9 +13,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoadingError } from "../error";
 import { ContentLoadingOverlay } from "../feedback";
 import { PagePeekBar, SearchBar, SelectionPopover, Toolbar } from "./actions";
-import { normalizeOutline } from "./hooks";
+import { normalizeOutline, useFullscreen } from "./hooks";
 import { renderPageAnnotations } from "./overlay";
 import { SidePanel } from "./panel";
+import { ViewerPortalProvider } from "./portal";
 import "./style.css";
 import type {
   AnnotationDraft,
@@ -24,6 +25,7 @@ import type {
   NormalizedRect,
   OutlineItem,
   PopoverAction,
+  SearchOptions,
   SelectionPopoverState,
   SidePanelTab,
 } from "./types";
@@ -86,6 +88,10 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [showAnnotations, setShowAnnotations] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOptions, setSearchOptions] = useState<SearchOptions>({
+    caseSensitive: false,
+    entireWord: false,
+  });
   const [matchCount, setMatchCount] = useState({ current: 0, total: 0 });
   const [outline, setOutline] = useState<OutlineItem[] | null>(null);
   const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>("annotations");
@@ -103,6 +109,8 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const pdfHistoryRef = useRef<PDFHistory | null>(null);
   const linkServiceRef = useRef<PDFLinkService | null>(null);
   const lastLocationRef = useRef<Bookmark | null>(null);
+
+  const { isFullscreen, toggleFullscreen } = useFullscreen(wrapperRef);
 
   const beginPeek = useCallback(() => {
     if (isPeekingRef.current) return;
@@ -297,26 +305,58 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     viewer.pagesRotation = (viewer.pagesRotation + 270) % 360;
   }, []);
 
-  const dispatchFind = useCallback((type: string, query: string) => {
-    eventBusRef.current?.dispatch("find", {
-      source: null,
-      type,
-      query,
-      caseSensitive: false,
-      entireWord: false,
-      highlightAll: true,
-      findPrevious: false,
-    });
-  }, []);
+  const runFind = useCallback(
+    (params: {
+      type: string;
+      query: string;
+      options: SearchOptions;
+      findPrevious?: boolean;
+      highlightAll?: boolean;
+    }) => {
+      const {
+        type,
+        query,
+        options,
+        findPrevious = false,
+        highlightAll = true,
+      } = params;
+
+      eventBusRef.current?.dispatch("find", {
+        source: null,
+        type,
+        query,
+        caseSensitive: options.caseSensitive,
+        entireWord: options.entireWord,
+        highlightAll,
+        findPrevious,
+      });
+    },
+    [],
+  );
 
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchQuery(value);
       if (value) {
-        dispatchFind("", value);
+        runFind({ type: "", query: value, options: searchOptions });
       }
     },
-    [dispatchFind],
+    [runFind, searchOptions],
+  );
+
+  /**
+   * Toggling an option re-runs the search with the new settings
+   */
+  const toggleSearchOption = useCallback(
+    (option: keyof SearchOptions) => {
+      const next = { ...searchOptions, [option]: !searchOptions[option] };
+      setSearchOptions(next);
+
+      if (searchQuery) {
+        runFind({ type: "", query: searchQuery, options: next });
+      }
+    },
+    [runFind, searchOptions, searchQuery],
   );
 
   const returnFromPeek = useCallback(() => {
@@ -356,43 +396,29 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   }, [fileName]);
 
   const findNext = useCallback(() => {
-    eventBusRef.current?.dispatch("find", {
-      source: null,
-      type: "again",
-      query: searchQuery,
-      caseSensitive: false,
-      entireWord: false,
-      highlightAll: true,
-      findPrevious: false,
-    });
-  }, [searchQuery]);
+    runFind({ type: "again", query: searchQuery, options: searchOptions });
+  }, [runFind, searchQuery, searchOptions]);
 
   const findPrev = useCallback(() => {
-    eventBusRef.current?.dispatch("find", {
-      source: null,
+    runFind({
       type: "again",
       query: searchQuery,
-      caseSensitive: false,
-      entireWord: false,
-      highlightAll: true,
+      options: searchOptions,
       findPrevious: true,
     });
-  }, [searchQuery]);
+  }, [runFind, searchQuery, searchOptions]);
 
   const closeSearch = useCallback(() => {
     setShowSearch(false);
     setSearchQuery("");
     setMatchCount({ current: 0, total: 0 });
-    eventBusRef.current?.dispatch("find", {
-      source: null,
+    runFind({
       type: "",
       query: "",
-      caseSensitive: false,
-      entireWord: false,
+      options: searchOptions,
       highlightAll: false,
-      findPrevious: false,
     });
-  }, []);
+  }, [runFind, searchOptions]);
 
   const toggleShowSearch = useCallback(() => {
     setShowSearch((v) => !v);
@@ -577,84 +603,95 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   };
 
   return (
-    <Stack ref={wrapperRef} gap="0" h="full" bg="bg">
-      <Toolbar
-        currentPage={currentPage}
-        numPages={numPages}
-        pageInputValue={pageInputValue}
-        handlePageInput={handlePageInput}
-        commitPageInput={commitPageInput}
-        goToPage={goToPage}
-        setZoom={setZoom}
-        rotateCCW={rotateCCW}
-        rotateCW={rotateCW}
-        zoomIn={zoomIn}
-        zoomOut={zoomOut}
-        zoomPresets={ZOOM_PRESETS}
-        scaleValue={scaleValue}
-        toggleShowSearch={toggleShowSearch}
-        toggleAnnotations={toggleAnnotations}
-        showAnnotations={showAnnotations}
-        handleDownload={handleDownload}
-      />
-
-      {showSearch && (
-        <SearchBar
-          ref={searchInputRef}
-          searchQuery={searchQuery}
-          matchCount={matchCount}
-          handleSearchChange={handleSearchChange}
-          closeSearch={closeSearch}
-          findNextMatch={findNext}
-          findPrevMatch={findPrev}
+    <ViewerPortalProvider container={wrapperRef}>
+      <Stack ref={wrapperRef} gap="0" h="full" bg="bg">
+        <Toolbar
+          currentPage={currentPage}
+          numPages={numPages}
+          pageInputValue={pageInputValue}
+          handlePageInput={handlePageInput}
+          commitPageInput={commitPageInput}
+          goToPage={goToPage}
+          setZoom={setZoom}
+          rotateCCW={rotateCCW}
+          rotateCW={rotateCW}
+          zoomIn={zoomIn}
+          zoomOut={zoomOut}
+          zoomPresets={ZOOM_PRESETS}
+          scaleValue={scaleValue}
+          toggleShowSearch={toggleShowSearch}
+          toggleAnnotations={toggleAnnotations}
+          showAnnotations={showAnnotations}
+          handleDownload={handleDownload}
+          isFullscreen={isFullscreen}
+          toggleFullscreen={toggleFullscreen}
         />
-      )}
 
-      <Box flex="1" display="flex" minH={0}>
-        {/* PDFViewer requires absolute positioning */}
-        <Box flex="1" position="relative" minW={0}>
-          {loading && (
-            <Center position="absolute" inset="0">
-              <ContentLoadingOverlay />
-            </Center>
-          )}
-          {error && (
-            <Box position="absolute" inset="0" p="4">
-              <LoadingError>{error}</LoadingError>
-            </Box>
-          )}
-          <Box ref={containerRef} position="absolute" inset="0" overflow="auto">
-            <div ref={viewerDivRef} className="pdfViewer" />
-            <SelectionPopover
-              containerRef={containerRef}
-              onSelect={handleSelectionAction}
-              disabled={!canAnnotate}
-            />
-          </Box>
-          <PagePeekBar
-            open={bookmark ? true : false}
-            currentPage={currentPage}
-            bookmark={bookmark}
-            onReturn={returnFromPeek}
-            onContinue={continueFromPeek}
-          />
-        </Box>
-        {showAnnotations && (
-          <SidePanel
-            canAnnotate={canAnnotate}
-            annotations={annotationApi}
-            draftAnnotation={draftAnnotation}
-            currentPage={currentPage}
-            tab={sidePanelTab}
-            outline={outline}
-            onTabChange={setSidePanelTab}
-            onClose={toggleAnnotations}
-            onJumpToAnnotation={jumpToAnchor}
-            onJumpToOutlineItem={handleJumpToOutlineItem}
-            onCancelDraftAnnotation={() => setDraftAnnotation(null)}
+        {showSearch && (
+          <SearchBar
+            ref={searchInputRef}
+            searchQuery={searchQuery}
+            matchCount={matchCount}
+            handleSearchChange={handleSearchChange}
+            closeSearch={closeSearch}
+            findNextMatch={findNext}
+            findPrevMatch={findPrev}
+            searchOptions={searchOptions}
+            onToggleSearchOption={toggleSearchOption}
           />
         )}
-      </Box>
-    </Stack>
+
+        <Box flex="1" display="flex" minH={0}>
+          {/* PDFViewer requires absolute positioning */}
+          <Box flex="1" position="relative" minW={0}>
+            {loading && (
+              <Center position="absolute" inset="0">
+                <ContentLoadingOverlay />
+              </Center>
+            )}
+            {error && (
+              <Box position="absolute" inset="0" p="4">
+                <LoadingError>{error}</LoadingError>
+              </Box>
+            )}
+            <Box
+              ref={containerRef}
+              position="absolute"
+              inset="0"
+              overflow="auto"
+            >
+              <div ref={viewerDivRef} className="pdfViewer" />
+              <SelectionPopover
+                containerRef={containerRef}
+                onSelect={handleSelectionAction}
+                disabled={!canAnnotate}
+              />
+            </Box>
+            <PagePeekBar
+              open={bookmark ? true : false}
+              currentPage={currentPage}
+              bookmark={bookmark}
+              onReturn={returnFromPeek}
+              onContinue={continueFromPeek}
+            />
+          </Box>
+          {showAnnotations && (
+            <SidePanel
+              canAnnotate={canAnnotate}
+              annotations={annotationApi}
+              draftAnnotation={draftAnnotation}
+              currentPage={currentPage}
+              tab={sidePanelTab}
+              outline={outline}
+              onTabChange={setSidePanelTab}
+              onClose={toggleAnnotations}
+              onJumpToAnnotation={jumpToAnchor}
+              onJumpToOutlineItem={handleJumpToOutlineItem}
+              onCancelDraftAnnotation={() => setDraftAnnotation(null)}
+            />
+          )}
+        </Box>
+      </Stack>
+    </ViewerPortalProvider>
   );
 }

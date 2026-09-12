@@ -1,10 +1,38 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   NormalizedRect,
   OutlineItem,
   OutlineRawItem,
   SelectionPopoverState,
 } from "./types";
+
+export function useFullscreen(elementRef: React.RefObject<HTMLElement | null>) {
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => document.fullscreenElement != null,
+  );
+
+  useEffect(() => {
+    const sync = () => setIsFullscreen(document.fullscreenElement != null);
+
+    document.addEventListener("fullscreenchange", sync);
+
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await elementRef.current?.requestFullscreen();
+      }
+    } catch {
+      // Denied by the browser
+    }
+  }, [elementRef]);
+
+  return { isFullscreen, toggleFullscreen };
+}
 
 /**
  * Walk up to PDF.js's per-page wrapper.

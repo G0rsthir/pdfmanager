@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from logging import getLogger
 from pathlib import Path
@@ -22,7 +23,9 @@ from server.models import (
     ORMCollection,
     ORMFile,
     ORMFileState,
+    ORMResourcePermission,
     ORMTag,
+    ORMUser,
     ORMUserTagPreference,
 )
 from server.repositories import (
@@ -40,10 +43,19 @@ from server.schemas.general import PdfStorageFile
 from server.schemas.library import (
     BulkTagsOperation,
     CreateCollectionRequest,
-    LibraryTreeNode,
     NormalizedRect,
 )
 from server.security.permissions import permission_levels_with
+
+
+@dataclass(kw_only=True)
+class LibraryTree:
+    collections: list[ORMCollection]
+    # collection_id: grant
+    grants: dict[UUID, list[ORMResourcePermission]]
+    # collection_id: owner
+    owners: dict[UUID, ORMUser]
+    target_user_id: UUID
 
 
 class LibraryService:
@@ -122,7 +134,10 @@ class LibraryService:
         if not writable_ids:
             return []
 
-        candidates = [cid for cid in writable_ids if source_id != cid]
+        # Deny moving into its own subtree (circle)
+        subtree = await self._collection_repo.list_subtree_ids(source_id)
+        candidates = [cid for cid in writable_ids if cid not in subtree]
+        candidates = await self._filter_same_owner(source_id, candidates)
 
         cols = await self._collection_repo.list_by_ids(candidates)
         return [c for c in cols if c.entity_type == "group"]
@@ -132,7 +147,7 @@ class LibraryService:
         if not perm or not perm.can(ResourcePermissionCapability.DELETE):
             raise InsufficientPermissionError(action="delete", resource="Collection", identifier=collection_id)
 
-        # Collect what needs external cleanup.
+        # Collect what needs external cleanup
         files = await self._file_repo.list_all_in_collection_tree(collection_id)
         file_ids = [f.id for f in files]
         storage_keys = [k for f in files for k in (f.storage_key, f.thumbnail) if k]
@@ -200,9 +215,35 @@ class LibraryService:
         if not perm or not perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=source_id)
 
+        owner = await self._permission_repo.get_effective_owner_for_collection(source_id)
+
+        if owner and owner.user_id != user_id:
+            # Deny shared root move
+            visible_parent = (
+                await self._permission_repo.get_effective_for_collection(source.parent_id, user_id)
+                if source.parent_id
+                else None
+            )
+            if not visible_parent:
+                raise InvalidActionError(
+                    rule="collection_move_shared_root", msg="Collection shared with you cannot be moved"
+                )
+
         if parent_id is None:
+            # Nested collections inherit their owner
+            if not owner or owner.user_id != user_id:
+                raise InvalidActionError(
+                    rule="collection_root_owner_only", msg="Only owner can move collection to the top level"
+                )
+
+            await self._permission_repo.grant(source_id, user_id, ResourcePermissionLevel.OWNER)
             source.parent_id = parent_id
             return
+
+        if parent_id in await self._collection_repo.list_subtree_ids(source_id):
+            raise InvalidActionError(
+                rule="collection_parent_descendant", msg="Collection cannot be moved into its own subcollection"
+            )
 
         parent = await self._collection_repo.get_by_id(parent_id)
 
@@ -216,7 +257,33 @@ class LibraryService:
         if not parent_perm or not parent_perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="move-target", resource="Collection", identifier=source_id)
 
+        await self._ensure_same_owner({source_id}, parent_id)
+
         source.parent_id = parent_id
+
+    async def _ensure_same_owner(self, source_collection_ids: set[UUID], target_id: UUID):
+        """
+        Folder moving must ensure that owner stays the same
+        """
+        owners = await self._permission_repo.list_owners_for_collections([*source_collection_ids, target_id])
+        target_owner = owners.get(target_id)
+
+        if target_owner is None or any(owners.get(cid) != target_owner for cid in source_collection_ids):
+            raise InvalidActionError(
+                rule="move_cross_owner", msg="Items can only be moved within their owner's library"
+            )
+
+    async def _filter_same_owner(self, source_collection_id: UUID, candidate_ids: list[UUID]) -> list[UUID]:
+        """
+        Folder moving must ensure that owner stays the same
+        """
+        owners = await self._permission_repo.list_owners_for_collections([source_collection_id, *candidate_ids])
+        source_owner = owners.get(source_collection_id)
+
+        if source_owner is None:
+            return []
+
+        return [cid for cid in candidate_ids if owners.get(cid) == source_owner]
 
     async def update_collection(self, user_id, collection_id, name, parent_id=None):
         collection = await self._collection_repo.get_by_id(collection_id)
@@ -381,6 +448,9 @@ class LibraryService:
         if collection.entity_type != "folder":
             raise InvalidActionError(rule="file_collection_must_be_folder", msg="File can only be added to folders")
 
+        if collection_id != file.collection_id:
+            await self._ensure_same_owner({file.collection_id}, collection_id)
+
         if file.name != name:
             file.name = name
             await self._search_engine.delete_fragments(doc_id=file.id, fragment_type=FragmentType.TITLE)
@@ -451,6 +521,8 @@ class LibraryService:
             collection = await self._collection_repo.get_by_id(collection_id)
             if collection.entity_type != "folder":
                 raise InvalidActionError(rule="file_collection_must_be_folder", msg="File can only be added to folders")
+
+            await self._ensure_same_owner({f.collection_id for f in files_by_id.values()}, collection_id)
 
             for file in files_by_id.values():
                 file.collection_id = collection_id
@@ -639,7 +711,9 @@ class LibraryService:
         if not writable_ids:
             return []
 
-        cols = await self._collection_repo.list_by_ids(writable_ids)
+        candidates = await self._filter_same_owner(file.collection_id, writable_ids)
+
+        cols = await self._collection_repo.list_by_ids(candidates)
         return [c for c in cols if c.entity_type == "folder"]
 
     async def list_distinct_labels(self, user_id: UUID):
@@ -855,40 +929,21 @@ class LibraryService:
             for f in files
         ]
 
-    async def get_library_tree(self, user_id: UUID) -> list[LibraryTreeNode]:
+    async def get_library_tree(self, user_id: UUID) -> LibraryTree:
         visible = await self._permission_repo.list_accessible_collection_ids(user_id)
         if not visible:
-            return []
+            return LibraryTree(collections=[], grants={}, owners={}, target_user_id=user_id)
 
         collections = await self._collection_repo.list_by_ids(visible)
         grants = await self._permission_repo.list_direct_grants_by_resource(visible)
 
-        nodes = {
-            c.id: LibraryTreeNode(
-                id=c.id,
-                name=c.name,
-                entity_type=c.entity_type,
-                parent_id=c.parent_id,
-                children=[],
-            )
-            for c in collections
-        }
-        roots = []
-        for n in nodes.values():
-            parent = nodes.get(n.parent_id) if n.parent_id else None
+        visible_ids = set(visible)
+        root_ids = [c.id for c in collections if c.parent_id not in visible_ids]
+        owner_ids = await self._permission_repo.list_owners_for_collections(root_ids)
+        users = await self._user_repo.list_by_ids(list(owner_ids.values()))
+        owners = {cid: users[uid] for cid, uid in owner_ids.items() if uid in users}
 
-            # Calculate permissions for the current user on this node,
-            # which will be helpful for frontend rendering and permission checks
-            relevant_grants = grants.get(n.id, [])
-            n.target_permission = next((g.permission for g in relevant_grants if g.user_id == user_id), None)
-            n.target_permission_count = len(relevant_grants)
-
-            if parent:
-                parent.children.append(n)
-                n.target_parent = parent
-            else:
-                roots.append(n)
-        return roots
+        return LibraryTree(collections=collections, grants=grants, owners=owners, target_user_id=user_id)
 
     async def list_tags_with_details(self, user_id: UUID):
         return await self._tags_repo.list_personalized_with_details(user_id=user_id)

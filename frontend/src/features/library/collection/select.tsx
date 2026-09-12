@@ -106,6 +106,7 @@ export function CollectionSelect(props: CollectionSelectProps) {
       <Combobox.Control>
         <Combobox.Input placeholder="Type to search" />
         <Combobox.IndicatorGroup>
+          {!required && <Combobox.ClearTrigger />}
           <Combobox.Trigger />
         </Combobox.IndicatorGroup>
       </Combobox.Control>

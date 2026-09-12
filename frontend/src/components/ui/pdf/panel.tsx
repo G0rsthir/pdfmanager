@@ -12,7 +12,6 @@ import {
   Group,
   Menu,
   parseColor,
-  Portal,
   SegmentGroup,
   Separator,
   Stack,
@@ -28,10 +27,10 @@ import {
   LuList,
   LuMessageSquare,
   LuTrash2,
-  LuX,
 } from "react-icons/lu";
-import { GenericIconButton } from "../button";
+import { GenericCloseButton, GenericIconButton } from "../button";
 import { EditableCombobox } from "../editable";
+import { ViewerPortal } from "./portal";
 import type {
   AnnotationDraft,
   AnnotationItem,
@@ -83,10 +82,8 @@ export function SidePanel(props: SidePanelProps) {
       borderLeftWidth="1px"
       borderColor="border"
     >
-      <Group justify="flex-end" align="center" px="3" py="2">
-        <GenericIconButton size="xs" variant="ghost" onClick={onClose}>
-          <LuX />
-        </GenericIconButton>
+      <Group justify="flex-end" align="center" px="3" py="1">
+        <GenericCloseButton size="xs" variant="ghost" onClick={onClose} />
       </Group>
       <Separator />
 
@@ -379,7 +376,7 @@ function ColorSwatchMenu(props: {
           transition="width 0.15s"
         />
       </Menu.Trigger>
-      <Portal>
+      <ViewerPortal>
         <Menu.Positioner>
           <Menu.Content p={1}>
             <ColorPicker.Root
@@ -406,7 +403,7 @@ function ColorSwatchMenu(props: {
             </ColorPicker.Root>
           </Menu.Content>
         </Menu.Positioner>
-      </Portal>
+      </ViewerPortal>
     </Menu.Root>
   );
 }

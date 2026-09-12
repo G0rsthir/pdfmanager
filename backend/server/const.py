@@ -31,6 +31,7 @@ class TagEnum(StrEnum):
     GENERAL = "general"
     SEARCH = "search"
     OPDS = "opds"
+    READERS = "readers"
 
 
 class RefreshScopeEnum(StrEnum):
@@ -44,6 +45,7 @@ class AccessScope(StrEnum):
     USER_WRITE = "user:write"
     LIBRARY_READ = "library:read"
     LIBRARY_WRITE = "library:write"
+    LIBRARY_SYNC = "library:sync"
 
 
 class SessionTypeEnum(StrEnum):

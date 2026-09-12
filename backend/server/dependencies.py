@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security
-from fastapi.security import HTTPBasic, OAuth2PasswordBearer, SecurityScopes
+from fastapi.security import APIKeyHeader, HTTPBasic, OAuth2PasswordBearer, SecurityScopes
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.const import AccessScope, RefreshScopeEnum
@@ -48,6 +48,28 @@ class AccessManagerDependency(OAuth2PasswordBearer):
     async def __call__(self, request: Request, scopes: SecurityScopes) -> AccessSessionContext:  # type: ignore
         manager: AuthManager[AccessSessionContext] = request.app.state.access_manager
         context = await manager(request=request)
+
+        resolver: PermissionResolver = request.app.state.permission_resolver
+        if not await resolver.has_scope(context, scopes.scopes):
+            raise InsufficientPermissionsException
+        return context
+
+
+class HeaderKeyManagerDependency(APIKeyHeader):
+    def __init__(self, header: str, scheme_name: str, description: str):
+        super().__init__(name=header, scheme_name=scheme_name, description=description, auto_error=False)
+
+    async def __call__(self, request: Request, scopes: SecurityScopes) -> AccessSessionContext:  # type: ignore
+        api_key = await super().__call__(request)
+        if not api_key:
+            raise self.make_not_authenticated_error()
+
+        manager: AuthManager[AccessSessionContext] = request.app.state.access_manager
+        try:
+            context = await manager.validate_token(api_key)
+        except HTTPException:
+            # Re-raise with the APIKey challenge
+            raise self.make_not_authenticated_error() from None
 
         resolver: PermissionResolver = request.app.state.permission_resolver
         if not await resolver.has_scope(context, scopes.scopes):
@@ -99,9 +121,19 @@ _refresh_manager_dependency = RefreshManagerDependency()
 
 _basic_auth_manager_dependency = BasicAuthManagerDependency()
 
+_koreader_auth_manager_dependency = HeaderKeyManagerDependency(
+    header="x-auth-user",
+    scheme_name="KOReaderSync",
+    description="API key entered as the username in KOReader's progress sync settings",
+)
+
 
 def AccessSecurity(*, scopes: list[AccessScope] | None = None):
     return Security(_access_manager_dependency, scopes=scopes)
+
+
+def KoreaderSecurity(*, scopes: list[AccessScope] | None = None):
+    return Security(_koreader_auth_manager_dependency, scopes=scopes)
 
 
 def RefreshSecurity(*, scopes: list[RefreshScopeEnum] | None = None):

@@ -40,7 +40,7 @@ const CAPABILITY_SCOPE: Record<ResourcePermissionCapability, AccessScope> = {
   [ResourcePermissionCapability.WRITE]: AccessScope.LIBRARY_WRITE,
   [ResourcePermissionCapability.DELETE]: AccessScope.LIBRARY_WRITE,
   [ResourcePermissionCapability.MANAGE_PERMISSIONS]: AccessScope.LIBRARY_WRITE,
-  [ResourcePermissionCapability.SYNC_PROGRESS]: AccessScope.LIBRARY_WRITE,
+  [ResourcePermissionCapability.SYNC_PROGRESS]: AccessScope.LIBRARY_SYNC,
 };
 
 export function useCan(resource?: {

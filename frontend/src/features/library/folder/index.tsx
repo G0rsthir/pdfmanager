@@ -119,7 +119,7 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
           <Heading size="3xl" fontWeight="normal">
             {collection.name}
           </Heading>
-          {collection.is_shared && (
+          {collection.is_shared_with_me && (
             <Text color="fg.muted" fontSize="sm">
               {collection.owner.name}'s files
             </Text>

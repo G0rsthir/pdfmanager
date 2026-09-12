@@ -65,6 +65,7 @@ class CollectionWithDetailsResponse(CollectionResponse):
 
     # Helpful for permission calculation, but not part of the actual response
     target_permission: ResourcePermissionLevel = Field(exclude=True)
+    target_permission_count: int | None = Field(default=None, exclude=True)
 
     @computed_field
     @property
@@ -73,7 +74,19 @@ class CollectionWithDetailsResponse(CollectionResponse):
 
     @computed_field
     @property
-    def is_shared(self) -> bool:
+    def is_shared_by_me(self) -> bool:
+        if (
+            self.target_permission == ResourcePermissionLevel.OWNER
+            and self.target_permission_count
+            and self.target_permission_count > 1
+        ):
+            return True
+
+        return False
+
+    @computed_field
+    @property
+    def is_shared_with_me(self) -> bool:
         if self.target_permission != ResourcePermissionLevel.OWNER:
             return True
 
@@ -182,19 +195,39 @@ class LibraryTreeNode(BaseModel):
     children: list[LibraryTreeNode] = Field(default_factory=list)
     entity_type: Literal["group", "folder"]
     parent_id: UUID | None = None
+    is_root: bool = False
+
+    owner: UserSummaryResponse | None = None  # set on roots only
 
     # Helpful for permission calculation, but not part of the actual response
     target_parent: LibraryTreeNode | None = Field(default=None, exclude=True)
     target_permission: ResourcePermissionLevel | None = Field(default=None, exclude=True)
     target_permission_count: int | None = Field(default=None, exclude=True)
+    target_user_id: UUID = Field(exclude=True)
 
     @computed_field
     @property
-    def is_shared(self) -> bool:
-        if self.target_permission_count and self.target_permission_count > 1:
+    def is_shared_with_me(self) -> bool:
+        if self.owner is not None and self.owner.id != self.target_user_id:
             return True
 
-        if self.target_parent and self.target_parent.is_shared:
+        if self.target_parent and self.target_parent.is_shared_with_me:
+            return True
+
+        return False
+
+    @computed_field
+    @property
+    def is_shared_by_me(self) -> bool:
+        if (
+            self.owner is not None
+            and self.owner.id == self.target_user_id
+            and self.target_permission_count
+            and self.target_permission_count > 1
+        ):
+            return True
+
+        if self.target_parent and self.target_parent.is_shared_by_me:
             return True
 
         return False

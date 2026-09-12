@@ -36,6 +36,7 @@ import {
   RadioCard,
   Stack,
   Table,
+  Tabs,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
@@ -215,7 +216,7 @@ function CreatePersonalApiKeyDialog(props: {
         return {
           body: {
             description: value.description,
-            scopes: [AccessScope.LIBRARY_READ],
+            scopes: [AccessScope.LIBRARY_READ, AccessScope.LIBRARY_SYNC],
             expires_at: today(getLocalTimeZone())
               .add({ years: 10 })
               .toDate(getLocalTimeZone()),
@@ -465,9 +466,29 @@ function OpdsURL() {
 
 export function OpdsInstructions() {
   return (
-    <Stack gap={3} borderWidth="1px" borderColor="border" rounded="md" p={4}>
+    <>
       <Text fontWeight="medium">Using this key in a reader</Text>
+      <Tabs.Root variant="subtle" defaultValue="generic" orientation="vertical">
+        <Tabs.List>
+          <Tabs.Trigger value="generic">Generic</Tabs.Trigger>
+          <Tabs.Trigger value="koreader">KOReader</Tabs.Trigger>
+        </Tabs.List>
 
+        <Tabs.Content value="generic">
+          <ReaderInstructionsGeneric />
+        </Tabs.Content>
+
+        <Tabs.Content value="koreader">
+          Manage your projects and their status here.
+        </Tabs.Content>
+      </Tabs.Root>
+    </>
+  );
+}
+
+function ReaderInstructionsGeneric() {
+  return (
+    <Stack gap={3} borderWidth="1px" borderColor="border" rounded="md" p={4}>
       <OpdsURL />
 
       <List.Root gap={1} fontSize="sm" color="fg.muted" variant="plain">

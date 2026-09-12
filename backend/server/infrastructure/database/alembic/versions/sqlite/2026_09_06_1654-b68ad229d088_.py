@@ -8,6 +8,7 @@ Create Date: 2026-09-06 16:54:06.245764
 
 import json
 from collections.abc import Callable, Sequence
+from itertools import chain
 from typing import Union
 
 import sqlalchemy as sa
@@ -23,8 +24,8 @@ depends_on: Union[str, Sequence[str], None] = None
 SCOPE_TABLES = ["roles", "sessions"]
 
 LIBRARY_SCOPES_MAP = {
-    "user:read": "library:read",
-    "user:write": "library:write",
+    "user:read": ["library:read"],
+    "user:write": ["library:write", "library:sync"],
 }
 
 
@@ -63,13 +64,19 @@ def _to_scope_string(scopes: str) -> str:
 
 def _grant_library_scopes(current: str) -> str:
     sc = json.loads(current)
-    implied = [LIBRARY_SCOPES_MAP[scope] for scope in sc if scope in LIBRARY_SCOPES_MAP]
+    implied = []
+    for scope in sc:
+        if scope not in LIBRARY_SCOPES_MAP:
+            continue
+        implied.extend(LIBRARY_SCOPES_MAP[scope])
+
     sc = sc + [scope for scope in implied if scope not in sc]
     return json.dumps(sc)
 
 
 def _revoke_library_scopes(current: str) -> str:
-    revoked = set(LIBRARY_SCOPES_MAP.values())
+    revoked = set(chain(*LIBRARY_SCOPES_MAP.values()))
+
     return json.dumps([scope for scope in json.loads(current) if scope not in revoked])
 
 

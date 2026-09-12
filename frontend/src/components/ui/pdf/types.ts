@@ -89,3 +89,11 @@ export interface Bookmark {
     y: number;
   };
 }
+
+/**
+ * PDF.js find options
+ */
+export interface SearchOptions {
+  caseSensitive: boolean;
+  entireWord: boolean;
+}

@@ -14,6 +14,7 @@ export const AccessScope = {
   USER_WRITE: "user:write",
   LIBRARY_READ: "library:read",
   LIBRARY_WRITE: "library:write",
+  LIBRARY_SYNC: "library:sync",
 } as const;
 
 /**
@@ -571,9 +572,13 @@ export type CollectionWithDetailsResponse = {
    */
   readonly capabilities: Array<ResourcePermissionCapability>;
   /**
-   * Is Shared
+   * Is Shared By Me
    */
-  readonly is_shared: boolean;
+  readonly is_shared_by_me: boolean;
+  /**
+   * Is Shared With Me
+   */
+  readonly is_shared_with_me: boolean;
 };
 
 /**
@@ -872,9 +877,18 @@ export type LibraryTreeNode = {
    */
   parent_id?: string | null;
   /**
-   * Is Shared
+   * Is Root
    */
-  readonly is_shared: boolean;
+  is_root?: boolean;
+  owner?: UserSummaryResponse | null;
+  /**
+   * Is Shared With Me
+   */
+  readonly is_shared_with_me: boolean;
+  /**
+   * Is Shared By Me
+   */
+  readonly is_shared_by_me: boolean;
   /**
    * Capabilities
    */
@@ -1747,6 +1761,11 @@ export type LibraryTreeNodeWritable = {
    * Parent Id
    */
   parent_id?: string | null;
+  /**
+   * Is Root
+   */
+  is_root?: boolean;
+  owner?: UserSummaryResponse | null;
 };
 
 /**
@@ -3953,6 +3972,20 @@ export type GetOpdsFileThumbnailError =
   GetOpdsFileThumbnailErrors[keyof GetOpdsFileThumbnailErrors];
 
 export type GetOpdsFileThumbnailResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
+export type KoreaderAuthData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/reader/koreader/users/auth";
+};
+
+export type KoreaderAuthResponses = {
   /**
    * Successful Response
    */

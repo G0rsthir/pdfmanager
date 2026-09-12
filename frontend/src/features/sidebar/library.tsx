@@ -7,14 +7,18 @@ import {
 import { useCan, useHasScopes } from "@/common/auth/hooks";
 import { GenericIconButton } from "@/components/ui/button";
 import { QueryView } from "@/components/ui/feedback";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useAPIQuery } from "@/hooks/query";
 import { useGlobalStore } from "@/store";
 import {
+  Avatar,
+  Collapsible,
   createTreeCollection,
   Group,
   Link,
   Menu,
   Portal,
+  Stack,
   Text,
   TreeView,
   useDisclosure,
@@ -36,7 +40,25 @@ import {
 } from "../library/collection/actions";
 import { PermissionsDialog } from "../library/collection/permissions";
 
-const ROOT_NODE: LibraryTreeNode = {
+type CollectionNode = Omit<LibraryTreeNode, "children"> & {
+  children?: LibraryNode[];
+};
+
+/**
+ * Placeholder row rendered inside a group that has no children
+ */
+type EmptyNode = {
+  id: string;
+  entity_type: "empty";
+  parent_id?: string;
+  children?: never;
+  // Same as parent
+  capabilities: ResourcePermissionCapability[];
+};
+
+type LibraryNode = CollectionNode | EmptyNode;
+
+const ROOT_NODE: CollectionNode = {
   id: "ROOT",
   name: "",
   children: [],
@@ -45,8 +67,42 @@ const ROOT_NODE: LibraryTreeNode = {
     ResourcePermissionCapability.READ,
     ResourcePermissionCapability.WRITE,
   ],
-  is_shared: false,
+  is_shared_by_me: false,
+  is_shared_with_me: false,
 };
+
+const MY_ROOT: CollectionNode = { ...ROOT_NODE, id: "MY" };
+const SHARED_ROOT: CollectionNode = {
+  ...ROOT_NODE,
+  id: "SHARED",
+  capabilities: [ResourcePermissionCapability.READ],
+};
+
+const EMPTY_NODE: Omit<EmptyNode, "id"> = {
+  entity_type: "empty",
+  capabilities: [],
+};
+
+function appendEmpty(root: LibraryNode, parentId?: string): LibraryNode {
+  if (root.entity_type != "group") return root;
+
+  const children =
+    root.children?.map((child) => appendEmpty(child, child.id)) ?? [];
+
+  return {
+    ...root,
+    children: children.length
+      ? children
+      : [
+          {
+            ...EMPTY_NODE,
+            id: `${root.id}:empty`,
+            parent_id: parentId,
+            capabilities: root.capabilities,
+          },
+        ],
+  };
+}
 
 export function Library() {
   const query = useAPIQuery({
@@ -54,11 +110,55 @@ export function Library() {
   });
 
   return (
-    <QueryView query={query}>{(data) => <LibraryTree data={data} />}</QueryView>
+    <QueryView query={query}>
+      {(data) => {
+        const mine = data.filter((n) => !n.is_shared_with_me);
+        const shared = data.filter((n) => n.is_shared_with_me);
+        return (
+          <Stack gap={3}>
+            <SidebarSection title="Library" actions={<LibraryActions />}>
+              <LibraryTree root={MY_ROOT} data={mine} />
+            </SidebarSection>
+            {shared.length > 0 && (
+              <SidebarSection title="Shared with me">
+                <LibraryTree root={SHARED_ROOT} data={shared} />
+              </SidebarSection>
+            )}
+          </Stack>
+        );
+      }}
+    </QueryView>
   );
 }
 
-export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
+function SidebarSection(props: {
+  title: React.ReactNode;
+  actions?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  const { title, actions, children } = props;
+
+  return (
+    <Collapsible.Root defaultOpen>
+      <Group mb="1" w="full" className="group" justifyContent="space-between">
+        <Collapsible.Trigger asChild>
+          <Text as="button" fontWeight="semibold" cursor="pointer">
+            {title}
+          </Text>
+        </Collapsible.Trigger>
+        {actions}
+      </Group>
+      <Collapsible.Content>{children}</Collapsible.Content>
+    </Collapsible.Root>
+  );
+}
+
+export function LibraryTree(props: {
+  data: LibraryNode[];
+  root: CollectionNode;
+}) {
+  const { data, root } = props;
+
   const navigate = useNavigate();
 
   const state = useGlobalStore(
@@ -68,26 +168,17 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
     })),
   );
 
-  const { open, onClose, onOpen } = useDisclosure();
-
   const collection = useMemo(
     () =>
-      createTreeCollection<LibraryTreeNode>({
+      createTreeCollection<LibraryNode>({
         nodeToValue: (node) => node.id,
         nodeToString: (node) => node.id,
-        rootNode: {
-          ...ROOT_NODE,
-          children: data,
-        },
+        rootNode: appendEmpty({ ...root, children: data }),
       }),
-    [data],
+    [data, root],
   );
 
   const { folderid } = useParams();
-
-  const can = useCan(ROOT_NODE);
-
-  const canModify = can(ResourcePermissionCapability.WRITE);
 
   return (
     <>
@@ -99,41 +190,57 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
         animateContent
         selectedValue={folderid ? [folderid] : []}
       >
-        <Group justify="space-between" mr="0.7rem">
-          <Text fontWeight="semibold">Library</Text>
-          <LibraryActions />
-        </Group>
         <TreeView.Tree>
           <TreeView.Node
             indentGuide={<TreeView.BranchIndentGuide />}
-            render={({ node, indexPath }) => {
+            render={({
+              node,
+              indexPath,
+            }: {
+              node: LibraryNode;
+              indexPath: number[];
+            }) => {
+              if (node.entity_type == "empty")
+                return (
+                  <TreeView.Item>
+                    <EmptyTreeNode node={node} />
+                  </TreeView.Item>
+                );
+
               if (node.entity_type == "folder")
                 return (
-                  <TreeView.Item onClick={() => navigate("folder/" + node.id)}>
+                  <TreeView.Item
+                    className="group"
+                    onClick={() => navigate("folder/" + node.id)}
+                    paddingInlineEnd="unset"
+                  >
                     <LuFolderOpen />
                     <TreeView.ItemText>{node.name}</TreeView.ItemText>
-                    <SharedIndicator shared={node.is_shared} />
+                    <SharedIndicator node={node} />
                     <TreeNodeActions node={node} indexPath={indexPath} />
                   </TreeView.Item>
                 );
 
               if (node.children?.length)
                 return (
-                  <TreeView.BranchControl>
+                  <TreeView.BranchControl
+                    className="group"
+                    paddingInlineEnd="unset"
+                  >
                     <TreeView.BranchIndicator asChild>
                       <LuChevronRight />
                     </TreeView.BranchIndicator>
                     <TreeView.BranchText>{node.name}</TreeView.BranchText>
-                    <SharedIndicator shared={node.is_shared} />
+                    <SharedIndicator node={node} />
                     <TreeNodeActions node={node} indexPath={indexPath} />
                   </TreeView.BranchControl>
                 );
 
               return (
-                <TreeView.Item>
+                <TreeView.Item className="group" paddingInlineEnd="unset">
                   <LuLibrary />
                   <TreeView.ItemText>{node.name}</TreeView.ItemText>
-                  <SharedIndicator shared={node.is_shared} />
+                  <SharedIndicator node={node} />
                   <TreeNodeActions node={node} indexPath={indexPath} />
                 </TreeView.Item>
               );
@@ -141,9 +248,22 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
           />
         </TreeView.Tree>
       </TreeView.Root>
-      {data.length == 0 && (
-        <Text textStyle="xs">
-          No folders yet.
+    </>
+  );
+}
+
+function EmptyTreeNode({ node }: { node: EmptyNode }) {
+  const { open, onClose, onOpen } = useDisclosure();
+
+  const can = useCan(node);
+
+  const canModify = can(ResourcePermissionCapability.WRITE);
+
+  return (
+    <>
+      <Text textStyle="xs">
+        No folders yet.
+        {canModify && (
           <Link
             variant="underline"
             colorPalette="teal"
@@ -153,40 +273,58 @@ export function LibraryTree({ data }: { data: LibraryTreeNode[] }) {
           >
             Create one
           </Link>
-        </Text>
-      )}
+        )}
+      </Text>
       <CreateCollectionDialog
         type="folder"
         open={open}
         onClose={onClose}
+        parent_id={node.parent_id}
         readonly={!canModify}
       />
     </>
   );
 }
 
-function SharedIndicator({ shared }: { shared?: boolean }) {
-  if (!shared) return null;
-  return (
-    <LuLink2 size={12} title="Shared" style={{ opacity: 0.6, flexShrink: 0 }} />
-  );
+function SharedIndicator({ node }: { node: CollectionNode }) {
+  if (node.is_shared_with_me && node.owner)
+    return (
+      <Tooltip content={`Shared by ${node.owner.name}`}>
+        <Avatar.Root
+          size="2xs"
+          flexShrink={0}
+          boxSize="4"
+          textStyle="2xs"
+          colorPalette="gray"
+        >
+          <Avatar.Fallback />
+        </Avatar.Root>
+      </Tooltip>
+    );
+
+  if (node.is_shared_by_me)
+    return (
+      <Tooltip content="Shared with others">
+        <LuLink2 size={12} style={{ opacity: 0.6, flexShrink: 0 }} />
+      </Tooltip>
+    );
+
+  return null;
 }
 
-function containsNode(node: LibraryTreeNode, targetId: string): boolean {
+function containsNode(node: LibraryNode, targetId: string): boolean {
   if (node.id == targetId) return true;
   return node.children?.some((child) => containsNode(child, targetId)) ?? false;
 }
 
-type NodeType = LibraryTreeNode["entity_type"];
+type NodeType = CollectionNode["entity_type"];
 
 type NodeDialog = {
   type: "create" | "edit" | "delete" | "permissions";
   nodeType: NodeType;
 } | null;
 
-function TreeNodeActions({
-  node,
-}: TreeView.NodeProviderProps<LibraryTreeNode>) {
+function TreeNodeActions({ node }: TreeView.NodeProviderProps<CollectionNode>) {
   const isGroup = node.entity_type == "group";
 
   const [dialog, setDialog] = useState<NodeDialog>(null);
@@ -198,6 +336,8 @@ function TreeNodeActions({
   const can = useCan(node);
 
   const canModify = can(ResourcePermissionCapability.WRITE);
+
+  const isSharedRoot = node.is_shared_with_me && node.is_root;
 
   const canAssignPermissions = can(
     ResourcePermissionCapability.MANAGE_PERMISSIONS,
@@ -211,7 +351,7 @@ function TreeNodeActions({
 
   return (
     <>
-      <TreeNodeMenu opacitySelector=".css-wurrfy:hover &">
+      <TreeNodeMenu>
         {isGroup && (
           <Menu.Item
             disabled={!canModify}
@@ -282,6 +422,7 @@ function TreeNodeActions({
         onClose={onClose}
         collection={node}
         readonly={!canModify}
+        canMove={!isSharedRoot}
       />
       <DeleteCollectionDialog
         type={dialog?.nodeType ?? "group"}
@@ -301,13 +442,7 @@ function TreeNodeActions({
   );
 }
 
-function TreeNodeMenu({
-  children,
-  opacitySelector = ".css-wurrfy:hover &",
-}: {
-  children: React.ReactNode;
-  opacitySelector: string;
-}) {
+function TreeNodeMenu({ children }: { children: React.ReactNode }) {
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
@@ -316,14 +451,14 @@ function TreeNodeMenu({
           right="0"
           top="0"
           scale="0.8"
-          css={{
-            opacity: 0,
-            [opacitySelector]: { opacity: 1 },
-          }}
           size="xs"
           variant="ghost"
           height={0}
           onClick={(e) => e.stopPropagation()}
+          opacity={0}
+          _groupHover={{ opacity: 1 }}
+          _focusVisible={{ opacity: 1 }}
+          _open={{ opacity: 1 }}
         >
           <BsThreeDotsVertical />
         </GenericIconButton>
@@ -345,7 +480,7 @@ function LibraryActions() {
 
   return (
     <>
-      <TreeNodeMenu opacitySelector=".chakra-group:hover &">
+      <TreeNodeMenu>
         <Menu.Item
           value="createGroup"
           onClick={() => setDialog({ type: "create", nodeType: "group" })}

@@ -14,7 +14,7 @@ from server.dependencies import (
     UserRepositoryDependency,
 )
 from server.exceptions import FieldError, InvalidActionError
-from server.routes._assemblers import build_annotation_response, build_file_response
+from server.routes._assemblers import build_annotation_response, build_file_response, build_library_tree_response
 from server.schemas.identity import UserSummaryResponse
 from server.schemas.library import (
     AnnotationResponse,
@@ -112,6 +112,7 @@ async def get_collection(
 
     owner_perm = await permissions.get_effective_owner_for_collection(collection_id)
     owner = await user_repo.get_by_id(owner_perm.user_id) if owner_perm else None
+    grants = await permissions.list_for_collection(collection_id)
 
     if not owner:
         raise HTTPException(
@@ -125,6 +126,7 @@ async def get_collection(
         entity_type=collection.entity_type,
         target_permission=perm.permission,
         owner=UserSummaryResponse.model_validate(owner),
+        target_permission_count=len(grants),
     )
 
 
@@ -252,7 +254,13 @@ async def update_collection(
             user_id=access_session.user_id, collection_id=collection_id, name=data.name, parent_id=data.parent_id
         )
     except InvalidActionError as e:
-        if e.rule == "collection_parent_self":
+        if e.rule in (
+            "collection_parent_self",
+            "collection_parent_descendant",
+            "collection_root_owner_only",
+            "collection_move_shared_root",
+            "move_cross_owner",
+        ):
             raise FieldError(field="parent_id", msg=str(e)) from e
         raise
 
@@ -319,7 +327,7 @@ async def delete_files_bulk(
 @router.post(path="/files/states/update-bulk", operation_id="PatchFilesStatesBulk")
 async def patch_files_states_bulk(
     data: BulkPatchFileStateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.LIBRARY_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.LIBRARY_SYNC])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -366,7 +374,7 @@ async def get_file_state(
 async def patch_file_state(
     file_id: Annotated[UUID, Path(alias="id")],
     data: PatchFileStateRequest,
-    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.LIBRARY_WRITE])],
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.LIBRARY_SYNC])],
     library_service: LibraryServiceDependency,
 ):
 
@@ -386,7 +394,8 @@ async def get_library_tree(
     library_service: LibraryServiceDependency,
 ):
 
-    return await library_service.get_library_tree(user_id=access_session.user_id)
+    tree = await library_service.get_library_tree(user_id=access_session.user_id)
+    return build_library_tree_response(tree, access_session.user_id)
 
 
 @router.get(path="/files", operation_id="ListFiles", response_model=list[FileResponse])

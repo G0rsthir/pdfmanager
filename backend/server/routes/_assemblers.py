@@ -12,9 +12,11 @@ from server.schemas.library import (
     AuthorResponse,
     FileResponse,
     FileStateResponse,
+    LibraryTreeNode,
     TagResponse,
 )
 from server.schemas.security import ApiKeyResponse
+from server.services.library import LibraryTree
 
 
 def build_oidc_provider_response(provider: ORMAuthProviderOidc, request: Request) -> AuthProviderOidcResponse:
@@ -41,6 +43,37 @@ def build_file_response(file_details: FileWithDetails, user_id: UUID) -> FileRes
         authors=[AuthorResponse.model_validate(author) for author in file_details.authors],
         target_permission=file_details.target_resource_permission.permission,
     )
+
+
+def build_library_tree_response(tree: LibraryTree, user_id: UUID) -> list[LibraryTreeNode]:
+    nodes = {
+        c.id: LibraryTreeNode(
+            id=c.id,
+            name=c.name,
+            entity_type=c.entity_type,
+            parent_id=c.parent_id,
+            children=[],
+            target_user_id=tree.target_user_id,
+        )
+        for c in tree.collections
+    }
+    roots = []
+    for n in nodes.values():
+        parent = nodes.get(n.parent_id) if n.parent_id else None
+
+        relevant_grants = tree.grants.get(n.id, [])
+        n.target_permission = next((g.permission for g in relevant_grants if g.user_id == user_id), None)
+        n.target_permission_count = len(relevant_grants)
+
+        if parent:
+            parent.children.append(n)
+            n.target_parent = parent
+        else:
+            owner = tree.owners.get(n.id)
+            n.owner = UserSummaryResponse.model_validate(owner) if owner else None
+            n.is_root = True
+            roots.append(n)
+    return roots
 
 
 def build_annotation_response(

@@ -2,35 +2,44 @@ import {
   ActionBar,
   Box,
   Button,
+  Grid,
+  GridItem,
   Group,
   Icon,
   Input,
   Menu,
-  Portal,
+  Popover,
   Separator,
+  Stack,
   Text,
 } from "@chakra-ui/react";
 import {
   LuArrowLeft,
   LuBookmark,
+  LuCaseSensitive,
   LuChevronDown,
   LuChevronUp,
   LuDownload,
   LuHighlighter,
+  LuMaximize,
   LuMessageSquare,
+  LuMinimize,
   LuMinus,
   LuPanelRight,
   LuPlus,
   LuRotateCcw,
   LuRotateCw,
   LuSearch,
-  LuX,
+  LuSettings2,
+  LuWholeWord,
 } from "react-icons/lu";
-import { GenericIconButton } from "../button";
+import { GenericCloseButton, GenericIconButton } from "../button";
 import { useSelectionPopover } from "./hooks";
+import { ViewerPortal } from "./portal";
 import type {
   Bookmark,
   PopoverAction,
+  SearchOptions,
   SelectionPopoverState,
   ZoomPreset,
 } from "./types";
@@ -55,6 +64,8 @@ interface ToolbarProps {
   toggleShowSearch: () => void;
   toggleAnnotations: () => void;
   showAnnotations: boolean;
+  isFullscreen: boolean;
+  toggleFullscreen: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
 }
@@ -76,6 +87,8 @@ export function Toolbar(props: ToolbarProps) {
     toggleShowSearch,
     toggleAnnotations,
     showAnnotations,
+    isFullscreen,
+    toggleFullscreen,
     zoomIn,
     zoomOut,
   } = props;
@@ -85,160 +98,238 @@ export function Toolbar(props: ToolbarProps) {
     : `${Math.round(parseFloat(scaleValue) * 100)}%`;
 
   return (
-    <Group
+    <Grid
+      templateColumns="1fr auto 1fr"
+      alignItems="center"
       gap="1"
       px="3"
       py="2"
       bg="bg.subtle"
       borderBottomWidth="1px"
-      justify="center"
       flexShrink={0}
     >
-      <Group gap="1" align="center">
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Previous page"
-          onClick={() => goToPage(currentPage - 1)}
-          disabled={currentPage <= 1}
-        >
-          <LuChevronUp />
-        </GenericIconButton>
+      <GridItem />
+
+      <Group gap="1">
         <Group gap="1" align="center">
-          <Input
+          <GenericIconButton
             size="xs"
-            w="12"
-            textAlign="center"
-            value={pageInputValue}
-            onChange={(e) => handlePageInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitPageInput();
-            }}
-            onBlur={commitPageInput}
-          />
-          <Text textStyle="xs" color="fg.muted" whiteSpace="nowrap">
-            / {numPages}
-          </Text>
-        </Group>
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Next page"
-          onClick={() => goToPage(currentPage + 1)}
-          disabled={currentPage >= numPages}
-        >
-          <LuChevronDown />
-        </GenericIconButton>
-      </Group>
-
-      <Separator orientation="vertical" h="5" />
-
-      <Group gap="1" align="center">
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Zoom out"
-          onClick={zoomOut}
-        >
-          <LuMinus />
-        </GenericIconButton>
-
-        <Menu.Root>
-          <Menu.Trigger asChild>
-            <Box
-              as="button"
-              textStyle="xs"
-              minW="16"
+            variant="ghost"
+            aria-label="Previous page"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            <LuChevronUp />
+          </GenericIconButton>
+          <Group gap="1" align="center">
+            <Input
+              size="xs"
+              w="12"
               textAlign="center"
-              whiteSpace="nowrap"
-              cursor="pointer"
-              borderRadius="sm"
-              _hover={{ bg: "bg.emphasized" }}
-              px="1"
-              py="0.5"
-            >
-              {displayScale}
-            </Box>
-          </Menu.Trigger>
-          <Portal>
-            <Menu.Positioner>
-              <Menu.Content minW="28">
-                {zoomPresets.map((preset) => (
-                  <Menu.Item
-                    key={preset.value}
-                    value={String(preset.value)}
-                    onClick={() => setZoom(preset.value)}
-                    fontWeight={scaleValue === preset.value ? "bold" : "normal"}
+              value={pageInputValue}
+              onChange={(e) => handlePageInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitPageInput();
+              }}
+              onBlur={commitPageInput}
+            />
+            <Text textStyle="xs" color="fg.muted" whiteSpace="nowrap">
+              / {numPages}
+            </Text>
+          </Group>
+          <GenericIconButton
+            size="xs"
+            variant="ghost"
+            aria-label="Next page"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage >= numPages}
+          >
+            <LuChevronDown />
+          </GenericIconButton>
+        </Group>
+
+        <Separator orientation="vertical" h="5" />
+
+        <Group gap="1" align="center">
+          <GenericIconButton
+            size="xs"
+            variant="ghost"
+            aria-label="Zoom out"
+            onClick={zoomOut}
+          >
+            <LuMinus />
+          </GenericIconButton>
+
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Box
+                as="button"
+                textStyle="xs"
+                minW="16"
+                textAlign="center"
+                whiteSpace="nowrap"
+                cursor="pointer"
+                borderRadius="sm"
+                _hover={{ bg: "bg.emphasized" }}
+                px="1"
+                py="0.5"
+              >
+                {displayScale}
+              </Box>
+            </Menu.Trigger>
+            <ViewerPortal>
+              <Menu.Positioner>
+                <Menu.Content minW="28">
+                  {zoomPresets.map((preset) => (
+                    <Menu.Item
+                      key={preset.value}
+                      value={String(preset.value)}
+                      onClick={() => setZoom(preset.value)}
+                      fontWeight={
+                        scaleValue === preset.value ? "bold" : "normal"
+                      }
+                    >
+                      {preset.label}
+                    </Menu.Item>
+                  ))}
+                </Menu.Content>
+              </Menu.Positioner>
+            </ViewerPortal>
+          </Menu.Root>
+
+          <GenericIconButton
+            size="xs"
+            variant="ghost"
+            aria-label="Zoom in"
+            onClick={zoomIn}
+          >
+            <LuPlus />
+          </GenericIconButton>
+        </Group>
+
+        <Separator orientation="vertical" h="5" />
+
+        <GenericIconButton
+          size="xs"
+          variant="ghost"
+          aria-label="Search"
+          onClick={toggleShowSearch}
+        >
+          <LuSearch />
+        </GenericIconButton>
+        <GenericIconButton
+          size="xs"
+          variant={showAnnotations ? "subtle" : "ghost"}
+          aria-label="Toggle annotations"
+          colorPalette={showAnnotations ? "colorPalette.600" : undefined}
+          aria-pressed={showAnnotations}
+          onClick={toggleAnnotations}
+        >
+          <LuPanelRight />
+        </GenericIconButton>
+      </Group>
+
+      <GridItem justifySelf="end">
+        <SettingsPopover
+          rotateCCW={rotateCCW}
+          rotateCW={rotateCW}
+          download={handleDownload}
+          isFullscreen={isFullscreen}
+          toggleFullscreen={toggleFullscreen}
+        />
+      </GridItem>
+    </Grid>
+  );
+}
+
+interface SettingsPopoverProps {
+  rotateCCW: () => void;
+  rotateCW: () => void;
+  download: () => void;
+  isFullscreen: boolean;
+  toggleFullscreen: () => void;
+}
+
+function SettingsPopover(props: SettingsPopoverProps) {
+  const { rotateCCW, rotateCW, download, isFullscreen, toggleFullscreen } =
+    props;
+
+  return (
+    <Popover.Root positioning={{ placement: "bottom-end" }}>
+      <Popover.Trigger asChild>
+        <GenericIconButton size="xs" variant="ghost" aria-label="More actions">
+          <LuSettings2 />
+        </GenericIconButton>
+      </Popover.Trigger>
+      <ViewerPortal>
+        <Popover.Positioner>
+          <Popover.Content width="64">
+            <Popover.Body p="3">
+              <Stack gap="4">
+                <SettingsRow label="Rotation">
+                  <Group attached>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      colorPalette="gray"
+                      aria-label="Rotate counter-clockwise"
+                      onClick={rotateCCW}
+                    >
+                      <LuRotateCcw />
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      colorPalette="gray"
+                      aria-label="Rotate clockwise"
+                      onClick={rotateCW}
+                    >
+                      <LuRotateCw />
+                    </Button>
+                  </Group>
+                </SettingsRow>
+
+                <SettingsRow label="View">
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    colorPalette="gray"
+                    onClick={toggleFullscreen}
                   >
-                    {preset.label}
-                  </Menu.Item>
-                ))}
-              </Menu.Content>
-            </Menu.Positioner>
-          </Portal>
-        </Menu.Root>
+                    {isFullscreen ? <LuMinimize /> : <LuMaximize />}
+                    {isFullscreen ? "Exit full screen" : "Full screen"}
+                  </Button>
+                </SettingsRow>
 
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Zoom in"
-          onClick={zoomIn}
-        >
-          <LuPlus />
-        </GenericIconButton>
-      </Group>
+                <SettingsRow label="Document">
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    colorPalette="green"
+                    onClick={download}
+                  >
+                    <LuDownload />
+                    Download
+                  </Button>
+                </SettingsRow>
+              </Stack>
+            </Popover.Body>
+          </Popover.Content>
+        </Popover.Positioner>
+      </ViewerPortal>
+    </Popover.Root>
+  );
+}
 
-      <Separator orientation="vertical" h="5" />
+function SettingsRow(props: { label: string; children: React.ReactNode }) {
+  const { label, children } = props;
 
-      {/* Rotation */}
-      <Group gap="0">
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Rotate counter-clockwise"
-          onClick={rotateCCW}
-        >
-          <LuRotateCcw />
-        </GenericIconButton>
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Rotate clockwise"
-          onClick={rotateCW}
-        >
-          <LuRotateCw />
-        </GenericIconButton>
-      </Group>
-
-      <GenericIconButton
-        size="xs"
-        variant="ghost"
-        aria-label="Search"
-        onClick={toggleShowSearch}
-      >
-        <LuSearch />
-      </GenericIconButton>
-      <GenericIconButton
-        size="xs"
-        variant={showAnnotations ? "subtle" : "ghost"}
-        aria-label="Toggle annotations"
-        colorPalette={showAnnotations ? "colorPalette.600" : undefined}
-        aria-pressed={showAnnotations}
-        onClick={toggleAnnotations}
-      >
-        <LuPanelRight />
-      </GenericIconButton>
-      <Separator orientation="vertical" h="5" />
-      <Group gap="0" ms="4">
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Download"
-          onClick={handleDownload}
-        >
-          <LuDownload />
-        </GenericIconButton>
-      </Group>
+  return (
+    <Group justify="space-between" align="center" gap="3">
+      <Text textStyle="xs" color="fg.muted" whiteSpace="nowrap">
+        {label}
+      </Text>
+      {children}
     </Group>
   );
 }
@@ -254,6 +345,33 @@ interface SearchBarProps {
   closeSearch: () => void;
   findNextMatch: () => void;
   findPrevMatch: () => void;
+  searchOptions: SearchOptions;
+  onToggleSearchOption: (option: keyof SearchOptions) => void;
+}
+
+function SearchToggle(props: {
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  const { label, icon, active, onToggle } = props;
+
+  return (
+    <Button
+      size="xs"
+      variant={active ? "subtle" : "ghost"}
+      colorPalette={active ? undefined : "gray"}
+      color={active ? "colorPalette.fg" : "fg.muted"}
+      aria-pressed={active}
+      title={label}
+      onClick={onToggle}
+      fontWeight={active ? "medium" : "normal"}
+    >
+      {icon}
+      {label}
+    </Button>
+  );
 }
 
 export function SearchBar(props: SearchBarProps) {
@@ -265,6 +383,8 @@ export function SearchBar(props: SearchBarProps) {
     closeSearch,
     findNextMatch,
     findPrevMatch,
+    searchOptions,
+    onToggleSearchOption,
   } = props;
 
   return (
@@ -322,14 +442,23 @@ export function SearchBar(props: SearchBarProps) {
           <LuChevronDown />
         </GenericIconButton>
       </Group>
-      <GenericIconButton
-        size="xs"
-        variant="ghost"
-        aria-label="Close search"
-        onClick={closeSearch}
-      >
-        <LuX />
-      </GenericIconButton>
+
+      <Group gap="2">
+        <SearchToggle
+          label="Match case"
+          icon={<LuCaseSensitive />}
+          active={searchOptions.caseSensitive}
+          onToggle={() => onToggleSearchOption("caseSensitive")}
+        />
+        <SearchToggle
+          label="Whole words"
+          icon={<LuWholeWord />}
+          active={searchOptions.entireWord}
+          onToggle={() => onToggleSearchOption("entireWord")}
+        />
+      </Group>
+
+      <GenericCloseButton size="xs" onClick={closeSearch} />
     </Group>
   );
 }
