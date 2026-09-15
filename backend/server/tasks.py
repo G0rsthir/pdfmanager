@@ -34,6 +34,20 @@ def _index_pdf_handler(session_factory: SessionFactory, storage_backend: Storage
     return handler
 
 
+def _backfill_identifiers_handler(session_factory: SessionFactory, storage_backend: StorageBackend):
+    async def handler(ctx: TaskContext) -> None:
+        async with session_factory() as session:
+            service = IndexingService(
+                storage_backend=storage_backend,
+                search_engine=get_search_engine(session),
+                file_repo=get_file_repository(session),
+            )
+            added = await service.backfill_file_identifiers()
+        await ctx.report_progress(1.0, f"added {added} identifiers")
+
+    return handler
+
+
 def _purge_history_handler(
     history_store: SqlTaskHistoryStore, status_store: SqlTaskStatusStore, *, keep_last: int = 50
 ):
@@ -65,6 +79,11 @@ def build_scheduler(app: FastAPI) -> tuple[InProcessTaskScheduler, TaskStatusSto
     )
     scheduler.register(
         "purge_task_history", _purge_history_handler(history_store=history_store, status_store=status_store)
+    )
+
+    scheduler.register(
+        "backfill_file_identifiers",
+        _backfill_identifiers_handler(session_factory, storage_backend),
     )
 
     return scheduler, status_store, history_store

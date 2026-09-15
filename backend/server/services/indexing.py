@@ -1,9 +1,12 @@
 import asyncio
+from logging import getLogger
 from uuid import UUID
 
 from server.infrastructure.pdf import PdfFile
 from server.infrastructure.search import ContentFragment, FragmentType, SearchBackend
 from server.infrastructure.storage import StorageBackend
+from server.infrastructure.storage.identifiers import FILE_IDENTIFIERS
+from server.models import ORMFileIdentifier
 from server.repositories import FileRepository
 
 
@@ -12,6 +15,7 @@ class IndexingService:
         self._storage_backend = storage_backend
         self._search_engine = search_engine
         self._file_repo = file_repo
+        self._logger = getLogger(__name__)
 
     async def index_pdf_file(self, file_id: UUID):
 
@@ -34,3 +38,18 @@ class IndexingService:
                 for page in pages
             ]
             await self._search_engine.index(fragments)
+
+    async def backfill_file_identifiers(self) -> int:
+        added = 0
+        for scheme, compute in FILE_IDENTIFIERS.items():
+            for file in await self._file_repo.list_missing_identifier(scheme):
+                try:
+                    async with self._storage_backend.as_local_path(file.storage_key) as path:
+                        value = await asyncio.to_thread(compute, path)
+                except FileNotFoundError:
+                    self._logger.warning(f"Missing storage for file {file.id}, skipping {scheme}")
+                    continue
+                self._file_repo.save(ORMFileIdentifier(file_id=file.id, scheme=scheme, value=value))
+                added += 1
+        await self._file_repo.commit()
+        return added

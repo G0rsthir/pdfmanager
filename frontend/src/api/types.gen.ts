@@ -200,10 +200,7 @@ export type AppStateResponse = {
    */
   sso_servers?: Array<SsoConfigResponse>;
   auto_login_sso_server?: SsoConfigResponse | null;
-  /**
-   * Opds Url
-   */
-  opds_url: string;
+  readers: ReaderResponse;
   /**
    * Is Setup Complete
    *
@@ -682,6 +679,38 @@ export type DetailsUpdate = {
 };
 
 /**
+ * DuplicateFileGroupResponse
+ */
+export type DuplicateFileGroupResponse = {
+  /**
+   * File Hash
+   */
+  file_hash: string;
+  /**
+   * Files
+   */
+  files: Array<FileResponse>;
+};
+
+/**
+ * DuplicateFilesNotificationResponse
+ */
+export type DuplicateFilesNotificationResponse = {
+  /**
+   * Type
+   */
+  type: "duplicate_files";
+  /**
+   * Count
+   */
+  count: number;
+  /**
+   * Group Count
+   */
+  group_count: number;
+};
+
+/**
  * FileResponse
  */
 export type FileResponse = {
@@ -1019,6 +1048,20 @@ export type PatchFileStateRequest = {
    */
   is_favorite?: boolean | null;
   status?: FileStatusEnum | null;
+};
+
+/**
+ * ReaderResponse
+ */
+export type ReaderResponse = {
+  /**
+   * Opds Url
+   */
+  opds_url: string;
+  /**
+   * Koreader Url
+   */
+  koreader_url: string;
 };
 
 export type RequiredScopeList = ScopeList;
@@ -1572,10 +1615,7 @@ export type AppStateResponseWritable = {
    */
   sso_servers?: Array<SsoConfigResponse>;
   auto_login_sso_server?: SsoConfigResponse | null;
-  /**
-   * Opds Url
-   */
-  opds_url: string;
+  readers: ReaderResponse;
 };
 
 /**
@@ -1657,6 +1697,20 @@ export type CollectionWithDetailsResponseWritable = {
    */
   entity_type: "folder" | "group";
   owner: UserSummaryResponse;
+};
+
+/**
+ * DuplicateFileGroupResponse
+ */
+export type DuplicateFileGroupResponseWritable = {
+  /**
+   * File Hash
+   */
+  file_hash: string;
+  /**
+   * Files
+   */
+  files: Array<FileResponseWritable>;
 };
 
 /**
@@ -2737,6 +2791,25 @@ export type ListFilesResponses = {
 };
 
 export type ListFilesResponse = ListFilesResponses[keyof ListFilesResponses];
+
+export type ListDuplicateFilesData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/library/files/duplicates";
+};
+
+export type ListDuplicateFilesResponses = {
+  /**
+   * Response Listduplicatefiles
+   *
+   * Successful Response
+   */
+  200: Array<DuplicateFileGroupResponse>;
+};
+
+export type ListDuplicateFilesResponse =
+  ListDuplicateFilesResponses[keyof ListDuplicateFilesResponses];
 
 export type UploadFileData = {
   body: BodyUploadFile;
@@ -3991,3 +4064,22 @@ export type KoreaderAuthResponses = {
    */
   200: unknown;
 };
+
+export type ListNotificationsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: "/api/v1/notifications";
+};
+
+export type ListNotificationsResponses = {
+  /**
+   * Response Listnotifications
+   *
+   * Successful Response
+   */
+  200: Array<DuplicateFilesNotificationResponse>;
+};
+
+export type ListNotificationsResponse =
+  ListNotificationsResponses[keyof ListNotificationsResponses];

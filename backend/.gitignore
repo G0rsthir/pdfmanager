@@ -1,5 +1,5 @@
 .env
-storage/
+/storage/
 .venv/
 __pycache__
 test.py

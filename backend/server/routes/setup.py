@@ -6,7 +6,7 @@ from server.dependencies import (
     OpdsCatalogServiceDependency,
     UserRepositoryDependency,
 )
-from server.schemas.config import AppStateResponse, SsoConfigResponse
+from server.schemas.config import AppStateResponse, ReaderResponse, SsoConfigResponse
 from server.schemas.identity import SetupUser, UserResponse
 
 router = APIRouter(prefix="/setup")
@@ -24,7 +24,6 @@ async def state(
     """
 
     is_initial_user_created = await user_repo.is_initial_user_exists()
-    opds_url = opds_service.root_url()
 
     sso_servers = []
     auto_login_sso_server = None
@@ -37,11 +36,16 @@ async def state(
             if provider.auto_login:
                 auto_login_sso_server = sso_server
 
+    readers = ReaderResponse(
+        opds_url=opds_service.root_url(),
+        koreader_url=str(request.url_for("koreader_base")),
+    )
+
     return AppStateResponse(
         is_initial_user_created=is_initial_user_created,
         sso_servers=sso_servers,
         auto_login_sso_server=auto_login_sso_server,
-        opds_url=opds_url,
+        readers=readers,
     )
 
 

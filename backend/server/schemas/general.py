@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
@@ -19,6 +19,7 @@ class DocumentStorageFile(StorageFile):
 @dataclass(kw_only=True)
 class PdfStorageFile(DocumentStorageFile):
     page_count: int
+    identifiers: dict = field(default_factory=dict)
 
 
 class RevokeResponse(BaseModel):

@@ -32,6 +32,7 @@ class TagEnum(StrEnum):
     SEARCH = "search"
     OPDS = "opds"
     READERS = "readers"
+    NOTIFICATIONS = "notifications"
 
 
 class RefreshScopeEnum(StrEnum):
@@ -71,6 +72,14 @@ class FileStatusEnum(StrEnum):
     DROPPED = "dropped"
     READ = "read"
     WANT_TO_READ = "want_to_read"
+
+
+class FileIdentifier(StrEnum):
+    KOREADER_HASH = "koreader:hash"
+
+
+class NotificationType(StrEnum):
+    DUPLICATE_FILES = "duplicate_files"
 
 
 class AssignmentLockReason(StrEnum):

@@ -1,8 +1,10 @@
+import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from logging import getLogger
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from fastapi import UploadFile
@@ -16,12 +18,14 @@ from server.exceptions import (
 from server.infrastructure.pdf import PdfFile
 from server.infrastructure.search import ContentFragment, FragmentType, SearchBackend
 from server.infrastructure.storage import StorageBackend, stream_bytes, stream_io
+from server.infrastructure.storage.identifiers import FILE_IDENTIFIERS
 from server.infrastructure.utils import sniff_content_type
 from server.models import (
     ORMAnnotation,
     ORMAuthor,
     ORMCollection,
     ORMFile,
+    ORMFileIdentifier,
     ORMFileState,
     ORMResourcePermission,
     ORMTag,
@@ -56,6 +60,13 @@ class LibraryTree:
     # collection_id: owner
     owners: dict[UUID, ORMUser]
     target_user_id: UUID
+
+
+@dataclass(kw_only=True)
+class DuplicateFileGroup:
+    file_hash: str
+    # oldest upload first
+    files: list[FileWithDetails]
 
 
 class LibraryService:
@@ -344,6 +355,7 @@ class LibraryService:
         scale: str | None = None,
         is_favorite: bool | None = None,
         status: FileStatusEnum | None = None,
+        extra: dict[str, Any] | None = None,
     ):
 
         file = await self._file_repo.get_by_id(file_id)
@@ -378,6 +390,9 @@ class LibraryService:
 
         if is_favorite is not None:
             state.is_favorite = is_favorite
+
+        if extra is not None:
+            state.extra.update(extra)
 
         await self._file_repo.commit()
 
@@ -563,7 +578,12 @@ class LibraryService:
         if not perm or not perm.can(ResourcePermissionCapability.WRITE):
             raise InsufficientPermissionError(action="upload_file", resource="Collection", identifier=collection_id)
 
-        stored_file = await self._store_pdf_file(file=file, user_id=user_id)
+        owner_perm = await self._permission_repo.get_effective_owner_for_collection(collection_id)
+
+        if not owner_perm:
+            raise InvalidActionError(rule="collection_owner_not_found", msg="Collection owner not found")
+
+        stored_file = await self._store_pdf_file(file=file, user_id=owner_perm.user_id)
 
         try:
             file_record = await self._create_file_record(
@@ -603,6 +623,12 @@ class LibraryService:
         file.file.seek(0)
         return sniff_content_type(head)
 
+    async def _compute_file_identifiers(self, path: Path):
+        def compute():
+            return {scheme: compute(path) for scheme, compute in FILE_IDENTIFIERS.items()}
+
+        return await asyncio.to_thread(compute)
+
     async def _store_pdf_file(
         self,
         file: UploadFile,
@@ -622,6 +648,8 @@ class LibraryService:
         )
 
         async with self._storage_backend.as_local_path(stored_file.storage_key) as path:
+            identifiers = await self._compute_file_identifiers(path)
+
             pfg_file = PdfFile(path)
 
             thumb_img = pfg_file.render_page_as_image(1)
@@ -640,6 +668,7 @@ class LibraryService:
                 thumbnail=thumb.storage_key,
                 thumbnail_content_type=thumb.content_type,
                 metadata=pfg_file.metadata(),
+                identifiers=identifiers,
             )
 
     async def _create_file_record(
@@ -677,6 +706,9 @@ class LibraryService:
 
         self._file_repo.save(file_record)
         await self._file_repo.flush()
+
+        for scheme, value in file.identifiers.items():
+            self._file_repo.save(ORMFileIdentifier(file_id=file_record.id, scheme=scheme, value=value))
 
         await self._tags_repo.delete_orphaned()
         tag_records = await self.resolve_tags(resolved_tags)
@@ -909,6 +941,24 @@ class LibraryService:
             authors=authors,
             status=status,
         )
+        return await self._with_details(files, user_id)
+
+    async def list_duplicate_files(self, user_id: UUID) -> list[DuplicateFileGroup]:
+        owned_collection_ids = await self._collection_repo.list_owned_ids(user_id)
+        files = await self._file_repo.list_duplicates(owned_collection_ids)
+
+        groups: dict[str, list[FileWithDetails]] = {}
+        for details in await self._with_details(files, user_id):
+            if details.file.file_hash:
+                groups.setdefault(details.file.file_hash, []).append(details)
+
+        return sorted(
+            (DuplicateFileGroup(file_hash=file_hash, files=items) for file_hash, items in groups.items()),
+            key=lambda group: len(group.files),
+            reverse=True,
+        )
+
+    async def _with_details(self, files: list[ORMFile], user_id: UUID) -> list[FileWithDetails]:
         if not files:
             return []
         file_ids = [f.id for f in files]

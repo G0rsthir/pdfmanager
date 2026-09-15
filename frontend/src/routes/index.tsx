@@ -22,6 +22,7 @@ import { FileReaderPage } from "@/features/library/file/reader";
 import { FolderPage } from "@/features/library/folder";
 import { SearchPage } from "@/features/library/search";
 import { TagsPage } from "@/features/library/tags";
+import { NotificationsPage } from "@/features/notifications";
 import SetupPage from "@/features/setup";
 import { lazy } from "react";
 import {
@@ -123,6 +124,10 @@ const router = createBrowserRouter([
               {
                 path: "account",
                 element: <CurrentUserAccountPage />,
+              },
+              {
+                path: "notifications",
+                element: <NotificationsPage />,
               },
               {
                 path: "folder/:folderid/file/:fileid/details",

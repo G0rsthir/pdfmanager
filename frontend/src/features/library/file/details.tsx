@@ -10,12 +10,11 @@ import {
   formatDateTime,
   formatRelativeTime,
 } from "@/common/format";
-import { CopyableValue, Section } from "@/components/ui/display";
+import { Checksum, CopyableValue, Section } from "@/components/ui/display";
 import { useAPIQuery } from "@/hooks/query";
 import {
   Badge,
   Link as ChakraLink,
-  Code,
   DataList,
   Group,
   SimpleGrid,
@@ -50,11 +49,7 @@ export function FileMetadataPanel({ file }: { file: FileResponse }) {
             </Text>
           </Row>
           <Row label="Checksum">
-            {file.file_hash && (
-              <CopyableValue value={file.file_hash} label="checksum">
-                <Code colorPalette="gray">{file.file_hash}</Code>
-              </CopyableValue>
-            )}
+            {file.file_hash && <Checksum value={file.file_hash} />}
           </Row>
           <Row label="Storage key">
             <CopyableValue value={file.storage_key} label="storage key">

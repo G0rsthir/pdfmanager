@@ -53,7 +53,7 @@ class UserRepository(Repository):
 
     async def is_initial_user_exists(self) -> bool:
         """
-        Check if atleast one user exists.
+        Check if atleast one user exists
         """
         user = await self.session.scalar(select(models.ORMUser))
         if user:
@@ -233,9 +233,9 @@ class CollectionRepository(Repository):
         stmt = select(models.ORMCollection).where(models.ORMCollection.id.in_(ids))
         return list(await self.session.scalars(stmt))
 
-    async def list_subtree_ids(self, collection_id: UUID) -> set[UUID]:
+    async def list_subtree_ids(self, collection_id: UUID) -> list[UUID]:
         """
-        The collection and all of its (nested) descendants
+        Collection and all of its nested collections ids
         """
         subtree = (
             select(models.ORMCollection.id)
@@ -248,7 +248,32 @@ class CollectionRepository(Repository):
 
         result = await self.session.scalars(select(subtree.c.id))
 
-        return set(result)
+        return list(set(result))
+
+    async def list_owned_ids(self, user_id: UUID) -> list[UUID]:
+        """
+        Collections and all nested collections owner by user
+        """
+        owner_grant = and_(
+            models.ORMResourcePermission.resource_id == models.ORMCollection.id,
+            models.ORMResourcePermission.permission == ResourcePermissionLevel.OWNER,
+        )
+
+        owned = (
+            select(models.ORMCollection.id)
+            .join(models.ORMResourcePermission, owner_grant)
+            .where(models.ORMResourcePermission.user_id == user_id)
+            .cte(name="owned", recursive=True)
+        )
+        owned = owned.union(
+            select(models.ORMCollection.id)
+            .join(owned, models.ORMCollection.parent_id == owned.c.id)
+            .where(~exists().where(owner_grant, models.ORMResourcePermission.user_id != user_id))
+        )
+
+        result = await self.session.scalars(select(owned.c.id))
+
+        return list(set(result))
 
     async def list_visible_to_user(
         self,
@@ -264,7 +289,7 @@ class CollectionRepository(Repository):
             .scalar_subquery()
         )
 
-        # All collection IDs visible to the user (granted + descendants)
+        # All collection IDs visible to the user (granted + nested)
         visible = (
             select(models.ORMCollection.id)
             .where(models.ORMCollection.id.in_(granted))
@@ -407,7 +432,7 @@ class FileRepository(Repository):
             .scalar_subquery()
         )
 
-        # All collection IDs visible to the user (granted + descendants)
+        # All collection IDs visible to the user (granted + nested)
         visible = (
             select(models.ORMCollection.id)
             .where(models.ORMCollection.id.in_(granted))
@@ -485,7 +510,7 @@ class FileRepository(Repository):
 
     async def list_all_in_collection_tree(self, collection_id: UUID) -> list[models.ORMFile]:
         """
-        Files in the given collection or any of its (nested) descendants.
+        Files in the given collection and in nested collections (subtree)
         """
         descendants = (
             select(models.ORMCollection.id)
@@ -499,53 +524,6 @@ class FileRepository(Repository):
             )
         )
         stmt = select(models.ORMFile).where(models.ORMFile.collection_id.in_(select(descendants.c.id)))
-        return list(await self.session.scalars(stmt))
-
-    async def list_in_progress(self, user_id: UUID, limit: int = 50) -> list[models.ORMFile]:
-        """
-        Files that user is currently reading
-        """
-
-        # Resources the user has ANY direct grant on (collections or files)
-        granted = (
-            select(models.ORMResourcePermission.resource_id)
-            .where(models.ORMResourcePermission.user_id == user_id)
-            .scalar_subquery()
-        )
-
-        # All collection IDs visible to the user (granted + descendants)
-        visible = (
-            select(models.ORMCollection.id)
-            .where(models.ORMCollection.id.in_(granted))
-            .cte("visible_collections", recursive=True)
-        )
-        visible = visible.union_all(
-            select(models.ORMCollection.id).join(visible, models.ORMCollection.parent_id == visible.c.id)
-        )
-
-        # File is visible if its collection is visible OR the file itself is granted
-        stmt = (
-            select(models.ORMFile)
-            .join(
-                models.ORMFileState,
-                and_(
-                    models.ORMFileState.file_id == models.ORMFile.id,
-                    models.ORMFileState.user_id == user_id,
-                ),
-            )
-            .where(
-                or_(
-                    models.ORMFile.collection_id.in_(select(visible.c.id)),
-                    models.ORMFile.id.in_(granted),
-                ),
-                models.ORMFileState.last_read_at.is_not(None),
-                models.ORMFileState.current_page < models.ORMFile.page_count,
-                models.ORMFileState.current_page > 1,
-            )
-            .order_by(models.ORMFileState.last_read_at.desc())
-            .limit(limit)
-        )
-
         return list(await self.session.scalars(stmt))
 
     async def list_owned_by(self, user_id: UUID) -> list[models.ORMFile]:
@@ -562,7 +540,29 @@ class FileRepository(Repository):
         )
         return list(await self.session.scalars(stmt))
 
-    def save(self, record: models.ORMFile | models.ORMFileState):
+    async def list_duplicates(self, collection_ids: Iterable[UUID]) -> list[models.ORMFile]:
+        """
+        Find duplicate files based on hash
+        """
+        ids = set(collection_ids)
+        if not ids:
+            return []
+
+        in_scope = models.ORMFile.collection_id.in_(ids)
+        duplicated_hashes = (
+            select(models.ORMFile.file_hash)
+            .where(in_scope, models.ORMFile.file_hash.is_not(None))
+            .group_by(models.ORMFile.file_hash)
+            .having(func.count() > 1)
+        )
+        stmt = (
+            select(models.ORMFile)
+            .where(in_scope, models.ORMFile.file_hash.in_(duplicated_hashes))
+            .order_by(models.ORMFile.file_hash, models.ORMFile.created_at)
+        )
+        return list(await self.session.scalars(stmt))
+
+    def save(self, record: models.ORMFile | models.ORMFileState | models.ORMFileIdentifier):
         self.session.add(record)
 
     async def delete(self, file: models.ORMFile):
@@ -589,6 +589,23 @@ class FileRepository(Repository):
             )
         )
         return {s.file_id: s for s in states}
+
+    async def list_by_identifier(self, scheme: str, value: str) -> list[models.ORMFile]:
+        stmt = (
+            select(models.ORMFile)
+            .join(models.ORMFileIdentifier, models.ORMFileIdentifier.file_id == models.ORMFile.id)
+            .where(models.ORMFileIdentifier.scheme == scheme, models.ORMFileIdentifier.value == value)
+        )
+        return list(await self.session.scalars(stmt))
+
+    async def list_missing_identifier(self, scheme: str) -> list[models.ORMFile]:
+        stmt = select(models.ORMFile).where(
+            ~exists().where(
+                models.ORMFileIdentifier.file_id == models.ORMFile.id,
+                models.ORMFileIdentifier.scheme == scheme,
+            )
+        )
+        return list(await self.session.scalars(stmt))
 
 
 @dataclass
@@ -802,7 +819,7 @@ class AuthorRepository(Repository):
 
     async def delete_orphaned(self):
         """
-        Delete authors with no file assignments.
+        Delete authors with no file assignments
         """
         has_files = exists().where(models.ORMFileAuthor.author_id == models.ORMAuthor.id)
 
@@ -850,7 +867,7 @@ class PermissionRepository(Repository):
 
     async def list_for_collection(self, collection_id: UUID) -> list[PermissionAssignment]:
         """
-        Everyone with access (direct + inherited). Closest grant wins per user.
+        Everyone with access (direct + inherited). Closest grant wins per user
         """
         anc = (
             select(
@@ -869,7 +886,7 @@ class PermissionRepository(Repository):
             ).join(anc, models.ORMCollection.id == anc.c.parent_id)
         )
 
-        # Rank by ancestor depth. Only carry the keys we need to re-join
+        # Rank by depth
         ranked = (
             select(
                 models.ORMResourcePermission.user_id.label("user_id"),
@@ -945,7 +962,7 @@ class PermissionRepository(Repository):
         self, collection_id: UUID, user_id: UUID
     ) -> models.ORMResourcePermission | None:
         """
-        Closest grant for user, walking from collection_id up to root.
+        Closest grant for user, walking from collection_id up to root
         """
         anc = (
             select(
@@ -976,7 +993,7 @@ class PermissionRepository(Repository):
     async def get_effective_owner_for_collection(self, collection_id: UUID) -> models.ORMResourcePermission | None:
         """
         Closest user with 'owner' permission, walking up from the collection.
-        None if no owner grant exists in the ancestor chain.
+        None if no owner grant exists in chain
         """
         anc = (
             select(
@@ -1008,7 +1025,7 @@ class PermissionRepository(Repository):
         self, user_id: UUID, permission: list[ResourcePermissionLevel] | None = None
     ) -> list[UUID]:
         """
-        All collection IDs the user can access (anything they have a grant on, plus all descendants).
+        All collection IDs the user can access (anything they have a grant on, plus all nested items)
         """
         grant_filter = [models.ORMResourcePermission.user_id == user_id]
         if permission:
@@ -1031,8 +1048,11 @@ class PermissionRepository(Repository):
 
     async def list_owners_for_collections(self, collection_ids: list[UUID]) -> dict[UUID, UUID]:
         """
-        Closest 'owner' user_id per collection, walking each one's ancestor chain.
-        Collections with no owner anywhere up the chain are omitted.
+        Closest 'owner' user_id per collection, walking up to root.
+        Collections with no owner anywhere up the chain are skipped
+
+        Returns:
+            dict collection_id -> user_id
         """
         if not collection_ids:
             return {}

@@ -122,7 +122,7 @@ export function ReadingStatusSelect({ file }: { file: FileResponse }) {
 
   const can = useCan(file);
 
-  const canWrite = can(ResourcePermissionCapability.WRITE);
+  const canWrite = can(ResourcePermissionCapability.SYNC_PROGRESS);
 
   return (
     <StatusSelect

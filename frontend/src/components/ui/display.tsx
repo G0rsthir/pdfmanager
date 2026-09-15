@@ -1,10 +1,14 @@
 import {
+  Badge,
   Box,
   Clipboard,
+  Code,
   EmptyState,
   Grid,
   GridItem,
   Group,
+  Input,
+  InputGroup,
   Span,
   Stack,
   Text,
@@ -12,7 +16,9 @@ import {
   type BoxProps,
   type TextProps,
 } from "@chakra-ui/react";
+import { LuFingerprint } from "react-icons/lu";
 import { GenericIconButton } from "./button";
+import { Tooltip } from "./tooltip";
 
 export function Block(props: BoxProps & React.RefAttributes<HTMLDivElement>) {
   const { ref, children, ...other } = props;
@@ -126,6 +132,28 @@ export function CopyableValue(props: {
   );
 }
 
+export function CopyableInput(props: { value: string }) {
+  const { value } = props;
+
+  return (
+    <Clipboard.Root value={value} w="full">
+      <InputGroup
+        endElement={
+          <Clipboard.Trigger asChild>
+            <GenericIconButton size="xs" variant="ghost" me="-2">
+              <Clipboard.Indicator />
+            </GenericIconButton>
+          </Clipboard.Trigger>
+        }
+      >
+        <Clipboard.Input asChild>
+          <Input readOnly fontSize="sm" variant="subtle" />
+        </Clipboard.Input>
+      </InputGroup>
+    </Clipboard.Root>
+  );
+}
+
 export function Empty(props: {
   title: React.ReactNode;
   icon: React.ReactNode;
@@ -141,5 +169,38 @@ export function Empty(props: {
         </VStack>
       </EmptyState.Content>
     </EmptyState.Root>
+  );
+}
+
+export function Checksum(props: {
+  value: string;
+  label?: string;
+  type?: string;
+}) {
+  const { value, label, type = "SHA-256" } = props;
+
+  const displayName = label ? label : value;
+
+  return (
+    <CopyableValue value={value} label="checksum">
+      <Tooltip
+        content={
+          <Stack gap="0.5">
+            <Text fontWeight="medium">{type} checksum</Text>
+            <Text fontFamily="mono">{value}</Text>
+          </Stack>
+        }
+      >
+        <Group attached>
+          <Badge size="sm" variant="subtle" colorPalette="gray" gap="1">
+            <LuFingerprint />
+            {type}
+          </Badge>
+          <Code size="sm" variant="outline" colorPalette="gray">
+            {displayName}
+          </Code>
+        </Group>
+      </Tooltip>
+    </CopyableValue>
   );
 }

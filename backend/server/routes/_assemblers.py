@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import Request, Response
 
+from server.const import NotificationType
 from server.infrastructure.opds.document import OpdsFeed, OpdsLinkType, OpdsRel, OpenSearchDescription
 from server.infrastructure.opds.render import render_feed, render_opensearch
 from server.models import ORMAnnotation, ORMAuthProviderOidc, ORMSession, ORMUser
@@ -10,13 +11,16 @@ from server.schemas.identity import AuthProviderOidcResponse, UserSummaryRespons
 from server.schemas.library import (
     AnnotationResponse,
     AuthorResponse,
+    DuplicateFileGroupResponse,
     FileResponse,
     FileStateResponse,
     LibraryTreeNode,
     TagResponse,
 )
+from server.schemas.notifications import DuplicateFilesNotificationResponse, NotificationResponse
 from server.schemas.security import ApiKeyResponse
-from server.services.library import LibraryTree
+from server.services.library import DuplicateFileGroup, LibraryTree
+from server.services.notifications import DuplicateFilesNotification, Notification
 
 
 def build_oidc_provider_response(provider: ORMAuthProviderOidc, request: Request) -> AuthProviderOidcResponse:
@@ -43,6 +47,23 @@ def build_file_response(file_details: FileWithDetails, user_id: UUID) -> FileRes
         authors=[AuthorResponse.model_validate(author) for author in file_details.authors],
         target_permission=file_details.target_resource_permission.permission,
     )
+
+
+def build_duplicate_file_group_response(group: DuplicateFileGroup, user_id: UUID) -> DuplicateFileGroupResponse:
+    return DuplicateFileGroupResponse(
+        file_hash=group.file_hash,
+        files=[build_file_response(file, user_id=user_id) for file in group.files],
+    )
+
+
+def build_notification_response(notification: Notification) -> NotificationResponse:
+    match notification:
+        case DuplicateFilesNotification():
+            return DuplicateFilesNotificationResponse(
+                type=NotificationType.DUPLICATE_FILES,
+                count=notification.count,
+                group_count=notification.group_count,
+            )
 
 
 def build_library_tree_response(tree: LibraryTree, user_id: UUID) -> list[LibraryTreeNode]:

@@ -17,6 +17,7 @@ async def api_server_lifespan(app: FastAPI):
     await scheduler.start()
 
     await scheduler.schedule("purge_task_history", Interval(seconds=7 * 24 * 60 * 60))
+    await scheduler.run("backfill_file_identifiers", dedup_key="startup")
 
     yield
 

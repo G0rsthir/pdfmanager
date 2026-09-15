@@ -2,8 +2,8 @@ from datetime import UTC, date, datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Enum, ForeignKey, UniqueConstraint
-from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy import JSON, ForeignKey, Index, UniqueConstraint
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from server.const import (
@@ -219,9 +219,10 @@ class ORMFileState(Base, AuditMixin):
     current_page: Mapped[int] = mapped_column(default=1)
     scale: Mapped[str] = mapped_column(default="1.0")
     is_favorite: Mapped[bool] = mapped_column(default=False)
-    status: Mapped[str] = mapped_column(default=FileStatusEnum.UNREAD)
+    status: Mapped[FileStatusEnum] = mapped_column(EnumValue(FileStatusEnum), default=FileStatusEnum.UNREAD)
 
     last_read_at: Mapped[datetime | None] = mapped_column(type_=DateTimeUTC(timezone=True), default=None)
+    extra: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), default=dict, server_default="{}")
 
     # Relationships
     file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
@@ -229,6 +230,21 @@ class ORMFileState(Base, AuditMixin):
 
     def __repr__(self):
         return f"ORMFileState(id={self.id}, user_id={self.user_id}, is_favorite={self.is_favorite} )"
+
+
+class ORMFileIdentifier(Base):
+    __tablename__ = "file_identifiers"
+    __table_args__ = (
+        UniqueConstraint("file_id", "scheme", name="unique_file_identifier"),
+        Index("ix_file_identifiers_lookup", "scheme", "value"),
+    )
+
+    scheme: Mapped[str]
+    value: Mapped[str]
+    extra: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), default=dict, server_default="{}")
+
+    # Relationships
+    file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
 
 
 class ORMAnnotation(Base, AuditMixin):

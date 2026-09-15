@@ -14,7 +14,12 @@ from server.dependencies import (
     UserRepositoryDependency,
 )
 from server.exceptions import FieldError, InvalidActionError
-from server.routes._assemblers import build_annotation_response, build_file_response, build_library_tree_response
+from server.routes._assemblers import (
+    build_annotation_response,
+    build_duplicate_file_group_response,
+    build_file_response,
+    build_library_tree_response,
+)
 from server.schemas.identity import UserSummaryResponse
 from server.schemas.library import (
     AnnotationResponse,
@@ -27,6 +32,7 @@ from server.schemas.library import (
     CollectionWithDetailsResponse,
     CreateAnnotationRequest,
     CreateCollectionRequest,
+    DuplicateFileGroupResponse,
     FileResponse,
     FileStateResponse,
     InviteToCollectionRequest,
@@ -413,6 +419,18 @@ async def list_files(
     )
 
     return [build_file_response(file, user_id=access_session.user_id) for file in files]
+
+
+@router.get(
+    path="/files/duplicates", operation_id="ListDuplicateFiles", response_model=list[DuplicateFileGroupResponse]
+)
+async def list_duplicate_files(
+    access_session: Annotated[AccessSessionContext, AccessSecurity(scopes=[AccessScope.LIBRARY_READ])],
+    library_service: LibraryServiceDependency,
+):
+    groups = await library_service.list_duplicate_files(user_id=access_session.user_id)
+
+    return [build_duplicate_file_group_response(group, user_id=access_session.user_id) for group in groups]
 
 
 @router.post(path="/files/upload", operation_id="UploadFile")

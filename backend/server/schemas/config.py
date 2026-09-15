@@ -7,11 +7,16 @@ class SsoConfigResponse(BaseModel):
     name: str
 
 
+class ReaderResponse(BaseModel):
+    opds_url: str
+    koreader_url: str
+
+
 class AppStateResponse(BaseModel):
     is_initial_user_created: bool = False
     sso_servers: list[SsoConfigResponse] = Field(default_factory=list)
     auto_login_sso_server: SsoConfigResponse | None = None
-    opds_url: str
+    readers: ReaderResponse
 
     @computed_field
     @property

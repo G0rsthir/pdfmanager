@@ -184,7 +184,7 @@ function UploadFileAction({
 
   return (
     <Flex justifyContent="end">
-      <Button size="sm" onClick={onOpen}>
+      <Button size="sm" onClick={onOpen} disabled={readOnly}>
         <LuHardDriveUpload /> Upload file
       </Button>
       <UploadFileDialog

@@ -11,6 +11,7 @@ import type {
   ListActiveTasksResponse,
   ListAnnotationsResponse,
   ListApiKeysResponse,
+  ListDuplicateFilesResponse,
   ListFilesResponse,
   ListPersonalApiKeysResponse,
   ListTaskHistoryResponse,
@@ -101,6 +102,22 @@ export const listFilesResponseTransformer = async (
   data: any,
 ): Promise<ListFilesResponse> => {
   data = data.map((item: any) => fileResponseSchemaResponseTransformer(item));
+  return data;
+};
+
+const duplicateFileGroupResponseSchemaResponseTransformer = (data: any) => {
+  data.files = data.files.map((item: any) =>
+    fileResponseSchemaResponseTransformer(item),
+  );
+  return data;
+};
+
+export const listDuplicateFilesResponseTransformer = async (
+  data: any,
+): Promise<ListDuplicateFilesResponse> => {
+  data = data.map((item: any) =>
+    duplicateFileGroupResponseSchemaResponseTransformer(item),
+  );
   return data;
 };
 

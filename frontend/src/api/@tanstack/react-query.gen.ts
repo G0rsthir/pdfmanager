@@ -48,8 +48,10 @@ import {
   listAuthProviders,
   listCollectionMoveTargets,
   listCollections,
+  listDuplicateFiles,
   listFileMoveTargets,
   listFiles,
+  listNotifications,
   listOidcAuthProviders,
   listPersonalApiKeys,
   listRoles,
@@ -178,12 +180,16 @@ import type {
   ListCollectionMoveTargetsResponse,
   ListCollectionsData,
   ListCollectionsResponse,
+  ListDuplicateFilesData,
+  ListDuplicateFilesResponse,
   ListFileMoveTargetsData,
   ListFileMoveTargetsError,
   ListFileMoveTargetsResponse,
   ListFilesData,
   ListFilesError,
   ListFilesResponse,
+  ListNotificationsData,
+  ListNotificationsResponse,
   ListOidcAuthProvidersData,
   ListOidcAuthProvidersResponse,
   ListPersonalApiKeysData,
@@ -1043,6 +1049,34 @@ export const listFilesOptions = (options?: Options<ListFilesData>) =>
       return data;
     },
     queryKey: listFilesQueryKey(options),
+  });
+
+export const listDuplicateFilesQueryKey = (
+  options?: Options<ListDuplicateFilesData>,
+) => createQueryKey("listDuplicateFiles", options);
+
+/**
+ * List Duplicate Files
+ */
+export const listDuplicateFilesOptions = (
+  options?: Options<ListDuplicateFilesData>,
+) =>
+  queryOptions<
+    ListDuplicateFilesResponse,
+    DefaultError,
+    ListDuplicateFilesResponse,
+    ReturnType<typeof listDuplicateFilesQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listDuplicateFiles({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listDuplicateFilesQueryKey(options),
   });
 
 /**
@@ -2358,4 +2392,32 @@ export const koreaderAuthOptions = (options?: Options<KoreaderAuthData>) =>
       return data;
     },
     queryKey: koreaderAuthQueryKey(options),
+  });
+
+export const listNotificationsQueryKey = (
+  options?: Options<ListNotificationsData>,
+) => createQueryKey("listNotifications", options);
+
+/**
+ * List Notifications
+ */
+export const listNotificationsOptions = (
+  options?: Options<ListNotificationsData>,
+) =>
+  queryOptions<
+    ListNotificationsResponse,
+    DefaultError,
+    ListNotificationsResponse,
+    ReturnType<typeof listNotificationsQueryKey>
+  >({
+    queryFn: async ({ queryKey, signal }) => {
+      const { data } = await listNotifications({
+        ...options,
+        ...queryKey[0],
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    queryKey: listNotificationsQueryKey(options),
   });

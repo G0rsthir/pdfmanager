@@ -18,6 +18,8 @@ export interface State {
   defaultLibraryLayout: LibraryLayout;
   libraryLayouts: Record<string, LibraryLayout>;
   fileClickAction: FileClickAction;
+  // norification_type: count
+  readNotifications: Record<string, number>;
 }
 
 export interface Actions {
@@ -29,6 +31,8 @@ export interface Actions {
   setDefaultLibraryLayout: (layout: LibraryLayout) => void;
   setLibraryLayout: (key: string, layout: LibraryLayout) => void;
   setFileClickAction: (action: FileClickAction) => void;
+  markNotificationsRead: (counts: Record<string, number>) => void;
+  pruneReadNotifications: (activeTypes: string[]) => void;
 }
 
 /**
@@ -45,6 +49,7 @@ export const useGlobalStore = create<State & Actions>()(
       defaultLibraryLayout: DEFAULT_LIBRARY_LAYOUT,
       libraryLayouts: {},
       fileClickAction: DEFAULT_FILE_CLICK_ACTION,
+      readNotifications: {},
 
       setExpandedLibraryNodes: (value) => set({ expandedLibraryNodes: value }),
       setPinnedOverviewNodes: (value) => set({ pinnedOverviewNodes: value }),
@@ -65,6 +70,22 @@ export const useGlobalStore = create<State & Actions>()(
         })),
 
       setFileClickAction: (action) => set({ fileClickAction: action }),
+
+      pruneReadNotifications: (activeTypes) =>
+        set((state) => {
+          const active = new Set(activeTypes);
+          const entries = Object.entries(state.readNotifications);
+          const kept = entries.filter(([type]) => active.has(type));
+
+          if (kept.length == entries.length) return state;
+
+          return { readNotifications: Object.fromEntries(kept) };
+        }),
+
+      markNotificationsRead: (counts) =>
+        set((state) => ({
+          readNotifications: { ...state.readNotifications, ...counts },
+        })),
     }),
     {
       name: "global",
@@ -75,6 +96,7 @@ export const useGlobalStore = create<State & Actions>()(
         libraryLayouts: state.libraryLayouts,
         fileClickAction: state.fileClickAction,
         pinnedOverviewNodes: state.pinnedOverviewNodes,
+        readNotifications: state.readNotifications,
       }),
     },
   ),

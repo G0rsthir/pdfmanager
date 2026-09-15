@@ -31,7 +31,9 @@ from server.services.api_keys import ApiKeyService
 from server.services.auth import AuthService
 from server.services.identity import IdentityService
 from server.services.library import LibraryService
+from server.services.notifications import NotificationService
 from server.services.opds import OpdsCatalogService, OpdsUrls
+from server.services.reader import ReaderService
 from server.services.search import SearchService
 from server.services.token import TokenResponseService
 
@@ -205,6 +207,20 @@ def get_opds_service(
     )
 
 
+def get_notification_service(
+    collection_repo: CollectionRepositoryDependency,
+    file_repo: FileRepositoryDependency,
+) -> NotificationService:
+    return NotificationService(collection_repo=collection_repo, file_repo=file_repo)
+
+
+def get_reader_service(
+    permission_repo: PermissionDependency,
+    file_repo: FileRepositoryDependency,
+) -> ReaderService:
+    return ReaderService(permission_repo=permission_repo, file_repo=file_repo)
+
+
 def get_search_service(
     annotation_repo: AnnotationRepositoryDependency,
     search_engine: SearchEngineDependency,
@@ -374,6 +390,16 @@ ApiKeyServiceDependency = Annotated[
 OpdsCatalogServiceDependency = Annotated[
     OpdsCatalogService,
     Depends(get_opds_service),
+]
+
+NotificationServiceDependency = Annotated[
+    NotificationService,
+    Depends(get_notification_service),
+]
+
+ReaderServiceDependency = Annotated[
+    ReaderService,
+    Depends(get_reader_service),
 ]
 
 SearchEngineDependency = Annotated[

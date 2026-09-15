@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from server.const import TagEnum
 
-from . import account, auth, general, identity, library, opds, reader, search, setup
+from . import account, auth, general, identity, library, notifications, opds, reader, search, setup
 
 api_router = APIRouter()
 api_router.include_router(auth.router, tags=[TagEnum.AUTHENTICATION])
@@ -14,3 +14,4 @@ api_router.include_router(identity.router, tags=[TagEnum.IDENTITY])
 api_router.include_router(general.router, tags=[TagEnum.GENERAL])
 api_router.include_router(opds.router, tags=[TagEnum.OPDS])
 api_router.include_router(reader.router, tags=[TagEnum.READERS])
+api_router.include_router(notifications.router, tags=[TagEnum.NOTIFICATIONS])

@@ -129,6 +129,11 @@ class FileResponse(BaseModel):
         return sorted(RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES[self.target_permission])
 
 
+class DuplicateFileGroupResponse(BaseModel):
+    file_hash: str
+    files: list[FileResponse]
+
+
 class FileStateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

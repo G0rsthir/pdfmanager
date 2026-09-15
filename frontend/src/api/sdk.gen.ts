@@ -21,6 +21,7 @@ import {
   listActiveTasksResponseTransformer,
   listAnnotationsResponseTransformer,
   listApiKeysResponseTransformer,
+  listDuplicateFilesResponseTransformer,
   listFilesResponseTransformer,
   listPersonalApiKeysResponseTransformer,
   listTaskHistoryResponseTransformer,
@@ -138,12 +139,16 @@ import type {
   ListCollectionMoveTargetsResponses,
   ListCollectionsData,
   ListCollectionsResponses,
+  ListDuplicateFilesData,
+  ListDuplicateFilesResponses,
   ListFileMoveTargetsData,
   ListFileMoveTargetsErrors,
   ListFileMoveTargetsResponses,
   ListFilesData,
   ListFilesErrors,
   ListFilesResponses,
+  ListNotificationsData,
+  ListNotificationsResponses,
   ListOidcAuthProvidersData,
   ListOidcAuthProvidersResponses,
   ListPersonalApiKeysData,
@@ -956,6 +961,29 @@ export const listFiles = <ThrowOnError extends boolean = false>(
       },
     ],
     url: "/api/v1/library/files",
+    ...options,
+  });
+
+/**
+ * List Duplicate Files
+ */
+export const listDuplicateFiles = <ThrowOnError extends boolean = false>(
+  options?: Options<ListDuplicateFilesData, ThrowOnError>,
+): RequestResult<ListDuplicateFilesResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListDuplicateFilesResponses,
+    unknown,
+    ThrowOnError
+  >({
+    responseTransformer: listDuplicateFilesResponseTransformer,
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
+    url: "/api/v1/library/files/duplicates",
     ...options,
   });
 
@@ -2087,3 +2115,25 @@ export const koreaderAuth = <ThrowOnError extends boolean = false>(
       ...options,
     },
   );
+
+/**
+ * List Notifications
+ */
+export const listNotifications = <ThrowOnError extends boolean = false>(
+  options?: Options<ListNotificationsData, ThrowOnError>,
+): RequestResult<ListNotificationsResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<
+    ListNotificationsResponses,
+    unknown,
+    ThrowOnError
+  >({
+    security: [
+      {
+        key: "AccessManagerDependency",
+        scheme: "bearer",
+        type: "http",
+      },
+    ],
+    url: "/api/v1/notifications",
+    ...options,
+  });

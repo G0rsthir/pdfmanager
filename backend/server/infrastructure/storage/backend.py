@@ -8,7 +8,6 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
-from typing import IO
 from uuid import uuid4
 
 import aiofiles
@@ -29,16 +28,6 @@ class StorageFile(Entity):
 def _safe_ext(filename: str) -> str:
     ext = Path(filename).suffix.lower()
     return ext if re.fullmatch(r"\.[a-z0-9]{1,10}", ext) else ""
-
-
-async def stream_bytes(data: bytes, chunk: int = 64 * 1024) -> AsyncIterator[bytes]:
-    for i in range(0, len(data), chunk):
-        yield data[i : i + chunk]
-
-
-async def stream_io(fp: IO[bytes], chunk: int = 64 * 1024) -> AsyncIterator[bytes]:
-    while data := await asyncio.to_thread(fp.read, chunk):
-        yield data
 
 
 class StorageBackend(ABC):

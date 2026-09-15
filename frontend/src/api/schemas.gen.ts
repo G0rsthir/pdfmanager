@@ -277,9 +277,8 @@ export const AppStateResponseSchema = {
         },
       ],
     },
-    opds_url: {
-      type: "string",
-      title: "Opds Url",
+    readers: {
+      $ref: "#/components/schemas/ReaderResponse",
     },
     is_setup_complete: {
       type: "boolean",
@@ -289,7 +288,7 @@ export const AppStateResponseSchema = {
     },
   },
   type: "object",
-  required: ["opds_url", "is_setup_complete"],
+  required: ["readers", "is_setup_complete"],
   title: "AppStateResponse",
 } as const;
 
@@ -1012,6 +1011,46 @@ export const DetailsUpdateSchema = {
   title: "DetailsUpdate",
 } as const;
 
+export const DuplicateFileGroupResponseSchema = {
+  properties: {
+    file_hash: {
+      type: "string",
+      title: "File Hash",
+    },
+    files: {
+      items: {
+        $ref: "#/components/schemas/FileResponse",
+      },
+      type: "array",
+      title: "Files",
+    },
+  },
+  type: "object",
+  required: ["file_hash", "files"],
+  title: "DuplicateFileGroupResponse",
+} as const;
+
+export const DuplicateFilesNotificationResponseSchema = {
+  properties: {
+    type: {
+      type: "string",
+      const: "duplicate_files",
+      title: "Type",
+    },
+    count: {
+      type: "integer",
+      title: "Count",
+    },
+    group_count: {
+      type: "integer",
+      title: "Group Count",
+    },
+  },
+  type: "object",
+  required: ["type", "count", "group_count"],
+  title: "DuplicateFilesNotificationResponse",
+} as const;
+
 export const FileResponseSchema = {
   properties: {
     id: {
@@ -1521,6 +1560,22 @@ export const PatchFileStateRequestSchema = {
   },
   type: "object",
   title: "PatchFileStateRequest",
+} as const;
+
+export const ReaderResponseSchema = {
+  properties: {
+    opds_url: {
+      type: "string",
+      title: "Opds Url",
+    },
+    koreader_url: {
+      type: "string",
+      title: "Koreader Url",
+    },
+  },
+  type: "object",
+  required: ["opds_url", "koreader_url"],
+  title: "ReaderResponse",
 } as const;
 
 export const RequiredScopeListSchema = {
@@ -2326,13 +2381,12 @@ export const AppStateResponseWritableSchema = {
         },
       ],
     },
-    opds_url: {
-      type: "string",
-      title: "Opds Url",
+    readers: {
+      $ref: "#/components/schemas/ReaderResponse",
     },
   },
   type: "object",
-  required: ["opds_url"],
+  required: ["readers"],
   title: "AppStateResponse",
 } as const;
 
@@ -2459,6 +2513,25 @@ export const CollectionWithDetailsResponseWritableSchema = {
   type: "object",
   required: ["id", "name", "entity_type", "owner"],
   title: "CollectionWithDetailsResponse",
+} as const;
+
+export const DuplicateFileGroupResponseWritableSchema = {
+  properties: {
+    file_hash: {
+      type: "string",
+      title: "File Hash",
+    },
+    files: {
+      items: {
+        $ref: "#/components/schemas/FileResponseWritable",
+      },
+      type: "array",
+      title: "Files",
+    },
+  },
+  type: "object",
+  required: ["file_hash", "files"],
+  title: "DuplicateFileGroupResponse",
 } as const;
 
 export const FileResponseWritableSchema = {

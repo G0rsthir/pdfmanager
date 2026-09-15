@@ -11,7 +11,7 @@ import { expiryDatePresets } from "@/common/format";
 import { ExpiresIndicatorBadge } from "@/components/ui/badges";
 import { GenericIconButton } from "@/components/ui/button";
 import { ExpiryDateSelect } from "@/components/ui/date";
-import { Block, Empty } from "@/components/ui/display";
+import { Block, CopyableInput, Empty } from "@/components/ui/display";
 import { QueryView } from "@/components/ui/feedback";
 import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
@@ -23,13 +23,11 @@ import {
   Alert,
   Badge,
   Button,
-  Clipboard,
   DataList,
   Field,
   Group,
   Heading,
   Input,
-  InputGroup,
   List,
   Menu,
   Portal,
@@ -442,26 +440,10 @@ export function PersonalApiKeyForm(props: {
 
 function OpdsURL() {
   const opdsURL = useGlobalStore(
-    useShallow((state) => state.appState?.opds_url ?? ""),
+    useShallow((state) => state.appState?.readers.opds_url ?? ""),
   );
 
-  return (
-    <Clipboard.Root value={opdsURL} w="full">
-      <InputGroup
-        endElement={
-          <Clipboard.Trigger asChild>
-            <GenericIconButton size="xs" variant="ghost" me="-2">
-              <Clipboard.Indicator />
-            </GenericIconButton>
-          </Clipboard.Trigger>
-        }
-      >
-        <Clipboard.Input asChild>
-          <Input readOnly fontSize="sm" variant="subtle" />
-        </Clipboard.Input>
-      </InputGroup>
-    </Clipboard.Root>
-  );
+  return <CopyableInput value={opdsURL} />;
 }
 
 export function OpdsInstructions() {
@@ -479,7 +461,7 @@ export function OpdsInstructions() {
         </Tabs.Content>
 
         <Tabs.Content value="koreader">
-          Manage your projects and their status here.
+          <ReaderInstructionsKoreader />
         </Tabs.Content>
       </Tabs.Root>
     </>
@@ -513,6 +495,83 @@ function ReaderInstructionsGeneric() {
         </List.Item>
       </List.Root>
 
+      <Text fontSize="xs" color="fg.muted">
+        The key grants read access to your whole library. Revoke it here if a
+        device is lost
+      </Text>
+    </Stack>
+  );
+}
+
+function KoreaderURL() {
+  const koreaderURL = useGlobalStore(
+    useShallow((state) => state.appState?.readers.koreader_url ?? ""),
+  );
+
+  return <CopyableInput value={koreaderURL} />;
+}
+
+function ReaderInstructionsKoreader() {
+  return (
+    <Stack gap={4} borderWidth="1px" borderColor="border" rounded="md" p={4}>
+      <Stack gap={2}>
+        <Text fontWeight="medium" fontSize="sm">
+          Reading progress sync
+        </Text>
+
+        <KoreaderURL />
+
+        <List.Root gap={1} fontSize="sm" color="fg.muted" variant="plain">
+          <List.Item>
+            <List.Indicator asChild color="green.500">
+              <LuCircleDashed />
+            </List.Indicator>
+            Tools - Progress sync - Custom sync server: enter the URL above
+          </List.Item>
+          <List.Item>
+            <List.Indicator asChild color="green.500">
+              <LuCircleDashed />
+            </List.Indicator>
+            Choose Login (not Register), then Username: this key
+          </List.Item>
+          <List.Item>
+            <List.Indicator asChild color="green.500">
+              <LuCircleDashed />
+            </List.Indicator>
+            Password: anything - KOReader only sends a hash of it, which is why
+            the key goes in the username
+          </List.Item>
+          <List.Item>
+            <List.Indicator asChild color="green.500">
+              <LuCircleDashed />
+            </List.Indicator>
+            Progress is matched per document and syncs both ways between devices
+          </List.Item>
+        </List.Root>
+      </Stack>
+
+      <Stack gap={2}>
+        <Text fontWeight="medium" fontSize="sm">
+          Library catalog
+        </Text>
+
+        <OpdsURL />
+
+        <List.Root gap={1} fontSize="sm" color="fg.muted" variant="plain">
+          <List.Item>
+            <List.Indicator asChild color="green.500">
+              <LuCircleDashed />
+            </List.Indicator>
+            File browser - magnifier - OPDS catalog - + to add the URL above
+          </List.Item>
+          <List.Item>
+            <List.Indicator asChild color="green.500">
+              <LuCircleDashed />
+            </List.Indicator>
+            Username: anything - it is ignored. Password: this key
+          </List.Item>
+        </List.Root>
+      </Stack>
       <Text fontSize="xs" color="fg.muted">
         The key grants read access to your whole library. Revoke it here if a
         device is lost

@@ -4,7 +4,7 @@ from typing import Any
 from urllib.parse import quote_plus
 from uuid import UUID
 
-from server.const import ResourcePermissionCapability
+from server.const import FileStatusEnum, ResourcePermissionCapability
 from server.exceptions import InsufficientPermissionError
 from server.infrastructure.opds.document import (
     OpdsAuthor,
@@ -185,7 +185,7 @@ class OpdsCatalogService:
         Shelf (reading now)
         """
 
-        files = await self._file_repo.list_in_progress(user_id)
+        files = await self._file_repo.list_visible_to_user(user_id, status=FileStatusEnum.READING)
 
         entries = []
         updated = datetime.now(UTC)

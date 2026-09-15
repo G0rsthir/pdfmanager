@@ -5,7 +5,14 @@ from fastapi import Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from server.exceptions import AuthenticationError, DomainError, FieldError, FieldValidationErrors, InvalidActionError
+from server.exceptions import (
+    AuthenticationError,
+    DomainError,
+    FieldError,
+    FieldValidationErrors,
+    InvalidActionError,
+    ResourceNotFoundError,
+)
 
 
 def build_field_error_detail(
@@ -31,6 +38,10 @@ async def authentication_handler(request: Request, exc: AuthenticationError) -> 
     )
 
 
+async def resource_not_found_handler(request: Request, exc: ResourceNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=jsonable_encoder({"detail": str(exc)}))
+
+
 async def field_error_handler(request: Request, exc: FieldError):
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -52,7 +63,9 @@ async def invalid_action_error_handler(request: Request, exc: InvalidActionError
 
 
 async def domain_error_handler(request: Request, exc: DomainError) -> JSONResponse:
-    return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content=jsonable_encoder({"detail": str(exc)}))
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=jsonable_encoder({"detail": str(exc)})
+    )
 
 
 # Custom exception handlers
@@ -61,5 +74,6 @@ exception_handlers: dict[Union[int, type[Exception]], Callable[[Request, Any], C
     FieldError: field_error_handler,
     FieldValidationErrors: validation_error_handler,
     InvalidActionError: invalid_action_error_handler,
+    ResourceNotFoundError: resource_not_found_handler,
     DomainError: domain_error_handler,
 }
