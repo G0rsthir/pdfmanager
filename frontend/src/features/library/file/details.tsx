@@ -20,6 +20,7 @@ import {
   SimpleGrid,
   Text,
 } from "@chakra-ui/react";
+import { LuFolder } from "react-icons/lu";
 import { NavLink } from "react-router";
 import { toFolderUrl } from "./path";
 import { ReadingStatusSelect } from "./status";
@@ -163,8 +164,20 @@ function FolderValue({ collectionId }: { collectionId: string }) {
   if (!query.data) return <Text color="fg.subtle">&mdash;</Text>;
 
   return (
-    <ChakraLink asChild colorPalette="orange">
-      <NavLink to={toFolderUrl(collectionId)}>{query.data.name}</NavLink>
+    <ChakraLink
+      asChild
+      colorPalette="orange"
+      color="colorPalette.fg"
+      fontWeight="medium"
+      gap={1.5}
+      _hover={{ textDecoration: "underline" }}
+    >
+      <NavLink to={toFolderUrl(collectionId)}>
+        <LuFolder />
+        <Text as="span" truncate>
+          {query.data.name}
+        </Text>
+      </NavLink>
     </ChakraLink>
   );
 }

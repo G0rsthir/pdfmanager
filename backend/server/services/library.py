@@ -9,7 +9,14 @@ from uuid import UUID
 
 from fastapi import UploadFile
 
-from server.const import UNSET, FileStatusEnum, ResourcePermissionCapability, ResourcePermissionLevel, UnsetEnum
+from server.const import (
+    UNSET,
+    AnnotationType,
+    FileStatusEnum,
+    ResourcePermissionCapability,
+    ResourcePermissionLevel,
+    UnsetEnum,
+)
 from server.exceptions import (
     InsufficientPermissionError,
     InvalidActionError,
@@ -781,6 +788,8 @@ class LibraryService:
         excerpt: str,
         rects: list[NormalizedRect],
         label: str | None,
+        entity_type: AnnotationType = AnnotationType.HIGHLIGHT,
+        geometry: dict | None = None,
     ):
 
         file = await self._file_repo.get_by_id(file_id)
@@ -796,6 +805,8 @@ class LibraryService:
             rects=[rect.model_dump() for rect in rects],
             label=label,
             color=color,
+            entity_type=entity_type,
+            geometry=geometry or {},
             file_id=file_id,
             author_id=user_id,
         )
@@ -805,23 +816,17 @@ class LibraryService:
 
         fragments = [
             ContentFragment(
-                content=annotation.body,
+                content=content,
                 doc_id=file.id,
                 entity_type=file.content_type,
                 fragment_type=FragmentType.ANNOTATION,
                 source_id=annotation.id,
                 page_number=annotation.page,
-                field="body",
-            ),
-            ContentFragment(
-                content=annotation.excerpt,
-                doc_id=file.id,
-                entity_type=file.content_type,
-                fragment_type=FragmentType.ANNOTATION,
-                source_id=annotation.id,
-                page_number=annotation.page,
-                field="excerpt",
-            ),
+                field=field,
+            )
+            # TODO
+            for field, content in (("body", annotation.body), ("excerpt", annotation.excerpt))
+            if content
         ]
 
         await self._search_engine.index(fragments)
@@ -851,7 +856,12 @@ class LibraryService:
         if label is not UNSET:
             annotation.label = label
 
-        annotation.body = body or annotation.body
+        # An empty body clears a comment, but a note is nothing without one
+        if body is not None:
+            if not body and annotation.entity_type == AnnotationType.NOTE:
+                raise InvalidActionError(rule="note_body_required", msg="A note must have a body")
+            annotation.body = body
+
         annotation.color = color or annotation.color
 
         await self._annotation_repo.commit()
@@ -860,23 +870,16 @@ class LibraryService:
 
         fragments = [
             ContentFragment(
-                content=annotation.body,
+                content=content,
                 doc_id=file.id,
                 entity_type=file.content_type,
                 fragment_type=FragmentType.ANNOTATION,
                 source_id=annotation.id,
                 page_number=annotation.page,
-                field="body",
-            ),
-            ContentFragment(
-                content=annotation.excerpt,
-                doc_id=file.id,
-                entity_type=file.content_type,
-                fragment_type=FragmentType.ANNOTATION,
-                source_id=annotation.id,
-                page_number=annotation.page,
-                field="excerpt",
-            ),
+                field=field,
+            )
+            for field, content in (("body", annotation.body), ("excerpt", annotation.excerpt))
+            if content
         ]
 
         await self._search_engine.index(fragments)

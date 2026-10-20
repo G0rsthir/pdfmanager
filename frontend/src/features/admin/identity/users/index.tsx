@@ -18,6 +18,7 @@ import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import { PasswordInput } from "@/components/ui/password-input";
+import { SimpleTable, TableFrame } from "@/components/ui/table/frame";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import {
@@ -54,16 +55,18 @@ export function UsersPage() {
         </Heading>
         <CreateUserAction />
       </Group>
-      <QueryView query={query}>
-        {(data) => <UsersView users={data} />}
-      </QueryView>
+      <TableFrame>
+        <QueryView query={query}>
+          {(data) => <UsersView users={data} />}
+        </QueryView>
+      </TableFrame>
     </Stack>
   );
 }
 
 function UsersView({ users }: { users: UserResponse[] }) {
   return (
-    <Table.Root size="md">
+    <SimpleTable size="md">
       <Table.Header>
         <Table.Row>
           <Table.ColumnHeader>Name</Table.ColumnHeader>
@@ -111,7 +114,7 @@ function UsersView({ users }: { users: UserResponse[] }) {
           </Table.Row>
         ))}
       </Table.Body>
-    </Table.Root>
+    </SimpleTable>
   );
 }
 

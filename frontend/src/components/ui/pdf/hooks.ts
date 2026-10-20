@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import { anchorFromRects, getPageElement } from "./geometry";
 import type {
   NormalizedRect,
   OutlineItem,
   OutlineRawItem,
-  SelectionPopoverState,
+  PopoverAnchor,
 } from "./types";
 
 export function useFullscreen(elementRef: React.RefObject<HTMLElement | null>) {
@@ -35,101 +36,65 @@ export function useFullscreen(elementRef: React.RefObject<HTMLElement | null>) {
 }
 
 /**
- * Walk up to PDF.js's per-page wrapper.
- * The text layer lives inside .page[data-page-number].
+ * Where to place a popover for anything anchored on a page
  */
-function findPage(
-  node: Node | null,
-): { number: number; el: HTMLElement } | null {
-  while (node) {
-    if (node instanceof HTMLElement && node.dataset.pageNumber) {
-      const n = parseInt(node.dataset.pageNumber, 10);
-      return Number.isNaN(n) ? null : { number: n, el: node };
-    }
-    node = node.parentNode;
-  }
-  return null;
-}
-
-export function useSelectionPopover(
-  containerRef: React.RefObject<HTMLElement | null>,
-) {
-  const [popover, setPopover] = useState<SelectionPopoverState | null>(null);
-  const dismiss = () => setPopover(null);
+export function useSelectionAnchor(options: {
+  containerRef: React.RefObject<HTMLElement | null>;
+  viewerRef: React.RefObject<HTMLElement | null>;
+  selection: { page: number; rects: NormalizedRect[] } | null;
+  rotation: number;
+  revision: string;
+}) {
+  const { containerRef, viewerRef, selection, rotation, revision } = options;
+  const [anchor, setAnchor] = useState<PopoverAnchor | null>(null);
 
   useEffect(() => {
-    const root = containerRef.current;
-    if (!root) return;
+    const container = containerRef.current;
+    const viewer = viewerRef.current;
 
-    const handler = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
-        setPopover(null);
-        return;
-      }
-      const range = sel.getRangeAt(0);
-      if (!root.contains(range.commonAncestorContainer)) {
-        setPopover(null);
-        return;
-      }
-      const text = sel.toString().trim();
-      if (!text) {
-        setPopover(null);
-        return;
-      }
+    if (!container || !viewer || !selection) {
+      setAnchor(null);
+      return;
+    }
 
-      // Reject multi-page selections
-      if (sel.rangeCount > 1) {
-        setPopover(null);
-        return;
-      }
+    const pageEl = getPageElement(viewer, selection.page);
 
-      const page = findPage(range.startContainer);
-      if (page == null) {
-        setPopover(null);
-        return;
-      }
+    if (!pageEl) {
+      setAnchor(null);
+      return;
+    }
 
-      const pageRect = page.el.getBoundingClientRect();
-      const lineRects = Array.from(range.getClientRects());
+    setTimeout(() =>
+      setAnchor(anchorFromRects(container, pageEl, selection.rects, rotation)),
+    );
+  }, [containerRef, viewerRef, selection, rotation, revision]);
 
-      const rects: NormalizedRect[] = lineRects.map((cr) => ({
-        top: (cr.top - pageRect.top) / pageRect.height,
-        left: (cr.left - pageRect.left) / pageRect.width,
-        width: cr.width / pageRect.width,
-        height: cr.height / pageRect.height,
-      }));
+  return anchor;
+}
 
-      const lastRect =
-        lineRects[lineRects.length - 1] ?? range.getBoundingClientRect();
-      const containerRect = root.getBoundingClientRect();
+/**
+ * Rendered size of an element in CSS px, tracked across zoom and rotation
+ */
+export function useElementSize(element: HTMLElement | null) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
-      // Anchor to the END of the last line of the selection
-      const anchor = {
-        x: lastRect.right - containerRect.left + root.scrollLeft,
-        y: lastRect.bottom - containerRect.top + root.scrollTop,
-      };
+  useEffect(() => {
+    if (!element) return;
 
-      setPopover({ anchor: anchor, text, page: page.number, rects });
-    };
+    const observer = new ResizeObserver(([entry]) => {
+      const box = entry.contentRect;
+      setSize((prev) =>
+        prev.width === box.width && prev.height === box.height
+          ? prev
+          : { width: box.width, height: box.height },
+      );
+    });
 
-    const selectionCleanup = () => {
-      if (window.getSelection()?.toString().trim() == "" && popover != null)
-        setPopover(null);
-    };
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
 
-    document.addEventListener("mouseup", handler);
-    document.addEventListener("keyup", handler);
-    document.addEventListener("selectionchange", selectionCleanup);
-
-    return () => {
-      document.removeEventListener("mouseup", handler);
-      document.removeEventListener("keyup", handler);
-      document.removeEventListener("selectionchange", selectionCleanup);
-    };
-  }, [containerRef, popover]);
-
-  return [popover, dismiss] as const;
+  return size;
 }
 
 export function normalizeOutline(

@@ -27,6 +27,7 @@ import { CreateApiKeyDialog, RevokeApiKeyDialog } from "./forms";
 import { useHasScopes } from "@/common/auth/hooks";
 import { ExpiresIndicatorBadge } from "@/components/ui/badges";
 import { Empty } from "@/components/ui/display";
+import { SimpleTable, TableFrame } from "@/components/ui/table/frame";
 import { ResetApiKeyDialog } from "@/features/apiKeys/dialogs";
 
 export function ApiKeysPage() {
@@ -52,9 +53,11 @@ export function ApiKeysPage() {
           </Alert.Description>
         </Stack>
       </Alert.Root>
-      <QueryView query={query}>
-        {(data) => <ApiKeysView apiKeys={data} />}
-      </QueryView>
+      <TableFrame>
+        <QueryView query={query}>
+          {(data) => <ApiKeysView apiKeys={data} />}
+        </QueryView>
+      </TableFrame>
     </Stack>
   );
 }
@@ -79,7 +82,7 @@ function ApiKeysView({ apiKeys }: { apiKeys: ApiKeyResponse[] }) {
     return <Empty icon={<LuKeyRound />} title="No keys yet" />;
 
   return (
-    <Table.Root size="md">
+    <SimpleTable size="md">
       <Table.Header>
         <Table.Row>
           <Table.ColumnHeader>Description</Table.ColumnHeader>
@@ -117,7 +120,7 @@ function ApiKeysView({ apiKeys }: { apiKeys: ApiKeyResponse[] }) {
           </Table.Row>
         ))}
       </Table.Body>
-    </Table.Root>
+    </SimpleTable>
   );
 }
 

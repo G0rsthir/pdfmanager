@@ -1,0 +1,21 @@
+# Used by BuildKit for docker/Dockerfile (the context is the repository root)
+# Allowlist: exclude everything, then include only what the image needs
+*
+
+!backend/
+!frontend/
+!docker/nginx.conf
+!docker/supervisord.conf
+
+
+# Local artifacts inside the included folders
+backend/.venv
+backend/storage
+backend/tests
+backend/**/.env
+backend/**/*.pyc
+backend/**/.ruff_cache
+**/__pycache__
+frontend/node_modules
+frontend/dist
+frontend/.env*

@@ -50,16 +50,14 @@ export const AnnotationResponseSchema = {
       type: "string",
       title: "Color",
     },
-    excerpt: {
-      type: "string",
-      title: "Excerpt",
-    },
     rects: {
       items: {
         $ref: "#/components/schemas/NormalizedRect",
       },
       type: "array",
       title: "Rects",
+      description:
+        "Anchor box: the line boxes for a highlight, one bounding box for every other type",
     },
     label: {
       anyOf: [
@@ -72,6 +70,36 @@ export const AnnotationResponseSchema = {
       ],
       title: "Label",
       description: "User-set identifier, used to cross-reference",
+    },
+    excerpt: {
+      type: "string",
+      title: "Excerpt",
+    },
+    geometry: {
+      oneOf: [
+        {
+          $ref: "#/components/schemas/HighlightGeometry",
+        },
+        {
+          $ref: "#/components/schemas/NoteGeometry",
+        },
+        {
+          $ref: "#/components/schemas/InkGeometry",
+        },
+        {
+          $ref: "#/components/schemas/ShapeGeometry",
+        },
+      ],
+      title: "Geometry",
+      discriminator: {
+        propertyName: "type",
+        mapping: {
+          highlight: "#/components/schemas/HighlightGeometry",
+          ink: "#/components/schemas/InkGeometry",
+          note: "#/components/schemas/NoteGeometry",
+          shape: "#/components/schemas/ShapeGeometry",
+        },
+      },
     },
     id: {
       type: "string",
@@ -106,10 +134,29 @@ export const AnnotationResponseSchema = {
       ],
       title: "Author Name",
     },
+    entity_type: {
+      $ref: "#/components/schemas/AnnotationType",
+    },
   },
   type: "object",
-  required: ["page", "body", "color", "excerpt", "rects", "id", "created_at"],
+  required: [
+    "page",
+    "body",
+    "color",
+    "rects",
+    "excerpt",
+    "geometry",
+    "id",
+    "created_at",
+    "entity_type",
+  ],
   title: "AnnotationResponse",
+} as const;
+
+export const AnnotationTypeSchema = {
+  type: "string",
+  enum: ["highlight", "note", "ink", "shape"],
+  title: "AnnotationType",
 } as const;
 
 export const ApiKeyCreateRequestSchema = {
@@ -884,14 +931,11 @@ export const CreateAnnotationRequestSchema = {
     body: {
       type: "string",
       title: "Body",
+      default: "",
     },
     color: {
       type: "string",
       title: "Color",
-    },
-    excerpt: {
-      type: "string",
-      title: "Excerpt",
     },
     rects: {
       items: {
@@ -899,6 +943,8 @@ export const CreateAnnotationRequestSchema = {
       },
       type: "array",
       title: "Rects",
+      description:
+        "Anchor box: the line boxes for a highlight, one bounding box for every other type",
     },
     label: {
       anyOf: [
@@ -912,9 +958,41 @@ export const CreateAnnotationRequestSchema = {
       title: "Label",
       description: "User-set identifier, used to cross-reference",
     },
+    excerpt: {
+      type: "string",
+      title: "Excerpt",
+      description: "Text the annotation is anchored to, if any",
+      default: "",
+    },
+    geometry: {
+      oneOf: [
+        {
+          $ref: "#/components/schemas/HighlightGeometry",
+        },
+        {
+          $ref: "#/components/schemas/NoteGeometry",
+        },
+        {
+          $ref: "#/components/schemas/InkGeometry",
+        },
+        {
+          $ref: "#/components/schemas/ShapeGeometry",
+        },
+      ],
+      title: "Geometry",
+      discriminator: {
+        propertyName: "type",
+        mapping: {
+          highlight: "#/components/schemas/HighlightGeometry",
+          ink: "#/components/schemas/InkGeometry",
+          note: "#/components/schemas/NoteGeometry",
+          shape: "#/components/schemas/ShapeGeometry",
+        },
+      },
+    },
   },
   type: "object",
-  required: ["page", "body", "color", "excerpt", "rects"],
+  required: ["page", "color", "rects", "geometry"],
   title: "CreateAnnotationRequest",
 } as const;
 
@@ -1269,6 +1347,51 @@ export const HTTPValidationErrorSchema = {
   title: "HTTPValidationError",
 } as const;
 
+export const HighlightGeometrySchema = {
+  properties: {
+    type: {
+      type: "string",
+      const: "highlight",
+      title: "Type",
+    },
+  },
+  type: "object",
+  required: ["type"],
+  title: "HighlightGeometry",
+  description: "Text-anchored: the rects already carry the shape",
+} as const;
+
+export const InkGeometrySchema = {
+  properties: {
+    type: {
+      type: "string",
+      const: "ink",
+      title: "Type",
+    },
+    paths: {
+      items: {
+        items: {
+          $ref: "#/components/schemas/NormalizedPoint",
+        },
+        type: "array",
+      },
+      type: "array",
+      minItems: 1,
+      title: "Paths",
+    },
+    width: {
+      type: "number",
+      maximum: 1,
+      exclusiveMinimum: 0,
+      title: "Width",
+      description: "Stroke width as a fraction of the page width",
+    },
+  },
+  type: "object",
+  required: ["type", "paths", "width"],
+  title: "InkGeometry",
+} as const;
+
 export const InviteToCollectionRequestSchema = {
   properties: {
     email: {
@@ -1367,6 +1490,27 @@ export const LibraryTreeNodeSchema = {
   title: "LibraryTreeNode",
 } as const;
 
+export const NormalizedPointSchema = {
+  properties: {
+    x: {
+      type: "number",
+      maximum: 1,
+      minimum: 0,
+      title: "X",
+    },
+    y: {
+      type: "number",
+      maximum: 1,
+      minimum: 0,
+      title: "Y",
+    },
+  },
+  type: "object",
+  required: ["x", "y"],
+  title: "NormalizedPoint",
+  description: "A point in the same space as NormalizedRect.",
+} as const;
+
 export const NormalizedRectSchema = {
   properties: {
     top: {
@@ -1398,7 +1542,23 @@ export const NormalizedRectSchema = {
   required: ["top", "left", "width", "height"],
   title: "NormalizedRect",
   description:
-    "All values are fractions (0..1) of the .page element's box,\nso they survive zoom / rotate without recomputation.",
+    "All values are fractions (0..1) of the page box at rotation 0,\nso they survive zoom and rotation without recomputation.",
+} as const;
+
+export const NoteGeometrySchema = {
+  properties: {
+    type: {
+      type: "string",
+      const: "note",
+      title: "Type",
+    },
+    point: {
+      $ref: "#/components/schemas/NormalizedPoint",
+    },
+  },
+  type: "object",
+  required: ["type", "point"],
+  title: "NoteGeometry",
 } as const;
 
 export const OidcGroupRule_InputSchema = {
@@ -1767,6 +1927,48 @@ export const SetupUserSchema = {
   required: ["email", "name"],
   title: "SetupUser",
   description: "Create initial application user",
+} as const;
+
+export const ShapeGeometrySchema = {
+  properties: {
+    type: {
+      type: "string",
+      const: "shape",
+      title: "Type",
+    },
+    shape: {
+      type: "string",
+      enum: ["rect", "ellipse", "line", "arrow"],
+      title: "Shape",
+    },
+    start: {
+      $ref: "#/components/schemas/NormalizedPoint",
+    },
+    end: {
+      $ref: "#/components/schemas/NormalizedPoint",
+    },
+    width: {
+      type: "number",
+      maximum: 1,
+      exclusiveMinimum: 0,
+      title: "Width",
+      description: "Stroke width as a fraction of the page width",
+    },
+    fill: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Fill",
+    },
+  },
+  type: "object",
+  required: ["type", "shape", "start", "end", "width"],
+  title: "ShapeGeometry",
 } as const;
 
 export const SsoConfigResponseSchema = {

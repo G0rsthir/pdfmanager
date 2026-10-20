@@ -65,7 +65,7 @@ class TaskHistoryResponse(BaseModel):
     @property
     def display_duration(self) -> str:
         if self.duration_ms is None:
-            return "—"
+            return "---"
         if self.duration_ms < 1000:
             return f"{self.duration_ms}ms"
         seconds = self.duration_ms / 1000

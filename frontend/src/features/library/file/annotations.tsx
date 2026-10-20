@@ -1,5 +1,5 @@
 import { listAnnotationsOptions } from "@/api/@tanstack/react-query.gen";
-import type { AnnotationResponse, FileResponse } from "@/api/types.gen";
+import type { ListAnnotationsResponse, FileResponse } from "@/api/types.gen";
 import { formatDateTime, formatRelativeTime } from "@/common/format";
 import { Empty } from "@/components/ui/display";
 import { QueryView } from "@/components/ui/feedback";
@@ -34,7 +34,7 @@ export function FileAnnotationsPanel({ file }: { file: FileResponse }) {
 }
 
 function AnnotationsView(props: {
-  annotations: AnnotationResponse[];
+  annotations: ListAnnotationsResponse;
   file: FileResponse;
 }) {
   const { annotations, file } = props;
@@ -97,7 +97,7 @@ function AnnotationsView(props: {
 }
 
 function AnnotationItem(props: {
-  annotation: AnnotationResponse;
+  annotation: ListAnnotationsResponse[number];
   file: FileResponse;
 }) {
   const { annotation, file } = props;

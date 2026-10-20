@@ -23,11 +23,18 @@
   margin: 1px auto 20px;
 }
 
-.pdfViewer .custom-annotation-overlay {
+/* Root of our own per-page layers (see layers.ts) */
+.pdfViewer .custom-layer-root {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
+}
+
+/* Set while a drawing tool is active, so dragging draws instead of
+   selecting text */
+.pdfViewer.no-text-select .textLayer {
+  user-select: none;
 }
 
 .pdfViewer .custom-annotation-highlight {
@@ -35,10 +42,25 @@
   mix-blend-mode: multiply;
 }
 
+.pdfViewer .custom-annotation-vector {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Outline around the annotation the select tool picked */
+.pdfViewer .custom-annotation-selection {
+  position: absolute;
+  outline: 2px solid var(--chakra-colors-color-palette-solid);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .pdfViewer .custom-annotation-marker {
   position: absolute;
-  left: calc(100% - 8px);
-  width: 8px;
+  left: calc(100% - 10px);
+  width: 10px;
   min-height: 10px;
   padding: 0 !important;
   border: unset !important;

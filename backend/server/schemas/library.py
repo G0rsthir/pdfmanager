@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from server.const import (
     RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES,
     RESOURCE_PERMISSIONS_LEVEL_WRITABLE,
+    AnnotationType,
     AssignmentLockReason,
     FileStatusEnum,
     ResourcePermissionCapability,
@@ -318,8 +319,7 @@ class ResourcePermissionResponse(BaseModel):
 
 class NormalizedRect(BaseModel):
     """
-    All values are fractions (0..1) of the .page element's box,
-    so they survive zoom / rotate without recomputation.
+    All values are fractions (0..1) of the page box using rotation 0
     """
 
     top: float = Field(ge=0, le=1)
@@ -328,13 +328,61 @@ class NormalizedRect(BaseModel):
     height: float = Field(ge=0, le=1)
 
 
+class NormalizedPoint(BaseModel):
+    """
+    Point in the same space as NormalizedRect
+    """
+
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
+class HighlightGeometry(BaseModel):
+    type: Literal[AnnotationType.HIGHLIGHT]
+
+
+class NoteGeometry(BaseModel):
+    type: Literal[AnnotationType.NOTE]
+    point: NormalizedPoint
+
+
+class InkGeometry(BaseModel):
+    type: Literal[AnnotationType.INK]
+    paths: list[list[NormalizedPoint]] = Field(min_length=1)
+    width: float = Field(gt=0, le=1, description="Stroke width as a fraction of the page width")
+
+
+class ShapeGeometry(BaseModel):
+    type: Literal[AnnotationType.SHAPE]
+    shape: Literal["rect", "ellipse", "line", "arrow"]
+    start: NormalizedPoint
+    end: NormalizedPoint
+    width: float = Field(gt=0, le=1, description="Stroke width as a fraction of the page width")
+    fill: str | None = None
+
+
+AnnotationGeometry = Annotated[
+    HighlightGeometry | NoteGeometry | InkGeometry | ShapeGeometry,
+    Field(discriminator="type"),
+]
+
+
 class CreateAnnotationRequest(BaseModel):
     page: int
-    body: str
+    body: str = ""
     color: str
-    excerpt: str
-    rects: list[NormalizedRect]
+    rects: list[NormalizedRect] = Field(description="Anchor box or  bounding box")
     label: str | None = Field(default=None, description="User-set identifier, used to cross-reference")
+    excerpt: str = Field(default="", description="Text the annotation is anchored to")
+
+    geometry: AnnotationGeometry
+
+    @model_validator(mode="after")
+    def check_excerpt(self):
+        if self.geometry.type == AnnotationType.HIGHLIGHT and not self.excerpt:
+            raise ValueError("A highlight must carry the text it is anchored to")
+
+        return self
 
 
 class PatchAnnotationRequest(BaseModel):
@@ -350,3 +398,9 @@ class AnnotationResponse(CreateAnnotationRequest):
     author_id: UUID | None = None
     created_at: AwareDatetime
     author_name: str | None = None
+
+    entity_type: AnnotationType
+
+    # Stored annotations always carry both
+    body: str = Field()
+    excerpt: str = Field()

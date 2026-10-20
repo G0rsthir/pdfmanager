@@ -1,12 +1,15 @@
 import {
   Badge,
   Box,
+  Card,
   Clipboard,
   Code,
   EmptyState,
   Grid,
   GridItem,
   Group,
+  HStack,
+  Icon,
   Input,
   InputGroup,
   Span,
@@ -202,5 +205,47 @@ export function Checksum(props: {
         </Group>
       </Tooltip>
     </CopyableValue>
+  );
+}
+
+export function SectionCard(props: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  colorPalette: string;
+  children: React.ReactNode;
+}) {
+  const { title, description, icon, colorPalette, children } = props;
+
+  return (
+    <Card.Root variant="outline" overflow="hidden">
+      <Card.Header
+        bg="bg.subtle"
+        borderBottomWidth="1px"
+        py={3}
+        px={5}
+        colorPalette={colorPalette}
+      >
+        <HStack gap={3}>
+          <Icon
+            as="span"
+            boxSize={8}
+            p={1.5}
+            rounded="md"
+            bg="colorPalette.subtle"
+            color="colorPalette.fg"
+          >
+            {icon}
+          </Icon>
+          <Stack gap={0}>
+            <Card.Title fontSize="md">{title}</Card.Title>
+            <Card.Description fontSize="sm">{description}</Card.Description>
+          </Stack>
+        </HStack>
+      </Card.Header>
+      <Card.Body p={5}>
+        <Stack gap={4}>{children}</Stack>
+      </Card.Body>
+    </Card.Root>
   );
 }

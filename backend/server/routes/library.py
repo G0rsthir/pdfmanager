@@ -537,6 +537,8 @@ async def create_annotation(
         page=data.page,
         body=data.body,
         color=data.color,
+        entity_type=data.geometry.type,
+        geometry=data.geometry.model_dump(mode="json"),
     )
 
 

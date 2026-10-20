@@ -335,7 +335,11 @@ class AnnotationRepository(Repository):
         return {c.id: c for c in records}
 
     async def list_by_file(self, file_id: UUID) -> list[models.ORMAnnotation]:
-        stmt = select(models.ORMAnnotation).where(models.ORMAnnotation.file_id == file_id)
+        stmt = (
+            select(models.ORMAnnotation)
+            .where(models.ORMAnnotation.file_id == file_id)
+            .order_by(models.ORMAnnotation.page, models.ORMAnnotation.created_at)
+        )
         return list(await self.session.scalars(stmt))
 
     async def list_by_files(self, file_ids: Iterable[UUID]) -> dict[UUID, Iterable[models.ORMAnnotation]]:
@@ -376,7 +380,7 @@ class AnnotationRepository(Repository):
 
         records = await self.session.execute(stmt)
 
-        return [record[0] for record in records.all() if record[0] is not None]
+        return [label for (label,) in records.all() if label is not None]
 
     def save(self, record: models.ORMAnnotation) -> None:
         self.session.add(record)

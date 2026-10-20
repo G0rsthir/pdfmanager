@@ -5,7 +5,6 @@ import {
   Grid,
   GridItem,
   Group,
-  Icon,
   Input,
   Menu,
   Popover,
@@ -20,9 +19,7 @@ import {
   LuChevronDown,
   LuChevronUp,
   LuDownload,
-  LuHighlighter,
   LuMaximize,
-  LuMessageSquare,
   LuMinimize,
   LuMinus,
   LuPanelRight,
@@ -33,16 +30,9 @@ import {
   LuSettings2,
   LuWholeWord,
 } from "react-icons/lu";
-import { GenericCloseButton, GenericIconButton } from "../button";
-import { useSelectionPopover } from "./hooks";
-import { ViewerPortal } from "./portal";
-import type {
-  Bookmark,
-  PopoverAction,
-  SearchOptions,
-  SelectionPopoverState,
-  ZoomPreset,
-} from "./types";
+import { GenericCloseButton } from "../button";
+import { ViewerIconButton, ViewerPortal } from "./portal";
+import type { Bookmark, SearchOptions, ToolId, ZoomPreset } from "./types";
 
 function isSpecialScale(value: string): boolean {
   return ["auto", "page-fit", "page-width", "page-actual"].includes(value);
@@ -64,6 +54,9 @@ interface ToolbarProps {
   toggleShowSearch: () => void;
   toggleAnnotations: () => void;
   showAnnotations: boolean;
+  activeTool: ToolId;
+  setTool: (tool: ToolId) => void;
+  canAnnotate: boolean;
   isFullscreen: boolean;
   toggleFullscreen: () => void;
   zoomIn: () => void;
@@ -112,15 +105,14 @@ export function Toolbar(props: ToolbarProps) {
 
       <Group gap="1">
         <Group gap="1" align="center">
-          <GenericIconButton
+          <ViewerIconButton
+            label="Previous page"
             size="xs"
-            variant="ghost"
-            aria-label="Previous page"
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage <= 1}
           >
             <LuChevronUp />
-          </GenericIconButton>
+          </ViewerIconButton>
           <Group gap="1" align="center">
             <Input
               size="xs"
@@ -129,7 +121,7 @@ export function Toolbar(props: ToolbarProps) {
               value={pageInputValue}
               onChange={(e) => handlePageInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") commitPageInput();
+                if (e.key == "Enter") commitPageInput();
               }}
               onBlur={commitPageInput}
             />
@@ -137,28 +129,22 @@ export function Toolbar(props: ToolbarProps) {
               / {numPages}
             </Text>
           </Group>
-          <GenericIconButton
+          <ViewerIconButton
+            label="Next page"
             size="xs"
-            variant="ghost"
-            aria-label="Next page"
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage >= numPages}
           >
             <LuChevronDown />
-          </GenericIconButton>
+          </ViewerIconButton>
         </Group>
 
         <Separator orientation="vertical" h="5" />
 
         <Group gap="1" align="center">
-          <GenericIconButton
-            size="xs"
-            variant="ghost"
-            aria-label="Zoom out"
-            onClick={zoomOut}
-          >
+          <ViewerIconButton label="Zoom out" size="xs" onClick={zoomOut}>
             <LuMinus />
-          </GenericIconButton>
+          </ViewerIconButton>
 
           <Menu.Root>
             <Menu.Trigger asChild>
@@ -186,7 +172,7 @@ export function Toolbar(props: ToolbarProps) {
                       value={String(preset.value)}
                       onClick={() => setZoom(preset.value)}
                       fontWeight={
-                        scaleValue === preset.value ? "bold" : "normal"
+                        scaleValue == preset.value ? "bold" : "normal"
                       }
                     >
                       {preset.label}
@@ -197,45 +183,43 @@ export function Toolbar(props: ToolbarProps) {
             </ViewerPortal>
           </Menu.Root>
 
-          <GenericIconButton
-            size="xs"
-            variant="ghost"
-            aria-label="Zoom in"
-            onClick={zoomIn}
-          >
+          <ViewerIconButton label="Zoom in" size="xs" onClick={zoomIn}>
             <LuPlus />
-          </GenericIconButton>
+          </ViewerIconButton>
         </Group>
 
         <Separator orientation="vertical" h="5" />
 
-        <GenericIconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Search"
-          onClick={toggleShowSearch}
-        >
+        <ViewerIconButton label="Search" size="xs" onClick={toggleShowSearch}>
           <LuSearch />
-        </GenericIconButton>
-        <GenericIconButton
+        </ViewerIconButton>
+        <ViewerIconButton
+          label={showAnnotations ? "Hide annotations" : "Show annotations"}
           size="xs"
           variant={showAnnotations ? "subtle" : "ghost"}
-          aria-label="Toggle annotations"
           colorPalette={showAnnotations ? "colorPalette.600" : undefined}
           aria-pressed={showAnnotations}
           onClick={toggleAnnotations}
         >
           <LuPanelRight />
-        </GenericIconButton>
+        </ViewerIconButton>
       </Group>
 
       <GridItem justifySelf="end">
+        <ViewerIconButton
+          label={isFullscreen ? "Exit full screen" : "Full screen"}
+          size="xs"
+          variant={isFullscreen ? "subtle" : "ghost"}
+          colorPalette={isFullscreen ? "colorPalette.600" : undefined}
+          onClick={toggleFullscreen}
+        >
+          {isFullscreen ? <LuMinimize /> : <LuMaximize />}
+        </ViewerIconButton>
+
         <SettingsPopover
           rotateCCW={rotateCCW}
           rotateCW={rotateCW}
           download={handleDownload}
-          isFullscreen={isFullscreen}
-          toggleFullscreen={toggleFullscreen}
         />
       </GridItem>
     </Grid>
@@ -246,20 +230,17 @@ interface SettingsPopoverProps {
   rotateCCW: () => void;
   rotateCW: () => void;
   download: () => void;
-  isFullscreen: boolean;
-  toggleFullscreen: () => void;
 }
 
 function SettingsPopover(props: SettingsPopoverProps) {
-  const { rotateCCW, rotateCW, download, isFullscreen, toggleFullscreen } =
-    props;
+  const { rotateCCW, rotateCW, download } = props;
 
   return (
     <Popover.Root positioning={{ placement: "bottom-end" }}>
       <Popover.Trigger asChild>
-        <GenericIconButton size="xs" variant="ghost" aria-label="More actions">
+        <ViewerIconButton label="Settings" size="xs">
           <LuSettings2 />
-        </GenericIconButton>
+        </ViewerIconButton>
       </Popover.Trigger>
       <ViewerPortal>
         <Popover.Positioner>
@@ -272,7 +253,6 @@ function SettingsPopover(props: SettingsPopoverProps) {
                       size="xs"
                       variant="outline"
                       colorPalette="gray"
-                      aria-label="Rotate counter-clockwise"
                       onClick={rotateCCW}
                     >
                       <LuRotateCcw />
@@ -281,24 +261,11 @@ function SettingsPopover(props: SettingsPopoverProps) {
                       size="xs"
                       variant="outline"
                       colorPalette="gray"
-                      aria-label="Rotate clockwise"
                       onClick={rotateCW}
                     >
                       <LuRotateCw />
                     </Button>
                   </Group>
-                </SettingsRow>
-
-                <SettingsRow label="View">
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    colorPalette="gray"
-                    onClick={toggleFullscreen}
-                  >
-                    {isFullscreen ? <LuMinimize /> : <LuMaximize />}
-                    {isFullscreen ? "Exit full screen" : "Full screen"}
-                  </Button>
                 </SettingsRow>
 
                 <SettingsRow label="Document">
@@ -403,10 +370,10 @@ export function SearchBar(props: SearchBarProps) {
         value={searchQuery}
         onChange={(e) => handleSearchChange(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
+          if (e.key == "Enter") {
             if (e.shiftKey) findPrevMatch();
             else findNextMatch();
-          } else if (e.key === "Escape") {
+          } else if (e.key == "Escape") {
             closeSearch();
           }
         }}
@@ -417,30 +384,28 @@ export function SearchBar(props: SearchBarProps) {
           {matchCount.current} / {matchCount.total}
         </Text>
       )}
-      {searchQuery && matchCount.total === 0 && (
+      {searchQuery && matchCount.total == 0 && (
         <Text textStyle="xs" color="fg.error" whiteSpace="nowrap">
           No results
         </Text>
       )}
       <Group gap="0">
-        <GenericIconButton
+        <ViewerIconButton
+          label="Previous match"
           size="xs"
-          variant="ghost"
-          aria-label="Previous match"
           onClick={findPrevMatch}
           disabled={!searchQuery}
         >
           <LuChevronUp />
-        </GenericIconButton>
-        <GenericIconButton
+        </ViewerIconButton>
+        <ViewerIconButton
+          label="Next match"
           size="xs"
-          variant="ghost"
-          aria-label="Next match"
           onClick={findNextMatch}
           disabled={!searchQuery}
         >
           <LuChevronDown />
-        </GenericIconButton>
+        </ViewerIconButton>
       </Group>
 
       <Group gap="2">
@@ -503,60 +468,5 @@ export function PagePeekBar(props: PagePeekBarProps) {
         </ActionBar.Content>
       </ActionBar.Positioner>
     </ActionBar.Root>
-  );
-}
-
-export function SelectionPopover(props: {
-  containerRef: React.RefObject<HTMLElement | null>;
-  disabled?: boolean;
-  onSelect: (action: PopoverAction, popover: SelectionPopoverState) => void;
-}) {
-  const { containerRef, disabled, onSelect } = props;
-
-  const [popover] = useSelectionPopover(containerRef);
-
-  if (!popover || disabled) return null;
-
-  return (
-    <Box
-      position="absolute"
-      top={`${popover.anchor.y + 4}px`}
-      left={`${popover.anchor.x - 50}px`}
-      zIndex={50}
-      bg="bg.panel"
-      rounded="md"
-      shadow="md"
-      borderWidth="1px"
-      px={2}
-      py={1}
-      // Block native focus loss.
-      onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-    >
-      <Group gap="2">
-        <Icon
-          size="xs"
-          cursor="pointer"
-          onClick={() => onSelect("comment", popover)}
-          _hover={{
-            color: "colorPalette.400",
-          }}
-        >
-          <LuMessageSquare />
-        </Icon>
-        <Icon
-          size="xs"
-          cursor="pointer"
-          onClick={() => onSelect("highlight", popover)}
-          _hover={{
-            color: "colorPalette.400",
-          }}
-        >
-          <LuHighlighter />
-        </Icon>
-      </Group>
-    </Box>
   );
 }

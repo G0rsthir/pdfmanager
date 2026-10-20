@@ -6,11 +6,9 @@ Use [ruff](https://github.com/astral-sh/ruff) for linting and code formatting.
 
 ## Eviroment setup
 
-Install [Poetry](https://python-poetry.org/)
+Install [UV](https://docs.astral.sh/uv/)
 
 ```shell
 cd backend
-poetry env use python3.13
-poetry install
-poetry run server run dev
+uv run server run dev
 ```

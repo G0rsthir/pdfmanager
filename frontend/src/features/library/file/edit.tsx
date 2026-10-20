@@ -10,7 +10,7 @@ import {
 } from "@/api/types.gen";
 import { useCan } from "@/common/auth/hooks";
 import { DateSelect } from "@/components/ui/date";
-import { Section } from "@/components/ui/display";
+import { SectionCard } from "@/components/ui/display";
 import { Form } from "@/components/ui/form/container";
 import { SubscribeFormError } from "@/components/ui/form/fields";
 import { TokensInput } from "@/components/ui/tokens";
@@ -28,6 +28,7 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react";
+import { LuFileText, LuTags } from "react-icons/lu";
 import { CollectionSelect } from "../collection/select";
 
 const MAX_NAME_LENGTH = 255;
@@ -97,7 +98,12 @@ function EditFileForm({
         )}
 
         <SimpleGrid columns={{ base: 1, lg: 2 }} gap={8}>
-          <Section title="Details">
+          <SectionCard
+            title="Details"
+            description="Name, description and location of the file"
+            icon={<LuFileText />}
+            colorPalette="blue"
+          >
             <form.Field
               name="name"
               validators={{
@@ -185,9 +191,14 @@ function EditFileForm({
                 </Field.Root>
               )}
             />
-          </Section>
+          </SectionCard>
 
-          <Section title="Metadata">
+          <SectionCard
+            title="Metadata"
+            description="Tags, authors and publication date"
+            icon={<LuTags />}
+            colorPalette="purple"
+          >
             <form.Field
               name="tags"
               children={({ state: fieldState, handleChange, handleBlur }) => (
@@ -256,7 +267,7 @@ function EditFileForm({
                 </Field.Root>
               )}
             />
-          </Section>
+          </SectionCard>
         </SimpleGrid>
 
         <SubscribeFormError form={form} />

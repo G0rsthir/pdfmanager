@@ -65,6 +65,17 @@ class AuthProviderTypesEnum(StrEnum):
     OIDC = "OIDC"
 
 
+class AnnotationType(StrEnum):
+    # text selection
+    HIGHLIGHT = "highlight"
+    # comment anywhere
+    NOTE = "note"
+    # free-style drawing
+    INK = "ink"
+    # rect / ellipse / line / arrow
+    SHAPE = "shape"
+
+
 class FileStatusEnum(StrEnum):
     UNREAD = "unread"
     READING = "reading"

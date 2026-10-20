@@ -51,24 +51,27 @@ export function QueryView<T>({ query, children }: QueryViewProps<T>) {
   return null;
 }
 
-/**
- * TODO: Write proper generic types
- */
-interface MultiQueryViewProps {
-  queries: QueryViewProps<unknown>["query"][];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  children: (data: (any | undefined)[]) => ReactNode;
+type Query<T> = QueryViewProps<T>["query"];
+
+interface MultiQueryViewProps<T extends readonly unknown[]> {
+  queries: [...{ [K in keyof T]: Query<T[K]> }];
+  children: (data: T) => ReactNode;
 }
 
-export function MultiQueryView({ queries, children }: MultiQueryViewProps) {
-  const error = queries.find((query) => query.isError);
+export function MultiQueryView<T extends readonly unknown[]>({
+  queries,
+  children,
+}: MultiQueryViewProps<T>) {
+  const list: readonly Query<unknown>[] = queries;
+
+  const error = list.find((query) => query.isError);
   if (error) return <LoadingError>{error.apiError?.message}</LoadingError>;
 
-  if (queries.some((query) => query.isLoading))
-    return <ContentLoadingOverlay />;
+  if (list.some((query) => query.isLoading)) return <ContentLoadingOverlay />;
 
-  if (queries.every((query) => query.isSuccess && query.data !== undefined)) {
-    return children(queries.map((query) => query.data));
+  if (list.every((query) => query.isSuccess && query.data !== undefined)) {
+    // Every query has data here, so the mapped array matches T position by position
+    return children(list.map((query) => query.data) as unknown as T);
   }
 
   return null;

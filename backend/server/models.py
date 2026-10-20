@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from server.const import (
     RESOURCE_PERMISSIONS_LEVEL_CAPABILITIES,
     AccessScope,
+    AnnotationType,
     FileStatusEnum,
     ResourcePermissionCapability,
     ResourcePermissionLevel,
@@ -255,9 +256,13 @@ class ORMAnnotation(Base, AuditMixin):
     excerpt: Mapped[str]
     color: Mapped[str]
     rects: Mapped[list] = mapped_column(JSON)
+    geometry: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), default=dict, server_default="{}")
 
-    # User-set identifier, used to cross-reference.
+    # User-set identifier, used to cross-reference
     label: Mapped[str | None] = mapped_column(default=None)
+
+    # Classification
+    entity_type: Mapped[AnnotationType] = mapped_column(EnumValue(AnnotationType), default=AnnotationType.HIGHLIGHT)
 
     # Relationships
     file_id: Mapped[UUID] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))

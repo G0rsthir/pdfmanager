@@ -9,24 +9,28 @@ import {
   PDFLinkService,
   PDFViewer,
 } from "pdfjs-dist/web/pdf_viewer.mjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LoadingError } from "../error";
 import { ContentLoadingOverlay } from "../feedback";
-import { PagePeekBar, SearchBar, SelectionPopover, Toolbar } from "./actions";
-import { normalizeOutline, useFullscreen } from "./hooks";
-import { renderPageAnnotations } from "./overlay";
+import { PagePeekBar, SearchBar, Toolbar } from "./actions";
+import { ANNOTATION_LABELS } from "./annotations";
+import { Composer, type ComposerValue } from "./composer";
+import { ContextToolbar } from "./context-toolbar";
+import { normalizeOutline, useFullscreen, useSelectionAnchor } from "./hooks";
+import { AnnotationLayers } from "./layer";
+import { useViewerLayers } from "./layers";
 import { SidePanel } from "./panel";
 import { ViewerPortalProvider } from "./portal";
 import "./style.css";
+import { noteTool, useViewerTools } from "./tools";
 import type {
   AnnotationDraft,
+  AnnotationItem,
   AnnotationsApi,
   Bookmark,
   NormalizedRect,
   OutlineItem,
-  PopoverAction,
   SearchOptions,
-  SelectionPopoverState,
   SidePanelTab,
 } from "./types";
 
@@ -34,6 +38,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url,
 ).toString();
+
+const VIEWER_TOOLS = [noteTool];
 
 const ZOOM_STEP = 0.15;
 const MIN_ZOOM = 0.25;
@@ -94,9 +100,14 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   });
   const [matchCount, setMatchCount] = useState({ current: 0, total: 0 });
   const [outline, setOutline] = useState<OutlineItem[] | null>(null);
+  const [rotation, setRotation] = useState(0);
+  // Must be state, used by hooks
+  const [eventBus, setEventBus] = useState<EventBus | null>(null);
   const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>("annotations");
   const [draftAnnotation, setDraftAnnotation] =
     useState<AnnotationDraft | null>(null);
+  // The existing annotation whose body is open in the composer
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,6 +137,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
 
     const eventBus = new EventBus();
     eventBusRef.current = eventBus;
+    setTimeout(() => setEventBus(eventBus));
 
     const linkService = new PDFLinkService({
       eventBus,
@@ -204,6 +216,10 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
       },
     );
 
+    eventBus.on("rotationchanging", (e: { pagesRotation: number }) => {
+      setRotation(e.pagesRotation);
+    });
+
     eventBus.on(
       "updateviewarea",
       (e: { location: { pageNumber: number; top: number; left: number } }) => {
@@ -240,11 +256,11 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
 
     return () => {
       aborted = true;
+      setEventBus(null);
       pdfViewer.cleanup();
       loadingTask.destroy().catch(() => {});
     };
 
-    // initialScaleValue and intialPage are only used on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps, react-x/exhaustive-deps
   }, [file, onPageChange, onScaleChange]);
 
@@ -499,74 +515,153 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
 
   const { create: createAnnotation } = annotations;
 
-  const handleSelectionAction = useCallback(
-    (action: PopoverAction, popover: SelectionPopoverState) => {
-      if (action === "highlight") {
-        createAnnotation({
-          page: popover.page,
-          excerpt: popover.text,
-          color: "yellow",
-          rects: popover.rects,
-          body: "",
-        });
-      } else {
-        setDraftAnnotation({
-          page: popover.page,
-          excerpt: popover.text,
-          rects: popover.rects,
-        });
-      }
-      setSidePanelTab("annotations");
-      setShowAnnotations(true);
-      window.getSelection()?.removeAllRanges();
-    },
-    [createAnnotation],
-  );
+  const layerRoots = useViewerLayers({ viewerRef: viewerDivRef, eventBus });
 
-  const handleCreateAnnotation: AnnotationsApi["create"] = useCallback(
-    (input) => {
-      createAnnotation(input);
+  // One composer at a time: starting a draft closes an edit, and back
+  const startDraft = useCallback((draft: AnnotationDraft) => {
+    setDraftAnnotation(draft);
+    setEditingId(null);
+  }, []);
+
+  const {
+    activeTool,
+    setTool,
+    resetTool,
+    selection,
+    select,
+    clearSelection,
+    allowTextSelection,
+    cursor,
+  } = useViewerTools({
+    containerRef,
+    annotations,
+    rotation,
+    onDraft: startDraft,
+    tools: VIEWER_TOOLS,
+  });
+
+  const anchor = useSelectionAnchor({
+    containerRef,
+    viewerRef: viewerDivRef,
+    selection,
+    rotation,
+    revision: scaleValue,
+  });
+
+  const draftAnchor = useSelectionAnchor({
+    containerRef,
+    viewerRef: viewerDivRef,
+    selection: draftAnnotation,
+    rotation,
+    revision: scaleValue,
+  });
+
+  const editingAnnotation = editingId
+    ? (annotations.items.find((item) => item.id == editingId) ?? null)
+    : null;
+
+  const editAnchor = useSelectionAnchor({
+    containerRef,
+    viewerRef: viewerDivRef,
+    selection: editingAnnotation,
+    rotation,
+    revision: scaleValue,
+  });
+
+  const handleSubmitDraft = useCallback(
+    ({ body, label }: ComposerValue) => {
+      if (!draftAnnotation) return;
+      createAnnotation({ ...draftAnnotation, body, label, color: "gray" });
       setDraftAnnotation(null);
     },
-    [createAnnotation],
+    [createAnnotation, draftAnnotation],
   );
 
-  const annotationApi = useMemo(
-    () => ({ ...annotations, create: handleCreateAnnotation }),
-    [handleCreateAnnotation, annotations],
+  const handleCancelDraft = useCallback(() => {
+    setDraftAnnotation(null);
+    resetTool();
+  }, [resetTool]);
+
+  const handleSubmitEdit = useCallback(
+    ({ body, label }: ComposerValue) => {
+      if (editingId) annotations.update(editingId, { body, label });
+      setEditingId(null);
+    },
+    [annotations, editingId],
   );
 
-  // Sync annotations indicators with PDF.js text-layer renders.
-  useEffect(() => {
-    const eventBus = eventBusRef.current;
-    const viewerDiv = viewerDivRef.current;
-    if (!eventBus || !viewerDiv) return;
+  const selectedAnnotation =
+    selection?.kind == "element"
+      ? (annotations.items.find((item) => item.id == selection.id) ?? null)
+      : null;
 
-    const handleOpen = () => {
-      setSidePanelTab("annotations");
-      setShowAnnotations(true);
-    };
+  const openAnnotationsPanel = useCallback(() => {
+    setSidePanelTab("annotations");
+    setShowAnnotations(true);
+  }, []);
 
-    const handler = (e: { pageNumber: number }) =>
-      renderPageAnnotations(
-        viewerDiv,
-        annotations.items,
-        e.pageNumber,
-        handleOpen,
-      );
-    eventBus.on("textlayerrendered", handler);
-
-    viewerDiv
-      .querySelectorAll<HTMLElement>(".page[data-page-number]")
-      .forEach((el) => {
-        const num = parseInt(el.dataset.pageNumber!, 10);
-        renderPageAnnotations(viewerDiv, annotations.items, num, handleOpen);
+  const handleOpenAnnotation = useCallback(
+    (annotation: AnnotationItem) => {
+      select({
+        kind: "element",
+        id: annotation.id,
+        page: annotation.page,
+        rects: annotation.rects,
       });
+      openAnnotationsPanel();
+    },
+    [select, openAnnotationsPanel],
+  );
 
-    return () => {
-      eventBus.off("textlayerrendered", handler);
-    };
-  }, [annotations]);
+  const handleHighlight = useCallback(
+    (color: string) => {
+      if (selection?.kind != "text") return;
+
+      createAnnotation({
+        geometry: { type: "highlight" },
+        page: selection.page,
+        excerpt: selection.text,
+        color,
+        rects: selection.rects,
+        body: "",
+      });
+      openAnnotationsPanel();
+      clearSelection();
+    },
+    [selection, createAnnotation, clearSelection, openAnnotationsPanel],
+  );
+
+  /**
+   * Text gets a new draft; an annotation gets its body opened for editing.
+   */
+  const handleComment = useCallback(() => {
+    if (selection?.kind == "text") {
+      startDraft({
+        page: selection.page,
+        excerpt: selection.text,
+        rects: selection.rects,
+        geometry: { type: "highlight" },
+      });
+      clearSelection();
+    } else if (selectedAnnotation) {
+      setDraftAnnotation(null);
+      setEditingId(selectedAnnotation.id);
+    }
+  }, [selection, selectedAnnotation, startDraft, clearSelection]);
+
+  const handleChangeColor = useCallback(
+    (color: string) => {
+      if (selectedAnnotation)
+        annotations.update(selectedAnnotation.id, { color });
+    },
+    [annotations, selectedAnnotation],
+  );
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectedAnnotation) return;
+    annotations.delete(selectedAnnotation.id);
+    clearSelection();
+  }, [annotations, selectedAnnotation, clearSelection]);
 
   const jumpToAnchor = useCallback(
     async (anchor: { page: number; rects: NormalizedRect[] }) => {
@@ -622,6 +717,9 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
           toggleShowSearch={toggleShowSearch}
           toggleAnnotations={toggleAnnotations}
           showAnnotations={showAnnotations}
+          activeTool={activeTool}
+          setTool={setTool}
+          canAnnotate={canAnnotate}
           handleDownload={handleDownload}
           isFullscreen={isFullscreen}
           toggleFullscreen={toggleFullscreen}
@@ -659,13 +757,74 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
               position="absolute"
               inset="0"
               overflow="auto"
+              cursor={cursor}
             >
-              <div ref={viewerDivRef} className="pdfViewer" />
-              <SelectionPopover
-                containerRef={containerRef}
-                onSelect={handleSelectionAction}
-                disabled={!canAnnotate}
+              <div
+                ref={viewerDivRef}
+                className={
+                  allowTextSelection ? "pdfViewer" : "pdfViewer no-text-select"
+                }
               />
+              <AnnotationLayers
+                roots={layerRoots}
+                annotations={annotations.items}
+                selectedId={selection?.kind == "element" ? selection.id : null}
+                rotation={rotation}
+                draft={draftAnnotation}
+                onOpen={handleOpenAnnotation}
+              />
+              {/* The composer replaces the toolbar while it is open */}
+              {!draftAnnotation && !editingAnnotation && (
+                <ContextToolbar
+                  anchor={anchor}
+                  selection={selection}
+                  annotation={selectedAnnotation}
+                  readOnly={!canAnnotate}
+                  onHighlight={handleHighlight}
+                  onComment={handleComment}
+                  onChangeColor={handleChangeColor}
+                  onOpenDetails={openAnnotationsPanel}
+                  onDelete={handleDeleteSelected}
+                />
+              )}
+              {draftAnnotation && draftAnchor && (
+                <Composer
+                  // A new draft starts a fresh composer instead of inheriting the text
+                  key={JSON.stringify([
+                    draftAnnotation.page,
+                    draftAnnotation.rects,
+                  ])}
+                  containerRef={containerRef}
+                  anchor={draftAnchor}
+                  title={
+                    draftAnnotation.excerpt ||
+                    `New ${ANNOTATION_LABELS[draftAnnotation.geometry.type]}`
+                  }
+                  submitLabel="Add"
+                  labels={annotations.labels}
+                  onSubmit={handleSubmitDraft}
+                  onCancel={handleCancelDraft}
+                />
+              )}
+              {editingAnnotation && editAnchor && (
+                <Composer
+                  key={editingAnnotation.id}
+                  containerRef={containerRef}
+                  anchor={editAnchor}
+                  title={
+                    editingAnnotation.excerpt ||
+                    ANNOTATION_LABELS[editingAnnotation.geometry.type]
+                  }
+                  initial={{
+                    body: editingAnnotation.body,
+                    label: editingAnnotation.label ?? "",
+                  }}
+                  submitLabel="Save"
+                  labels={annotations.labels}
+                  onSubmit={handleSubmitEdit}
+                  onCancel={() => setEditingId(null)}
+                />
+              )}
             </Box>
             <PagePeekBar
               open={bookmark ? true : false}
@@ -678,8 +837,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
           {showAnnotations && (
             <SidePanel
               canAnnotate={canAnnotate}
-              annotations={annotationApi}
-              draftAnnotation={draftAnnotation}
+              annotations={annotations}
               currentPage={currentPage}
               tab={sidePanelTab}
               outline={outline}
@@ -687,7 +845,6 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
               onClose={toggleAnnotations}
               onJumpToAnnotation={jumpToAnchor}
               onJumpToOutlineItem={handleJumpToOutlineItem}
-              onCancelDraftAnnotation={() => setDraftAnnotation(null)}
             />
           )}
         </Box>

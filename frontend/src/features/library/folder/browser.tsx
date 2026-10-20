@@ -1,5 +1,6 @@
 import type { FileResponse } from "@/api/types.gen";
 import { GenericIconButton } from "@/components/ui/button";
+import { TableFrame } from "@/components/ui/table/frame";
 import { useLibraryLayout } from "@/hooks/layout";
 import {
   ActionBar,
@@ -57,7 +58,9 @@ export function FileBrowser({
         </SimpleGrid>
       ) : (
         <Stack gap={4}>
-          <FileTable tagType={tagType} files={files} selection={selection} />
+          <TableFrame>
+            <FileTable tagType={tagType} files={files} selection={selection} />
+          </TableFrame>
         </Stack>
       )}
       <BulkActions files={files} selection={selection} />

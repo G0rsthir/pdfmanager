@@ -142,11 +142,30 @@ function SidebarSection(props: {
     <Collapsible.Root defaultOpen>
       <Group mb="1" w="full" className="group" justifyContent="space-between">
         <Collapsible.Trigger asChild>
-          <Text as="button" fontWeight="semibold" cursor="pointer">
-            {title}
-          </Text>
+          <Group w="full" cursor="pointer" as="button">
+            <Text fontWeight="semibold">{title}</Text>
+          </Group>
         </Collapsible.Trigger>
-        {actions}
+        <Collapsible.Context>
+          {(collapsible) =>
+            collapsible.open && actions ? (
+              actions
+            ) : (
+              <GenericIconButton
+                size="2xs"
+                variant="ghost"
+                onClick={() => collapsible.setOpen(!collapsible.open)}
+              >
+                <LuChevronRight
+                  style={{
+                    transition: "transform 0.2s",
+                    transform: collapsible.open ? "rotate(90deg)" : undefined,
+                  }}
+                />
+              </GenericIconButton>
+            )
+          }
+        </Collapsible.Context>
       </Group>
       <Collapsible.Content>{children}</Collapsible.Content>
     </Collapsible.Root>

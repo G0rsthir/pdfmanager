@@ -39,7 +39,6 @@ import {
   getOpdsFile,
   getOpdsFileThumbnail,
   inviteToCollection,
-  koreaderAuth,
   listActiveTasks,
   listAnnotationLabels,
   listAnnotations,
@@ -161,7 +160,6 @@ import type {
   GetOpdsFileThumbnailError,
   InviteToCollectionData,
   InviteToCollectionError,
-  KoreaderAuthData,
   ListActiveTasksData,
   ListActiveTasksResponse,
   ListAnnotationLabelsData,
@@ -2367,31 +2365,6 @@ export const getOpdsFileThumbnailOptions = (
       return data;
     },
     queryKey: getOpdsFileThumbnailQueryKey(options),
-  });
-
-export const koreaderAuthQueryKey = (options?: Options<KoreaderAuthData>) =>
-  createQueryKey("koreaderAuth", options);
-
-/**
- * Koreader Auth
- */
-export const koreaderAuthOptions = (options?: Options<KoreaderAuthData>) =>
-  queryOptions<
-    unknown,
-    DefaultError,
-    unknown,
-    ReturnType<typeof koreaderAuthQueryKey>
-  >({
-    queryFn: async ({ queryKey, signal }) => {
-      const { data } = await koreaderAuth({
-        ...options,
-        ...queryKey[0],
-        signal,
-        throwOnError: true,
-      });
-      return data;
-    },
-    queryKey: koreaderAuthQueryKey(options),
   });
 
 export const listNotificationsQueryKey = (

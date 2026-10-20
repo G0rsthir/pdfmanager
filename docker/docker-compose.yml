@@ -1,7 +1,9 @@
 services:
   app:
     restart: unless-stopped
-    #build: .
+    # build:
+    #   context: ..
+    #   dockerfile: docker/Dockerfile
     image: ghcr.io/g0rsthir/pdfmanager:latest
     volumes:
       - app-storage:/app/storage

@@ -1,5 +1,6 @@
 import type { FileResponse } from "@/api/types.gen";
 import { formatDateTime, formatRelativeTime } from "@/common/format";
+import { SimpleTable } from "@/components/ui/table/frame";
 import { useFileThumbnail } from "@/hooks/asset";
 import { useFileClickAction } from "@/hooks/layout";
 import {
@@ -50,7 +51,7 @@ export function FileTable(props: FileViewProps) {
     selection && selection.ids.size > 0 && selection.ids.size < files.length;
 
   return (
-    <Table.Root size="sm" variant="outline" interactive colorPalette="gray">
+    <SimpleTable size="sm" interactive>
       <Table.Header>
         <Table.Row>
           {selection && (
@@ -164,7 +165,7 @@ export function FileTable(props: FileViewProps) {
           </Table.Row>
         ))}
       </Table.Body>
-    </Table.Root>
+    </SimpleTable>
   );
 }
 

@@ -2,7 +2,7 @@ import { GenericIconButton } from "@/components/ui/button";
 import { ReactNavLink } from "@/components/ui/navlink";
 import { useGlobalStore } from "@/store";
 import { Box, Collapsible, Group, Icon, Text } from "@chakra-ui/react";
-import { LuChevronDown, LuPin, LuPinOff, LuSearch } from "react-icons/lu";
+import { LuChevronRight, LuPin, LuPinOff, LuSearch } from "react-icons/lu";
 import { useNavigate } from "react-router";
 import { useShallow } from "zustand/shallow";
 
@@ -49,10 +49,10 @@ export function Overview() {
             <Text fontWeight="semibold">Overview</Text>
             <Collapsible.Indicator
               transition="transform 0.2s"
-              _open={{ transform: "rotate(180deg)" }}
+              _open={{ transform: "rotate(90deg)" }}
             >
               <Icon color="fg.muted">
-                <LuChevronDown size={16} />
+                <LuChevronRight size={16} />
               </Icon>
             </Collapsible.Indicator>
           </Group>
