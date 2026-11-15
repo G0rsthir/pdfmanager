@@ -15,7 +15,7 @@ import {
 import { GenericIconButton } from "@/components/ui/button";
 import { QueryView } from "@/components/ui/feedback";
 import { Form } from "@/components/ui/form/container";
-import { SubscribeFormError } from "@/components/ui/form/fields";
+import type { SelectOption } from "@/components/ui/select";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import {
@@ -24,14 +24,10 @@ import {
   Badge,
   Button,
   CloseButton,
-  createListCollection,
   Dialog,
-  Field,
   Group,
-  Input,
   Menu,
   Portal,
-  Select,
   Stack,
   Text,
   type BadgeProps,
@@ -148,26 +144,23 @@ function ManageCollectionPermissions(props: {
 
 type ResourcePermissionLevelWritable = InviteToCollectionRequest["permission"];
 
-const PERMISSION_OPTIONS_WRITABLE = createListCollection<{
-  value: ResourcePermissionLevelWritable;
-  label: string;
-}>({
-  items: [
-    { value: "read", label: "Viewer" },
-    { value: "modify", label: "Editor" },
-    { value: "contribute", label: "Contributor" },
-  ],
-});
+const PERMISSION_OPTIONS_WRITABLE = [
+  { value: "read", label: "Viewer" },
+  { value: "modify", label: "Editor" },
+  { value: "contribute", label: "Contributor" },
+] satisfies SelectOption<ResourcePermissionLevelWritable>[];
+
+const INVITE_DEFAULT_VALUES: InviteToCollectionRequest = {
+  email: "",
+  permission: "read",
+};
 
 function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
   const { collectionId, readOnly } = props;
 
   const { form } = useFormMutation({
     formOptions: {
-      defaultValues: {
-        email: "",
-        permission: "read" as ResourcePermissionLevelWritable,
-      },
+      defaultValues: INVITE_DEFAULT_VALUES,
     },
     mutationOptions: inviteToCollectionMutation,
     onMutate: (value) => ({ body: value, path: { id: collectionId } }),
@@ -175,73 +168,41 @@ function InviteForm(props: { collectionId: string; readOnly?: boolean }) {
   });
 
   return (
-    <Form onSubmit={form.handleSubmit}>
-      <Stack>
-        <Group gap={2}>
-          <form.Field
-            name="email"
-            children={({ state: fieldState, handleChange, handleBlur }) => (
-              <Field.Root
-                invalid={!fieldState.meta.isValid}
-                required
-                disabled={readOnly}
-                flex={1}
-              >
-                <Input
-                  value={fieldState.value}
-                  onChange={(e) => handleChange(e.target.value)}
-                  onBlur={handleBlur}
+    <Form onSubmit={() => void form.handleSubmit()}>
+      <form.AppForm>
+        <Stack>
+          <Group gap={2}>
+            <form.AppField
+              name="email"
+              children={(field) => (
+                <field.TextField
                   placeholder="Add people by email"
+                  required
+                  disabled={readOnly}
+                  flex={1}
                 />
-                <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-              </Field.Root>
-            )}
-          />
+              )}
+            />
 
-          <form.Field
-            name="permission"
-            children={({ state: fieldState, handleChange, handleBlur }) => (
-              <Select.Root
-                collection={PERMISSION_OPTIONS_WRITABLE}
-                value={[fieldState.value]}
-                onValueChange={(e) =>
-                  handleChange(e.value[0] as ResourcePermissionLevelWritable)
-                }
-                onInteractOutside={handleBlur}
-                disabled={readOnly}
-                width="120px"
-              >
-                <Select.HiddenSelect />
-                <Select.Control>
-                  <Select.Trigger>
-                    <Select.ValueText placeholder="Permission" />
-                  </Select.Trigger>
-                  <Select.IndicatorGroup>
-                    <Select.Indicator />
-                  </Select.IndicatorGroup>
-                </Select.Control>
-                <Portal>
-                  <Select.Positioner>
-                    <Select.Content>
-                      {PERMISSION_OPTIONS_WRITABLE.items.map((item) => (
-                        <Select.Item item={item} key={item.value}>
-                          {item.label}
-                          <Select.ItemIndicator />
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Positioner>
-                </Portal>
-              </Select.Root>
-            )}
-          />
+            <form.AppField
+              name="permission"
+              children={(field) => (
+                <field.SelectField
+                  items={PERMISSION_OPTIONS_WRITABLE}
+                  placeholder="Permission"
+                  disabled={readOnly}
+                  width="120px"
+                />
+              )}
+            />
 
-          <Button type="submit" variant="surface" disabled={readOnly}>
-            Invite
-          </Button>
-        </Group>
-        <SubscribeFormError form={form} />
-      </Stack>
+            <form.SubmitButton variant="surface" disabled={readOnly}>
+              Invite
+            </form.SubmitButton>
+          </Group>
+          <form.SubscribeFormError />
+        </Stack>
+      </form.AppForm>
     </Form>
   );
 }

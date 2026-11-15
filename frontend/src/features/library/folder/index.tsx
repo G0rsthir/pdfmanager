@@ -97,7 +97,7 @@ function FolderView(props: { collection: CollectionWithDetailsResponse }) {
 
   const collectionFilesQ = useAPIQuery({
     ...getCollectionFilesOptions({
-      path: { id: collection.id! },
+      path: { id: collection.id },
       query: {
         tags: searchParams.tag,
         name: searchParams.name?.[0],

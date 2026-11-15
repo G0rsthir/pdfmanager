@@ -7,19 +7,14 @@ import { useAuth } from "@/common/auth/hooks";
 import { useAppState } from "@/common/state/hooks";
 import { GenericIconButton } from "@/components/ui/button";
 import { Form } from "@/components/ui/form/container";
-import { SubscribeFormError } from "@/components/ui/form/fields";
-import { PasswordInput } from "@/components/ui/password-input";
 import { useFormMutation } from "@/hooks/form";
 import {
-  Button,
   Card,
   Center,
   Container,
-  Field,
   Group,
   Heading,
   HStack,
-  Input,
   Separator,
   Stack,
   Text,
@@ -27,6 +22,11 @@ import {
 import { useEffect, useState } from "react";
 import { LuKeyRound } from "react-icons/lu";
 import { useLocation, useNavigate } from "react-router";
+import { z } from "zod";
+
+const loginRedirectStateSchema = z.object({
+  from: z.object({ pathname: z.string() }),
+});
 
 function useLoginState() {
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ function useLoginState() {
   const { loadAppState } = useAppState();
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const state = await loadAppState();
       setAppState(state);
     })();
@@ -47,7 +47,7 @@ function useLoginState() {
   useEffect(() => {
     // Redirect user to the setup page if process is not complete.
     if (appState?.is_setup_complete == false) {
-      navigate("/setup");
+      void navigate("/setup");
       return;
     }
     // Redirect user to the SSO page.
@@ -90,7 +90,8 @@ export function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const to = location.state?.from?.pathname || "/";
+  const redirectState = loginRedirectStateSchema.safeParse(location.state);
+  const to = redirectState.data?.from.pathname || "/";
 
   const auth = useAuth();
   const loginState = useLoginState();
@@ -108,73 +109,49 @@ export function LoginPage() {
       },
     }),
     onMutate: (value) => value,
-    onSuccess: () => navigate(to, { replace: true }),
+    onSuccess: () => void navigate(to, { replace: true }),
   });
 
   return (
     <Center h="100vh">
       <Container maxW="md">
-        <Form onSubmit={form.handleSubmit}>
+        <Form onSubmit={() => void form.handleSubmit()}>
           <Card.Root padding="8">
             <Card.Body>
               <Stack gap="6">
                 <Heading size="2xl" mb="4" textAlign="center">
                   Log in to your account
                 </Heading>
-                <form.Field
+                <form.AppField
                   name="username"
-                  children={({
-                    state: fieldState,
-                    handleChange,
-                    handleBlur,
-                  }) => (
-                    <Field.Root invalid={!fieldState.meta.isValid} required>
-                      <Field.Label>
-                        Email <Field.RequiredIndicator />
-                      </Field.Label>
-                      <Input
-                        placeholder="Enter your email"
-                        value={fieldState.value}
-                        onChange={(e) => handleChange(e.target.value)}
-                        onBlur={handleBlur}
-                      />
-                      <Field.ErrorText>
-                        {fieldState.meta.errors}
-                      </Field.ErrorText>
-                    </Field.Root>
+                  children={(field) => (
+                    <field.TextField
+                      label="Email"
+                      placeholder="Enter your email"
+                      required
+                    />
                   )}
                 />
-                <form.Field
+                <form.AppField
                   name="password"
-                  children={({
-                    state: fieldState,
-                    handleChange,
-                    handleBlur,
-                  }) => (
-                    <Field.Root required invalid={!fieldState.meta.isValid}>
-                      <Field.Label>
-                        Password <Field.RequiredIndicator />
-                      </Field.Label>
-                      <PasswordInput
-                        placeholder="********"
-                        value={fieldState.value}
-                        onChange={(e) => handleChange(e.target.value)}
-                        onBlur={handleBlur}
-                      />
-                      <Field.ErrorText>
-                        {fieldState.meta.errors}
-                      </Field.ErrorText>
-                    </Field.Root>
+                  children={(field) => (
+                    <field.PasswordField
+                      label="Password"
+                      placeholder="********"
+                      required
+                    />
                   )}
                 />
-                <SubscribeFormError form={form} />
+                <form.AppForm>
+                  <form.SubscribeFormError />
+                </form.AppForm>
               </Stack>
             </Card.Body>
             <Card.Footer>
               <Stack w="full" gap={4}>
-                <Button type="submit" w="full">
-                  Sign in
-                </Button>
+                <form.AppForm>
+                  <form.SubmitButton w="full">Sign in</form.SubmitButton>
+                </form.AppForm>
                 {loginState.appState?.sso_servers &&
                   loginState.appState.sso_servers.length > 0 && (
                     <SsoProviders providers={loginState.appState.sso_servers} />

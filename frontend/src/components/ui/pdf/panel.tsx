@@ -138,7 +138,10 @@ function OutlineView(props: {
       <TreeView.Tree>
         <TreeView.Node
           indentGuide={<TreeView.BranchIndentGuide />}
-          render={({ node, nodeState }) =>
+          render={({
+            node,
+            nodeState,
+          }: TreeView.NodeRenderProps<OutlineItem>) =>
             nodeState.isBranch ? (
               <TreeView.BranchControl>
                 <TreeView.BranchTrigger>

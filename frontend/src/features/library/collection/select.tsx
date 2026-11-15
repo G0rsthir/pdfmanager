@@ -1,5 +1,7 @@
 import { listCollectionsOptions } from "@/api/@tanstack/react-query.gen";
 import type { CollectionResponse } from "@/api/types.gen";
+import { useFieldContext } from "@/components/ui/form/context";
+import { LabeledField, type FieldProps } from "@/components/ui/form/fields";
 import { useAPIQuery } from "@/hooks/query";
 import {
   Combobox,
@@ -47,14 +49,14 @@ export function CollectionSelect(props: CollectionSelectProps) {
 
   const hydrated = useRef(false);
 
-  const { contains } = useFilter({ sensitivity: "base" });
+  const textFilter = useFilter({ sensitivity: "base" });
 
   const { collection, filter, set } = useListCollection<{
     label: string;
     value: string;
   }>({
     initialItems: [],
-    filter: contains,
+    filter: (itemText, filterText) => textFilter.contains(itemText, filterText),
   });
 
   const combobox = useCombobox({
@@ -124,5 +126,29 @@ export function CollectionSelect(props: CollectionSelectProps) {
         </Combobox.Positioner>
       </Portal>
     </Combobox.RootProvider>
+  );
+}
+
+export function CollectionSelectField(
+  props: FieldProps &
+    Pick<CollectionSelectProps, "allowedCollectionIds" | "type">,
+) {
+  const { allowedCollectionIds, type, required, ...rest } = props;
+
+  const field = useFieldContext<string | null | undefined>();
+
+  return (
+    <LabeledField required={required} {...rest}>
+      <CollectionSelect
+        defaultValue={field.state.value ?? ""}
+        onValueChange={(value?: string) =>
+          field.handleChange(value || (required ? "" : null))
+        }
+        onBlur={field.handleBlur}
+        allowedCollectionIds={allowedCollectionIds}
+        type={type}
+        required={required}
+      />
+    </LabeledField>
   );
 }

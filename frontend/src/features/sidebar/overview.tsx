@@ -115,7 +115,7 @@ function SearchLink() {
   return (
     <Group
       as="button"
-      onClick={() => navigate("/search")}
+      onClick={() => void navigate("/search")}
       w="full"
       px="3"
       py="2"

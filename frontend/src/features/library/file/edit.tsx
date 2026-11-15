@@ -12,8 +12,7 @@ import { useCan } from "@/common/auth/hooks";
 import { DateSelect } from "@/components/ui/date";
 import { SectionCard } from "@/components/ui/display";
 import { Form } from "@/components/ui/form/container";
-import { SubscribeFormError } from "@/components/ui/form/fields";
-import { TokensInput } from "@/components/ui/tokens";
+import { LabeledField } from "@/components/ui/form/fields";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIQuery } from "@/hooks/query";
 import {
@@ -21,7 +20,6 @@ import {
   Button,
   Field,
   Group,
-  Input,
   parseDate,
   SimpleGrid,
   Stack,
@@ -29,7 +27,7 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { LuFileText, LuTags } from "react-icons/lu";
-import { CollectionSelect } from "../collection/select";
+import { CollectionSelectField } from "../collection/select";
 
 const MAX_NAME_LENGTH = 255;
 const MAX_DESCRIPTION_LENGTH = 255;
@@ -84,7 +82,7 @@ function EditFileForm({
   const listAuthorsQ = useAPIQuery({ ...listAuthorsOptions() });
 
   return (
-    <Form onSubmit={form.handleSubmit}>
+    <Form onSubmit={() => void form.handleSubmit()}>
       <Stack gap={8}>
         {readOnly && (
           <Alert.Root status="info" size="sm">
@@ -104,7 +102,7 @@ function EditFileForm({
             icon={<LuFileText />}
             colorPalette="blue"
           >
-            <form.Field
+            <form.AppField
               name="name"
               validators={{
                 onChange: ({ value }) => {
@@ -113,26 +111,12 @@ function EditFileForm({
                     return `Name cannot exceed ${MAX_NAME_LENGTH} characters`;
                 },
               }}
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  required
-                  disabled={readOnly}
-                >
-                  <Field.Label>
-                    Name <Field.RequiredIndicator />
-                  </Field.Label>
-                  <Input
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+              children={(field) => (
+                <field.TextField label="Name" required disabled={readOnly} />
               )}
             />
 
-            <form.Field
+            <form.AppField
               name="description"
               validators={{
                 onChange: ({ value }) =>
@@ -140,55 +124,38 @@ function EditFileForm({
                     ? `Description cannot exceed ${MAX_DESCRIPTION_LENGTH} characters`
                     : undefined,
               }}
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
+              children={(field) => (
+                <LabeledField
+                  label="Description"
+                  helperText={`${field.state.value.length} / ${MAX_DESCRIPTION_LENGTH}`}
                   disabled={readOnly}
                 >
-                  <Field.Label>Description</Field.Label>
                   <Textarea
                     rows={3}
                     resize="vertical"
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
                   />
-                  <Field.HelperText>
-                    {fieldState.value.length} / {MAX_DESCRIPTION_LENGTH}
-                  </Field.HelperText>
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+                </LabeledField>
               )}
             />
 
-            <form.Field
+            <form.AppField
               name="collection_id"
               validators={{
                 onChange: ({ value }) =>
                   !value ? "Folder is required" : undefined,
               }}
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
+              children={() => (
+                <CollectionSelectField
+                  label="Folder"
+                  helperText="Only folders you can write to are selectable"
+                  allowedCollectionIds={moveTargetsQ.data?.map((c) => c.id)}
+                  type="folder"
                   required
                   disabled={readOnly}
-                >
-                  <Field.Label>
-                    Folder <Field.RequiredIndicator />
-                  </Field.Label>
-                  <CollectionSelect
-                    defaultValue={fieldState.value}
-                    allowedCollectionIds={moveTargetsQ.data?.map((c) => c.id)}
-                    onValueChange={handleChange}
-                    onBlur={handleBlur}
-                    required
-                    type="folder"
-                  />
-                  <Field.HelperText>
-                    Only folders you can write to are selectable
-                  </Field.HelperText>
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+                />
               )}
             />
           </SectionCard>
@@ -199,61 +166,43 @@ function EditFileForm({
             icon={<LuTags />}
             colorPalette="purple"
           >
-            <form.Field
+            <form.AppField
               name="tags"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
+              children={(field) => (
+                <field.TokensField
+                  label="Tags"
+                  suggestions={listTagsQ.data?.map((item) => item.name)}
+                  description="Press Enter or Return to add tag"
                   disabled={readOnly}
-                >
-                  <Field.Label>Tags</Field.Label>
-                  <TokensInput
-                    defaultValue={fieldState.value}
-                    onValueChange={handleChange}
-                    onBlur={handleBlur}
-                    suggestions={listTagsQ.data?.map((item) => item.name)}
-                    description="Press Enter or Return to add tag"
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+                />
               )}
             />
 
-            <form.Field
+            <form.AppField
               name="authors"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
+              children={(field) => (
+                <field.TokensField
+                  label="Authors"
+                  suggestions={listAuthorsQ.data?.map((item) => item.name)}
+                  description="Press Enter or Return to add author"
+                  colorPalette="green"
                   disabled={readOnly}
-                >
-                  <Field.Label>Authors</Field.Label>
-                  <TokensInput
-                    defaultValue={fieldState.value}
-                    onValueChange={handleChange}
-                    onBlur={handleBlur}
-                    description="Press Enter or Return to add author"
-                    suggestions={listAuthorsQ.data?.map((item) => item.name)}
-                    colorPalette="green"
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+                />
               )}
             />
 
-            <form.Field
+            <form.AppField
               name="published"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={readOnly}
-                >
-                  <Field.Label>Published</Field.Label>
+              children={(field) => (
+                <LabeledField label="Published" disabled={readOnly}>
                   <Field.Context>
                     {(ctx) => (
                       <DateSelect
-                        onValueChange={(details) => handleChange(details.value)}
-                        onBlur={handleBlur}
-                        value={fieldState.value}
+                        onValueChange={(details) =>
+                          field.handleChange(details.value)
+                        }
+                        onBlur={field.handleBlur}
+                        value={field.state.value}
                         invalid={ctx.invalid}
                         ids={{
                           label: () => ctx.ids.label,
@@ -263,14 +212,15 @@ function EditFileForm({
                       />
                     )}
                   </Field.Context>
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+                </LabeledField>
               )}
             />
           </SectionCard>
         </SimpleGrid>
 
-        <SubscribeFormError form={form} />
+        <form.AppForm>
+          <form.SubscribeFormError />
+        </form.AppForm>
 
         <form.Subscribe
           selector={(state) => [state.isDefaultValue, state.canSubmit]}

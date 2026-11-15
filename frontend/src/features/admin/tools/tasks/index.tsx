@@ -87,8 +87,8 @@ export function TasksPage() {
   });
 
   const refresh = () => {
-    historyTasksQ.refetch();
-    activeTasksQ.refetch();
+    void historyTasksQ.refetch();
+    void activeTasksQ.refetch();
   };
 
   return (

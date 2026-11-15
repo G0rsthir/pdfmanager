@@ -15,7 +15,7 @@ export function LogoutPage() {
   const navigate = useNavigate();
 
   const handleSignIn = () => {
-    navigate("/login", { replace: true });
+    void navigate("/login", { replace: true });
   };
 
   return (

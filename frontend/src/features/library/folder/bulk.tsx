@@ -11,14 +11,13 @@ import {
   type FileStatusEnum,
 } from "@/api/types.gen";
 import { useCan } from "@/common/auth/hooks";
-import { SubscribeFormError } from "@/components/ui/form/fields";
+import { LabeledField } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
-import { TokensInput } from "@/components/ui/tokens";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
-import { Alert, Field, Text } from "@chakra-ui/react";
-import { CollectionSelect } from "../collection/select";
+import { Alert, Text } from "@chakra-ui/react";
+import { CollectionSelectField } from "../collection/select";
 import { StatusSelect } from "../file/status";
 
 function fileCount(count: number) {
@@ -64,7 +63,7 @@ export function MoveFilesDialog(props: {
       close={onClose}
       title="Move files"
       confirmBtnText="Move"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       isPending={mutation.isPending}
       disabled={!canModify}
     >
@@ -80,36 +79,25 @@ export function MoveFilesDialog(props: {
         />
       )}
 
-      <form.Field
+      <form.AppField
         name="collection_id"
         validators={{
           onChange: ({ value }) => (!value ? "Folder is required" : undefined),
         }}
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
+        children={() => (
+          <CollectionSelectField
+            label="Folder"
+            helperText="Only folders you can write to are selectable"
+            allowedCollectionIds={targetsQ.data?.map((folder) => folder.id)}
+            type="folder"
             required
             disabled={!canModify}
-          >
-            <Field.Label>
-              Folder <Field.RequiredIndicator />
-            </Field.Label>
-            <CollectionSelect
-              defaultValue={fieldState.value}
-              allowedCollectionIds={targetsQ.data?.map((folder) => folder.id)}
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              required
-              type="folder"
-            />
-            <Field.HelperText>
-              Only folders you can write to are selectable
-            </Field.HelperText>
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }
@@ -168,7 +156,7 @@ export function TagFilesDialog(props: {
       close={close}
       title="Tag files"
       confirmBtnText="Apply"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       isPending={mutation.isPending}
       disabled={!canModify}
     >
@@ -185,39 +173,29 @@ export function TagFilesDialog(props: {
         />
       )}
 
-      <form.Field
+      <form.AppField
         name="add"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} disabled={!canModify}>
-            <Field.Label>Add tags</Field.Label>
-            <TokensInput
-              defaultValue={fieldState.value}
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              suggestions={allTagsQ.data?.map((tag) => tag.name)}
-              description="Press Enter or Return to add tag"
-              colorPalette="green"
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TokensField
+            label="Add tags"
+            suggestions={allTagsQ.data?.map((tag) => tag.name)}
+            description="Press Enter or Return to add tag"
+            colorPalette="green"
+            disabled={!canModify}
+          />
         )}
       />
 
-      <form.Field
+      <form.AppField
         name="remove"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} disabled={!canModify}>
-            <Field.Label>Remove tags</Field.Label>
-            <TokensInput
-              defaultValue={fieldState.value}
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              suggestions={selectionTags}
-              description="Press Enter or Return to remove tag"
-              colorPalette="red"
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TokensField
+            label="Remove tags"
+            suggestions={selectionTags}
+            description="Press Enter or Return to remove tag"
+            colorPalette="red"
+            disabled={!canModify}
+          />
         )}
       />
 
@@ -231,7 +209,9 @@ export function TagFilesDialog(props: {
         }
       </form.Subscribe>
 
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }
@@ -317,7 +297,7 @@ export function SetStatusFilesDialog(props: {
       close={close}
       title="Set reading status"
       confirmBtnText="Apply"
-      onSubmit={form.handleSubmit}
+      onSubmit={() => void form.handleSubmit()}
       isPending={mutation.isPending}
       disabled={!canModify}
     >
@@ -334,30 +314,27 @@ export function SetStatusFilesDialog(props: {
         />
       )}
 
-      <form.Field
+      <form.AppField
         name="status"
         validators={{
           onChange: ({ value }) => (!value ? "Field is required" : undefined),
         }}
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={!canModify}
-          >
-            <Field.Label>Status</Field.Label>
+        children={(field) => (
+          <LabeledField label="Status" required disabled={!canModify}>
             <StatusSelect
-              value={fieldState.value}
-              onChange={handleChange}
-              onBlur={handleBlur}
+              value={field.state.value}
+              onChange={field.handleChange}
+              onBlur={field.handleBlur}
               size="sm"
               width="full"
+              disabled={!canModify}
             />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          </LabeledField>
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }

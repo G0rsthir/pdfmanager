@@ -1,4 +1,16 @@
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
+
+// FastAPI 422 response: { detail: [{ loc: ["body", "field"], msg: "..." }] }
+const validationErrorSchema = z.object({
+  detail: z
+    .array(
+      z.object({
+        loc: z.array(z.union([z.string(), z.number()])),
+        msg: z.string(),
+      }),
+    )
+    .nonempty(),
+});
 
 export class APIError extends Error {
   public type: string;
@@ -40,8 +52,10 @@ export function parseAPIError(error: unknown): APIError {
       return apiError;
     }
 
-    if (Array.isArray(detail) && detail[0]?.loc && detail[0]?.msg) {
-      apiError.message = `${detail[0].loc.slice(-1)[0]}: ${detail[0].msg}`;
+    const validation = validationErrorSchema.safeParse(error);
+    if (validation.success) {
+      const [first] = validation.data.detail;
+      apiError.message = `${first.loc.at(-1)}: ${first.msg}`;
       return apiError;
     }
   }
@@ -94,7 +108,8 @@ export function parseFormError(error: unknown): Record<string, unknown> {
       return { form: String(detail) };
     }
 
-    if (Array.isArray(detail) && detail[0]?.loc && detail[0]?.msg) {
+    const validation = validationErrorSchema.safeParse(error);
+    if (validation.success) {
       const errors: {
         fields: Record<string, string>;
         form?: string;
@@ -102,8 +117,8 @@ export function parseFormError(error: unknown): Record<string, unknown> {
         fields: {},
       };
 
-      for (const item of detail) {
-        const keys: string[] = item.loc;
+      for (const item of validation.data.detail) {
+        const keys = [...item.loc];
 
         // If the first location segment is "path", it means the error is about a URL path parameter
         // (not a body field). In this case we treat it as a root-level error.

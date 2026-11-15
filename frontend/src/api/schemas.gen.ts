@@ -56,8 +56,7 @@ export const AnnotationResponseSchema = {
       },
       type: "array",
       title: "Rects",
-      description:
-        "Anchor box: the line boxes for a highlight, one bounding box for every other type",
+      description: "Anchor box or  bounding box",
     },
     label: {
       anyOf: [
@@ -943,8 +942,7 @@ export const CreateAnnotationRequestSchema = {
       },
       type: "array",
       title: "Rects",
-      description:
-        "Anchor box: the line boxes for a highlight, one bounding box for every other type",
+      description: "Anchor box or  bounding box",
     },
     label: {
       anyOf: [
@@ -961,7 +959,7 @@ export const CreateAnnotationRequestSchema = {
     excerpt: {
       type: "string",
       title: "Excerpt",
-      description: "Text the annotation is anchored to, if any",
+      description: "Text the annotation is anchored to",
       default: "",
     },
     geometry: {
@@ -1358,7 +1356,6 @@ export const HighlightGeometrySchema = {
   type: "object",
   required: ["type"],
   title: "HighlightGeometry",
-  description: "Text-anchored: the rects already carry the shape",
 } as const;
 
 export const InkGeometrySchema = {
@@ -1508,7 +1505,7 @@ export const NormalizedPointSchema = {
   type: "object",
   required: ["x", "y"],
   title: "NormalizedPoint",
-  description: "A point in the same space as NormalizedRect.",
+  description: "Point in the same space as NormalizedRect",
 } as const;
 
 export const NormalizedRectSchema = {
@@ -1542,7 +1539,7 @@ export const NormalizedRectSchema = {
   required: ["top", "left", "width", "height"],
   title: "NormalizedRect",
   description:
-    "All values are fractions (0..1) of the page box at rotation 0,\nso they survive zoom and rotation without recomputation.",
+    "All values are fractions (0..1) of the page box using rotation 0",
 } as const;
 
 export const NoteGeometrySchema = {

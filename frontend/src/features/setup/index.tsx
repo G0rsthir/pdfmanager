@@ -23,7 +23,7 @@ export default function SetupPage() {
     return <ApplicationError description="Failed to load setup state" />;
 
   const setupStepCallback = () => {
-    refetch();
+    void refetch();
   };
 
   switch (true) {

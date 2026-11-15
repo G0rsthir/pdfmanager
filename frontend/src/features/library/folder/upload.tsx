@@ -2,12 +2,11 @@ import {
   listTagsOptions,
   uploadFileMutation,
 } from "@/api/@tanstack/react-query.gen";
-import { SubscribeFormError } from "@/components/ui/form/fields";
+import { LabeledField } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
-import { TokensInput } from "@/components/ui/tokens";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIQuery } from "@/hooks/query";
-import { Box, Field, FileUpload, Icon, Input } from "@chakra-ui/react";
+import { Box, FileUpload, Icon } from "@chakra-ui/react";
 import { LuUpload } from "react-icons/lu";
 
 interface UploadFormValues {
@@ -45,7 +44,7 @@ export function UploadFileDialog(props: {
         file: value.file!,
       },
       // Request validation does not work for the file upload
-      requestValidator: async () => true,
+      requestValidator: () => Promise.resolve(true),
     }),
     successNotification: "File uploaded successfully",
     onSuccess: onClose,
@@ -65,80 +64,61 @@ export function UploadFileDialog(props: {
       open={open}
       close={handleClose}
       title="Upload file"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Upload"
       isPending={mutation.isPending}
       disabled={readOnly}
     >
-      <form.Field
+      <form.AppField
         name="name"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
-            <Field.Label>Name</Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.HelperText>
-              Leave empty to use the PDF's title or the file name
-            </Field.HelperText>
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TextField
+            label="Name"
+            helperText="Leave empty to use the PDF's title or the file name"
+            disabled={readOnly}
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="description"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
-            <Field.Label>Description</Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.HelperText>
-              Leave empty to use the PDF's description
-            </Field.HelperText>
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TextField
+            label="Description"
+            helperText="Leave empty to use the PDF's description"
+            disabled={readOnly}
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="tags"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
-            <Field.Label>Tags</Field.Label>
-            <TokensInput
-              defaultValue={[]}
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              suggestions={listTagsQ.data?.map((item) => item.name)}
-              description="Press Enter or Return to add tag"
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TokensField
+            label="Tags"
+            suggestions={listTagsQ.data?.map((item) => item.name)}
+            description="Press Enter or Return to add tag"
+            disabled={readOnly}
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="file"
         validators={{
           onSubmit: ({ value }) =>
             !value ? "Please select a file" : undefined,
         }}
-        children={({ state: fieldState, handleChange }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} disabled={readOnly}>
+        children={(field) => (
+          <LabeledField disabled={readOnly}>
             <FileUpload.Root
               alignItems="stretch"
               maxFiles={1}
               accept={["application/pdf"]}
-              invalid={!fieldState.meta.isValid}
+              invalid={!field.state.meta.isValid}
               onFileChange={(details) => {
-                handleChange(details.acceptedFiles[0]);
+                field.handleChange(details.acceptedFiles[0]);
               }}
             >
               <FileUpload.HiddenInput />
-              {!fieldState.value && (
+              {!field.state.value && (
                 <FileUpload.Dropzone _invalid={{ border: "1px solid red" }}>
                   <Icon size="md" color="fg.muted">
                     <LuUpload />
@@ -150,12 +130,13 @@ export function UploadFileDialog(props: {
               )}
               <FileUpload.List clearable />
             </FileUpload.Root>
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          </LabeledField>
         )}
       />
 
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }

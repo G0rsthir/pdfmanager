@@ -33,7 +33,7 @@ import { ANNOTATION_LABELS } from "./annotations";
 import { BodyField, LabelField } from "./fields";
 import { ViewerPortal, ViewerTooltip } from "./portal";
 import { ColorSwatches } from "./swatches";
-import type { AnnotationItem, AnnotationsApi, AnnotationType } from "./types";
+import type { AnnotationItem, AnnotationsApi } from "./types";
 
 type FilterValues = ReturnType<typeof availableFilterValues>;
 
@@ -352,7 +352,7 @@ function ActiveFilters(props: {
   for (const type of filters.types) {
     chips.push({
       key: `type:${type}`,
-      label: ANNOTATION_LABELS[type as AnnotationType],
+      label: ANNOTATION_LABELS[type],
       remove: () =>
         onChange({ ...filters, types: toggle(filters.types, type) }),
     });

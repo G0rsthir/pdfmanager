@@ -22,7 +22,7 @@ export const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onSuccess: (_data, _variables, _context, mutation) => {
       if (!(mutation.options.meta?.invalidateQueries ?? true)) return;
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         predicate: (query) => query.meta?.skipInvalidation != true,
       });
     },

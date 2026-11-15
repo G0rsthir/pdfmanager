@@ -236,21 +236,23 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
     loadingTask.promise
       .then((pdfDoc) => {
         if (aborted) {
-          pdfDoc.destroy();
+          void pdfDoc.destroy();
           return;
         }
         pdfViewer.setDocument(pdfDoc);
         linkService.setDocument(pdfDoc, null);
         pdfHistory.initialize({ fingerprint: pdfDoc.fingerprints[0] ?? "" });
         setNumPages(pdfDoc.numPages);
-        pdfDoc.getOutline().then((nodes) => {
+        void pdfDoc.getOutline().then((nodes) => {
           setOutline(normalizeOutline(nodes));
         });
         setLoading(false);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (aborted) return;
-        setError(err?.message ?? "Failed to load PDF");
+        // PDF.js rejects with Error subclasses
+        const message = err instanceof Error ? err.message : "";
+        setError(message || "Failed to load PDF");
         setLoading(false);
       });
 
@@ -694,7 +696,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
   const handleJumpToOutlineItem = (dest: OutlineItem["dest"]) => {
     if (!dest) return;
     beginPeek();
-    linkServiceRef.current?.goToDestination(dest);
+    void linkServiceRef.current?.goToDestination(dest);
   };
 
   return (
@@ -720,9 +722,9 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
           activeTool={activeTool}
           setTool={setTool}
           canAnnotate={canAnnotate}
-          handleDownload={handleDownload}
+          handleDownload={() => void handleDownload()}
           isFullscreen={isFullscreen}
-          toggleFullscreen={toggleFullscreen}
+          toggleFullscreen={() => void toggleFullscreen()}
         />
 
         {showSearch && (
@@ -843,7 +845,7 @@ export function ReactPDFViewer(props: ReactPDFViewerProps) {
               outline={outline}
               onTabChange={setSidePanelTab}
               onClose={toggleAnnotations}
-              onJumpToAnnotation={jumpToAnchor}
+              onJumpToAnnotation={(annotation) => void jumpToAnchor(annotation)}
               onJumpToOutlineItem={handleJumpToOutlineItem}
             />
           )}

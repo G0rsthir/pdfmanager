@@ -49,7 +49,7 @@ export function useSearchParamMulti<T extends Record<string, ParamDef>>(
             if (value == null || value === "") continue;
 
             if (Array.isArray(value)) {
-              for (const v of value) params.append(key, v);
+              for (const v of value) params.append(key, String(v));
             } else {
               params.set(key, value as string);
             }

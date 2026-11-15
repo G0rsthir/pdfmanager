@@ -7,7 +7,7 @@ import { useHasScopes } from "@/common/auth/hooks";
 import { GenericIconButton } from "@/components/ui/button";
 import { Empty } from "@/components/ui/display";
 import { QueryView } from "@/components/ui/feedback";
-import { SubscribeFormError } from "@/components/ui/form/fields";
+import { LabeledField } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { PaletteColors } from "@/config/theme";
 import { useFormMutation } from "@/hooks/form";
@@ -17,10 +17,8 @@ import {
   Box,
   Card,
   ColorPicker,
-  Field,
   Group,
   Heading,
-  Input,
   Menu,
   Portal,
   SimpleGrid,
@@ -186,42 +184,33 @@ function EditTagDialog(props: {
       open={open}
       close={handleClose}
       title="Edit Tag"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Update"
       disabled={readonly}
     >
       <Stack gap="4">
-        <form.Field
+        <form.AppField
           name="name"
-          children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} required disabled>
-              <Field.Label>
-                Name <Field.RequiredIndicator />
-              </Field.Label>
-              <Input
-                value={fieldState.value}
-                onChange={(e) => handleChange(e.target.value)}
-                onBlur={handleBlur}
-              />
-              <Field.HelperText>
-                To rename a tag, remove it from your files and add it again with
-                the new name.
-              </Field.HelperText>
-              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-            </Field.Root>
+          children={(field) => (
+            <field.TextField
+              label="Name"
+              helperText="To rename a tag, remove it from your files and add it again with the new name."
+              required
+              disabled
+            />
           )}
         />
-        <form.Field
+        <form.AppField
           name="color"
-          children={({ state: fieldState, handleChange }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} disabled={readonly}>
+          children={(field) => (
+            <LabeledField disabled={readonly}>
               <ColorPicker.Root
-                defaultValue={parseColor(fieldState.value)}
+                defaultValue={parseColor(field.state.value)}
                 maxW="200px"
                 onValueChange={(e) => {
                   const colorName =
                     swatchesColors?.[e.value.toString("hex")] ?? "grey";
-                  handleChange(colorName);
+                  field.handleChange(colorName);
                 }}
                 positioning={{ placement: "top" }}
               >
@@ -247,11 +236,12 @@ function EditTagDialog(props: {
                   </ColorPicker.Content>
                 </ColorPicker.Positioner>
               </ColorPicker.Root>
-              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-            </Field.Root>
+            </LabeledField>
           )}
         />
-        <SubscribeFormError form={form} />
+        <form.AppForm>
+          <form.SubscribeFormError />
+        </form.AppForm>
 
         <Group gap="2" align="center">
           <Text textStyle="sm" color="fg.muted">

@@ -47,7 +47,7 @@ function BackToFolderLink() {
       color="fg.muted"
       _hover={{ color: "fg" }}
       transition="color 0.2s"
-      onClick={() => navigate(-1)}
+      onClick={() => void navigate(-1)}
       cursor="pointer"
     >
       <LuChevronLeft />

@@ -1,12 +1,41 @@
+import { CancelButton, SubmitButton } from "@/components/ui/form/buttons";
+import { fieldContext, formContext } from "@/components/ui/form/context";
+import {
+  ExpiryDateField,
+  PasswordField,
+  SelectField,
+  SubscribeFormError,
+  SwitchField,
+  TextField,
+  TokensField,
+} from "@/components/ui/form/fields";
 import { showSuccessNotification } from "@/components/ui/toaster";
 import { useAPIMutation } from "@/hooks/query";
 import {
-  useForm,
+  createFormHook,
   type FormAsyncValidateOrFn,
   type FormValidateOrFn,
   type FormValidators,
 } from "@tanstack/react-form";
 import type { MutationMeta, UseMutationOptions } from "@tanstack/react-query";
+
+const { useAppForm } = createFormHook({
+  fieldContext,
+  formContext,
+  fieldComponents: {
+    TextField,
+    PasswordField,
+    ExpiryDateField,
+    SelectField,
+    SwitchField,
+    TokensField,
+  },
+  formComponents: {
+    SubscribeFormError,
+    CancelButton,
+    SubmitButton,
+  },
+});
 
 type AnyFormValidators<TFormValues> = FormValidators<
   TFormValues,
@@ -52,10 +81,10 @@ export function useFormMutation<
     mutationMeta,
   } = props;
 
-  const form = useForm({
+  const form = useAppForm({
     ...formOptions,
     onSubmit: async ({ value }) => {
-      mutation.mutate(onMutate(value as TFormValues));
+      await mutation.mutateAsync(onMutate(value));
     },
   });
 

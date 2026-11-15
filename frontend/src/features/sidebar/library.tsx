@@ -230,7 +230,7 @@ export function LibraryTree(props: {
                 return (
                   <TreeView.Item
                     className="group"
-                    onClick={() => navigate("folder/" + node.id)}
+                    onClick={() => void navigate("folder/" + node.id)}
                     paddingInlineEnd="unset"
                   >
                     <LuFolderOpen />
@@ -364,7 +364,7 @@ function TreeNodeActions({ node }: TreeView.NodeProviderProps<CollectionNode>) {
 
   const handleNodeDelete = () => {
     if (folderid && containsNode(node, folderid)) {
-      navigate("/", { replace: true });
+      void navigate("/", { replace: true });
     }
   };
 

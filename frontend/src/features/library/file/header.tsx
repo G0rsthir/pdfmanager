@@ -161,7 +161,7 @@ function DownloadButton({ file }: { file: FileResponse }) {
       variant="surface"
       colorPalette="green"
       loading={pending}
-      onClick={handleDownload}
+      onClick={() => void handleDownload()}
     >
       <LuDownload /> Download
     </Button>
@@ -198,7 +198,7 @@ export function HeaderActions(props: { file: FileResponse }) {
       <DeleteFileDialog
         open={dialog == "delete"}
         onClose={() => setDialog(null)}
-        onSuccess={() => navigate(-1)}
+        onSuccess={() => void navigate(-1)}
         id={file.id}
       />
     </>

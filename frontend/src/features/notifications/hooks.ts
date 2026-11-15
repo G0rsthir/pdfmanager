@@ -44,7 +44,7 @@ export function useNotifications() {
   const unread = notifications.filter((notification) => !isRead(notification));
 
   const markRead = (...items: AppNotification[]) => {
-    queryClient.invalidateQueries({
+    void queryClient.invalidateQueries({
       queryKey: listNotificationsQueryKey(),
     });
 

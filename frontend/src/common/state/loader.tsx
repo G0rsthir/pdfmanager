@@ -18,7 +18,7 @@ function useInitialLoader() {
   const { loadAppState } = useAppState();
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       if (isComplete || isLoading) return;
       setIsLoading(true);
       try {
@@ -49,7 +49,7 @@ function Lifecycle({ children }: { children?: React.ReactNode }) {
   useEffect(() => {
     if (session) return;
 
-    navigate("/login", {
+    void navigate("/login", {
       state: { from: location, type: "logout" },
       replace: true,
     });
@@ -59,7 +59,7 @@ function Lifecycle({ children }: { children?: React.ReactNode }) {
 
   useEffect(() => {
     if (appState?.is_setup_complete === false) {
-      navigate("/setup");
+      void navigate("/setup");
       return;
     }
   }, [navigate, appState]);

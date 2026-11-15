@@ -1,33 +1,6 @@
 import { Alert, Box, Group, HStack, Link, Stack, Text } from "@chakra-ui/react";
 import { useLocation, useNavigate } from "react-router";
 
-/**
- * This can be used to show form errors that are returned from the API and are not field validation errors.
- * By default, it looks for the "form" field. This field is automatically set using the parseFormError function.
- */
-export function FormError(props: {
-  errors?: Record<string, React.ReactNode> | React.ReactNode;
-  errorField?: string;
-}) {
-  const { errors, errorField = "form", ...other } = props;
-
-  const errorMessage =
-    errors && typeof errors == "object" && errorField in errors
-      ? (errors as Record<string, React.ReactNode>)[errorField]
-      : (errors as React.ReactNode);
-
-  if (!errorMessage) return null;
-
-  return (
-    <Alert.Root status="error" {...other}>
-      <Alert.Indicator />
-      <Alert.Content>
-        <Alert.Title>{errorMessage}</Alert.Title>
-      </Alert.Content>
-    </Alert.Root>
-  );
-}
-
 interface UnrecoverableErrorProps {
   description?: string;
   children?: React.ReactNode;
@@ -64,7 +37,7 @@ export function UnrecoverableError(props: UnrecoverableErrorProps) {
         <Group>
           <Link
             onClick={() =>
-              isLastLocationExists ? navigate(-1) : navigate("/")
+              isLastLocationExists ? void navigate(-1) : void navigate("/")
             }
             variant="underline"
           >
