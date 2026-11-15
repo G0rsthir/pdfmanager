@@ -21,11 +21,11 @@ export interface TokensInputProps {
 }
 
 export function TokensInput(props: TokensInputProps) {
-  const { contains } = useFilter({ sensitivity: "base" });
+  const textFilter = useFilter({ sensitivity: "base" });
 
   const { collection, filter, set } = useListCollection<string>({
     initialItems: [],
-    filter: contains,
+    filter: (itemText, filterText) => textFilter.contains(itemText, filterText),
   });
 
   useEffect(() => {

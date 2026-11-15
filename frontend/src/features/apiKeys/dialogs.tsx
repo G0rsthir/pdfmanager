@@ -3,13 +3,9 @@ import type {
   ApiKeyResetRequest,
   HttpValidationError,
 } from "@/api/types.gen";
-import { expiryDatePresets } from "@/common/format";
-import { ExpiryDateSelect } from "@/components/ui/date";
-import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { queryClient } from "@/config/query";
 import { useFormMutation } from "@/hooks/form";
-import { Field } from "@ark-ui/react";
 import {
   Alert,
   Button,
@@ -130,7 +126,7 @@ export function ResetApiKeyDialog<TVariables extends ResetApiKeyVariables>(
         onClose={() => {
           onClose();
           mutation.reset();
-          queryClient.invalidateQueries();
+          void queryClient.invalidateQueries();
         }}
         data={mutation.data}
       />
@@ -144,44 +140,24 @@ export function ResetApiKeyDialog<TVariables extends ResetApiKeyVariables>(
         onClose();
       }}
       title="Reset API Key"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Reset"
     >
       Are you sure you want to recreate this token? This will invalidate the
       current one
-      <form.Field
+      <form.AppField
         name="expires_at"
         validators={{
           onChange: ({ value }) =>
             value.length == 0 ? "Date is required" : undefined,
         }}
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
-            <Field.Label>
-              Expiry Date <Field.RequiredIndicator />
-            </Field.Label>
-            <Field.Context>
-              {(ctx) => (
-                <ExpiryDateSelect
-                  onValueChange={(details) => handleChange(details.value)}
-                  onBlur={handleBlur}
-                  required
-                  value={fieldState.value}
-                  invalid={ctx.invalid}
-                  presets={expiryDatePresets}
-                  ids={{
-                    label: () => ctx.ids.label,
-                    input: () => ctx.ids.control,
-                  }}
-                />
-              )}
-            </Field.Context>
-
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.ExpiryDateField label="Expiry Date" required />
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }

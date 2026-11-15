@@ -6,15 +6,11 @@ import { AccessScope } from "@/api/types.gen";
 import { useAuth, useHasScopes } from "@/common/auth/hooks";
 import { Block, SettingsOption } from "@/components/ui/display";
 import { Form } from "@/components/ui/form/container";
-import { SubscribeFormError } from "@/components/ui/form/fields";
-import { PasswordInput } from "@/components/ui/password-input";
 import { useFormMutation } from "@/hooks/form";
 import {
   Alert,
   Button,
-  Field,
   Group,
-  Input,
   Separator,
   Stack,
   Text,
@@ -73,7 +69,7 @@ function EditAccountDetails() {
     successNotification: "Details updated successfully",
     resetForm: false,
     onSuccess: () => {
-      refreshSession();
+      void refreshSession();
       form.reset(form.state.values);
     },
   });
@@ -83,49 +79,23 @@ function EditAccountDetails() {
   const isReadOnly = session?.user.is_external || !hasScope;
 
   return (
-    <Form onSubmit={form.handleSubmit}>
+    <Form onSubmit={() => void form.handleSubmit()}>
       <Stack>
-        <form.Field
+        <form.AppField
           name="name"
-          children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root
-              invalid={!fieldState.meta.isValid}
-              required
-              disabled={isReadOnly}
-            >
-              <Field.Label>
-                Name <Field.RequiredIndicator />
-              </Field.Label>
-              <Input
-                value={fieldState.value}
-                onChange={(e) => handleChange(e.target.value)}
-                onBlur={handleBlur}
-              />
-              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-            </Field.Root>
+          children={(field) => (
+            <field.TextField label="Name" required disabled={isReadOnly} />
           )}
         />
-        <form.Field
+        <form.AppField
           name="email"
-          children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root
-              invalid={!fieldState.meta.isValid}
-              required
-              disabled={isReadOnly}
-            >
-              <Field.Label>
-                Email <Field.RequiredIndicator />
-              </Field.Label>
-              <Input
-                value={fieldState.value}
-                onChange={(e) => handleChange(e.target.value)}
-                onBlur={handleBlur}
-              />
-              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-            </Field.Root>
+          children={(field) => (
+            <field.TextField label="Email" required disabled={isReadOnly} />
           )}
         />
-        <SubscribeFormError form={form} />
+        <form.AppForm>
+          <form.SubscribeFormError />
+        </form.AppForm>
         <form.Subscribe
           selector={(state) => state.isDirty}
           children={(isDirty) => {
@@ -193,60 +163,41 @@ function ChangePassword() {
     );
 
   return (
-    <Form onSubmit={form.handleSubmit}>
+    <Form onSubmit={() => void form.handleSubmit()}>
       <Stack>
-        <form.Field
+        <form.AppField
           name="password_old"
-          children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} required>
-              <Field.Label>
-                Current Password <Field.RequiredIndicator />
-              </Field.Label>
-              <PasswordInput
-                placeholder="********"
-                value={fieldState.value}
-                onChange={(e) => handleChange(e.target.value)}
-                onBlur={handleBlur}
-              />
-              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-            </Field.Root>
+          children={(field) => (
+            <field.PasswordField
+              label="Current Password"
+              placeholder="********"
+              required
+            />
           )}
         />
-        <form.Field
+        <form.AppField
           name="password_new"
-          children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} required>
-              <Field.Label>
-                New Password <Field.RequiredIndicator />
-              </Field.Label>
-              <PasswordInput
-                placeholder="********"
-                value={fieldState.value}
-                onChange={(e) => handleChange(e.target.value)}
-                onBlur={handleBlur}
-              />
-              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-            </Field.Root>
+          children={(field) => (
+            <field.PasswordField
+              label="New Password"
+              placeholder="********"
+              required
+            />
           )}
         />
-        <form.Field
+        <form.AppField
           name="password_confirm"
-          children={({ state: fieldState, handleChange, handleBlur }) => (
-            <Field.Root invalid={!fieldState.meta.isValid} required>
-              <Field.Label>
-                Confirm Password <Field.RequiredIndicator />
-              </Field.Label>
-              <PasswordInput
-                placeholder="********"
-                value={fieldState.value}
-                onChange={(e) => handleChange(e.target.value)}
-                onBlur={handleBlur}
-              />
-              <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-            </Field.Root>
+          children={(field) => (
+            <field.PasswordField
+              label="Confirm Password"
+              placeholder="********"
+              required
+            />
           )}
         />
-        <SubscribeFormError form={form} />
+        <form.AppForm>
+          <form.SubscribeFormError />
+        </form.AppForm>
         <Group justifyContent="flex-end">
           <Button type="submit">Update</Button>
         </Group>

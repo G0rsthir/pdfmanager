@@ -14,31 +14,25 @@ import {
 import { useHasScopes } from "@/common/auth/hooks";
 import { GenericIconButton } from "@/components/ui/button";
 import { QueryView } from "@/components/ui/feedback";
-import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
-import { PasswordInput } from "@/components/ui/password-input";
+import type { SelectOption } from "@/components/ui/select";
 import { SimpleTable, TableFrame } from "@/components/ui/table/frame";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
 import {
   Badge,
   Button,
-  createListCollection,
-  Field,
   Group,
   Heading,
-  Input,
   Menu,
   Portal,
-  Select,
   Stack,
-  Switch,
   Table,
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuPlus } from "react-icons/lu";
 
@@ -265,188 +259,74 @@ function CreateUserDialog(props: {
       open={open}
       close={handleClose}
       title="Create User"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Create"
       disabled={readonly}
     >
-      <form.Field
+      <form.AppField
         name="name"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={readonly}
-          >
-            <Field.Label>
-              Name <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TextField label="Name" required disabled={readonly} />
         )}
       />
-      <form.Field
+      <form.AppField
         name="email"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={readonly}
-          >
-            <Field.Label>
-              Email <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TextField label="Email" required disabled={readonly} />
         )}
       />
-      <form.Field
+      <form.AppField
         name="password"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
+        children={(field) => (
+          <field.PasswordField
+            label="Password"
+            placeholder="********"
             required
-            invalid={!fieldState.meta.isValid}
             disabled={readonly}
-          >
-            <Field.Label>
-              Password <Field.RequiredIndicator />
-            </Field.Label>
-            <PasswordInput
-              placeholder="********"
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="password_confirm"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
+        children={(field) => (
+          <field.PasswordField
+            label="Confirm Password"
+            placeholder="********"
             required
-            invalid={!fieldState.meta.isValid}
             disabled={readonly}
-          >
-            <Field.Label>
-              Confirm Password <Field.RequiredIndicator />
-            </Field.Label>
-            <PasswordInput
-              placeholder="********"
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="role_id"
         validators={{
           onChange: ({ value }) => (!value ? "Role is required" : undefined),
         }}
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
+        children={(field) => (
+          <field.SelectField
+            label="Role"
+            placeholder="Select role"
+            items={toRoleOptions(queryRoles.data)}
             required
             disabled={readonly}
-          >
-            <RoleSelect
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              required
-              value={fieldState.value}
-              roles={queryRoles.data ?? []}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="is_enabled"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} disabled={readonly}>
-            <Switch.Root
-              checked={fieldState.value}
-              onCheckedChange={({ checked }) => handleChange(checked)}
-            >
-              <Switch.HiddenInput onBlur={handleBlur} />
-              <Switch.Control />
-              <Switch.Label>Active</Switch.Label>
-            </Switch.Root>
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.SwitchField label="Active" disabled={readonly} />
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }
 
-interface RoleSelectProps {
-  onValueChange: (value: string) => void;
-  value: string;
-  onBlur: () => void;
-  required?: boolean;
-  roles: RoleResponse[];
-}
-
-function RoleSelect(props: RoleSelectProps) {
-  const { onValueChange, value, required, roles, onBlur } = props;
-
-  const collection = useMemo(() => {
-    return createListCollection({
-      items: roles ?? [],
-      itemToString: (role) => role.name,
-      itemToValue: (role) => role.id,
-    });
-  }, [roles]);
-
-  return (
-    <Select.Root
-      collection={collection}
-      onValueChange={(e) => onValueChange(e.value?.[0])}
-      required={required}
-      onInteractOutside={onBlur}
-      value={value ? [value] : []}
-    >
-      <Select.HiddenSelect />
-      <Select.Label>
-        Role {required && <Field.RequiredIndicator />}
-      </Select.Label>
-      <Select.Control>
-        <Select.Trigger>
-          <Select.ValueText placeholder="Select role" />
-        </Select.Trigger>
-        <Select.IndicatorGroup>
-          <Select.Indicator />
-        </Select.IndicatorGroup>
-      </Select.Control>
-      <Portal>
-        <Select.Positioner>
-          <Select.Content maxH="300px" overflowY="auto">
-            {collection.items.map((role) => (
-              <Select.Item item={role} key={role.id}>
-                {role.name}
-                <Select.ItemIndicator />
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Positioner>
-      </Portal>
-    </Select.Root>
-  );
+function toRoleOptions(roles: RoleResponse[] = []): SelectOption[] {
+  return roles.map((role) => ({ value: role.id, label: role.name }));
 }
 
 function EditUserDialog(props: {
@@ -485,76 +365,38 @@ function EditUserDialog(props: {
       open={open}
       close={handleClose}
       title="Edit User"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Update"
     >
-      <form.Field
+      <form.AppField
         name="name"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
-            <Field.Label>
-              Name <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
-        )}
+        children={(field) => <field.TextField label="Name" required />}
       />
-      <form.Field
+      <form.AppField
         name="email"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
-            <Field.Label>
-              Email <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
-        )}
+        children={(field) => <field.TextField label="Email" required />}
       />
-      <form.Field
+      <form.AppField
         name="role_id"
         validators={{
           onChange: ({ value }) => (!value ? "Role is required" : undefined),
         }}
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid} required>
-            <RoleSelect
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              required
-              value={fieldState.value}
-              roles={queryRoles.data ?? []}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.SelectField
+            label="Role"
+            placeholder="Select role"
+            items={toRoleOptions(queryRoles.data)}
+            required
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="is_enabled"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root invalid={!fieldState.meta.isValid}>
-            <Switch.Root
-              checked={fieldState.value}
-              onCheckedChange={({ checked }) => handleChange(checked)}
-            >
-              <Switch.HiddenInput onBlur={handleBlur} />
-              <Switch.Control />
-              <Switch.Label>Active</Switch.Label>
-            </Switch.Root>
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
-        )}
+        children={(field) => <field.SwitchField label="Active" />}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }
@@ -589,44 +431,32 @@ function ResetPasswordDialog(props: {
       open={open}
       close={handleClose}
       title="Reset password"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Update"
     >
-      <form.Field
+      <form.AppField
         name="password"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root required invalid={!fieldState.meta.isValid}>
-            <Field.Label>
-              Password <Field.RequiredIndicator />
-            </Field.Label>
-            <PasswordInput
-              placeholder="********"
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.PasswordField
+            label="Password"
+            placeholder="********"
+            required
+          />
         )}
       />
-      <form.Field
+      <form.AppField
         name="password_confirm"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root required invalid={!fieldState.meta.isValid}>
-            <Field.Label>
-              Confirm Password <Field.RequiredIndicator />
-            </Field.Label>
-            <PasswordInput
-              placeholder="********"
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.PasswordField
+            label="Confirm Password"
+            placeholder="********"
+            required
+          />
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }

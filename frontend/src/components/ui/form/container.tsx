@@ -3,7 +3,7 @@ interface FormProps extends React.ComponentPropsWithRef<"form"> {
 }
 
 export function Form({ children, onSubmit, ...rest }: FormProps) {
-  const onFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const onFormSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     e.stopPropagation();
     onSubmit?.(e);

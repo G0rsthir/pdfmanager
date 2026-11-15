@@ -2,18 +2,13 @@ import { createSetupUser } from "@/api/sdk.gen";
 import type { CreateSetupUserData } from "@/api/types.gen";
 import { useAuth } from "@/common/auth/hooks";
 import { Form } from "@/components/ui/form/container";
-import { SubscribeFormError } from "@/components/ui/form/fields";
-import { PasswordInput } from "@/components/ui/password-input";
 import { useFormMutation } from "@/hooks/form";
 import {
   Box,
-  Button,
   Card,
   Center,
   Container,
-  Field,
   Heading,
-  Input,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -55,7 +50,7 @@ export function SetupUser({
   return (
     <Center h="100vh">
       <Container maxW="md">
-        <Form onSubmit={form.handleSubmit}>
+        <Form onSubmit={() => void form.handleSubmit()}>
           <Card.Root>
             <Card.Body>
               <Stack gap="6">
@@ -65,77 +60,46 @@ export function SetupUser({
                   </Heading>
                   <Text color="fg.muted">Add an initial application user</Text>
                 </Box>
-                <form.Field
+                <form.AppField
                   name="name"
-                  children={({ state, handleChange, handleBlur }) => (
-                    <Field.Root invalid={!state.meta.isValid} required>
-                      <Field.Label>
-                        Name <Field.RequiredIndicator />
-                      </Field.Label>
-                      <Input
-                        value={state.value}
-                        onChange={(e) => handleChange(e.target.value)}
-                        onBlur={handleBlur}
-                      />
-                      <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
-                    </Field.Root>
+                  children={(field) => (
+                    <field.TextField label="Name" required />
                   )}
                 />
-                <form.Field
+                <form.AppField
                   name="email"
-                  children={({ state, handleChange, handleBlur }) => (
-                    <Field.Root invalid={!state.meta.isValid} required>
-                      <Field.Label>
-                        Email <Field.RequiredIndicator />
-                      </Field.Label>
-                      <Input
-                        placeholder="Enter your email"
-                        value={state.value}
-                        onChange={(e) => handleChange(e.target.value)}
-                        onBlur={handleBlur}
-                      />
-                      <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
-                    </Field.Root>
+                  children={(field) => (
+                    <field.TextField
+                      label="Email"
+                      placeholder="Enter your email"
+                      required
+                    />
                   )}
                 />
-                <form.Field
+                <form.AppField
                   name="password"
-                  children={({ state, handleChange, handleBlur }) => (
-                    <Field.Root required invalid={!state.meta.isValid}>
-                      <Field.Label>
-                        Password <Field.RequiredIndicator />
-                      </Field.Label>
-                      <PasswordInput
-                        placeholder="********"
-                        value={state.value}
-                        onChange={(e) => handleChange(e.target.value)}
-                        onBlur={handleBlur}
-                      />
-                      <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
-                    </Field.Root>
+                  children={(field) => (
+                    <field.PasswordField
+                      label="Password"
+                      placeholder="********"
+                      required
+                    />
                   )}
                 />
-                <form.Field
+                <form.AppField
                   name="password_confirm"
-                  children={({ state, handleChange, handleBlur }) => (
-                    <Field.Root required invalid={!state.meta.isValid}>
-                      <Field.Label>
-                        Confirm Password <Field.RequiredIndicator />
-                      </Field.Label>
-                      <PasswordInput
-                        placeholder="********"
-                        value={state.value}
-                        onChange={(e) => handleChange(e.target.value)}
-                        onBlur={handleBlur}
-                      />
-                      <Field.ErrorText>{state.meta.errors}</Field.ErrorText>
-                    </Field.Root>
+                  children={(field) => (
+                    <field.PasswordField
+                      label="Confirm Password"
+                      placeholder="********"
+                      required
+                    />
                   )}
                 />
-                <SubscribeFormError form={form} />
-                <Button type="submit" w="full">
-                  Sign in
-                </Button>
+                <form.AppForm>
+                  <form.SubscribeFormError />
+                  <form.SubmitButton w="full">Sign in</form.SubmitButton>
+                </form.AppForm>
               </Stack>
             </Card.Body>
           </Card.Root>

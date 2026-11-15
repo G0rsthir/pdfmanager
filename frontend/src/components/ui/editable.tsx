@@ -15,11 +15,11 @@ interface ComboboxFieldProps extends Omit<ComboboxRootProps, "collection"> {
 export function EditableCombobox(props: ComboboxFieldProps) {
   const { suggestions, ...rest } = props;
 
-  const { contains } = useFilter({ sensitivity: "base" });
+  const textFilter = useFilter({ sensitivity: "base" });
 
   const { collection, filter, set } = useListCollection({
     initialItems: suggestions,
-    filter: contains,
+    filter: (itemText, filterText) => textFilter.contains(itemText, filterText),
   });
 
   useEffect(() => {

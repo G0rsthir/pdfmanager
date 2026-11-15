@@ -21,7 +21,7 @@ export function useFileThumbnail(fileId: string, enabled = true) {
       setSrc(objectUrl);
     }
 
-    loadThumbnail();
+    void loadThumbnail();
 
     return () => {
       cancelled = true;

@@ -7,13 +7,10 @@ import {
 import type { ApiKeyResponse } from "@/api/types.gen";
 import { AccessScope } from "@/api/types.gen";
 import { useHasScopes } from "@/common/auth/hooks";
-import { expiryDatePresets } from "@/common/format";
 import { ExpiresIndicatorBadge } from "@/components/ui/badges";
 import { GenericIconButton } from "@/components/ui/button";
-import { ExpiryDateSelect } from "@/components/ui/date";
 import { Block, CopyableInput, Empty } from "@/components/ui/display";
 import { QueryView } from "@/components/ui/feedback";
-import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import { useFormMutation } from "@/hooks/form";
@@ -24,10 +21,8 @@ import {
   Badge,
   Button,
   DataList,
-  Field,
   Group,
   Heading,
-  Input,
   List,
   Menu,
   Portal,
@@ -48,7 +43,6 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuCircleDashed, LuKeyRound, LuPlus } from "react-icons/lu";
 import { useShallow } from "zustand/shallow";
 import { ApiKeyResultDialog, ResetApiKeyDialog } from "../apiKeys/dialogs";
-import { ScopeSelect } from "../apiKeys/selects";
 
 type KeyType = "standard" | "opds";
 
@@ -252,30 +246,20 @@ function CreatePersonalApiKeyDialog(props: {
       open={open}
       close={handleClose}
       title="New API Key"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Create"
       disabled={!canWrite}
       size="lg"
     >
-      <form.Field
+      <form.AppField
         name="description"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
+        children={(field) => (
+          <field.TextField
+            label="Description"
+            placeholder="What is this key for?"
             required
             disabled={!canWrite}
-          >
-            <Field.Label>
-              Description <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              placeholder="What is this key for?"
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
 
@@ -327,34 +311,33 @@ function CreatePersonalApiKeyDialog(props: {
       )}
 
       {keyType == "standard" ? (
-        <PersonalApiKeyForm FormField={form.Field} readonly={!canWrite} />
+        <PersonalApiKeyForm form={form} readonly={!canWrite} />
       ) : (
         <OpdsInstructions />
       )}
 
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }
 
-interface ExpiryDateSelectField {
-  state: { value: DateValue[]; meta: { isValid: boolean; errors?: string } };
-  handleChange: (value: DateValue[]) => void;
-  handleBlur: () => void;
+interface PersonalApiKeyFormValues {
+  description: string;
+  expires_at: DateValue[];
+  scopes: AccessScope[];
 }
 
-interface ScopesSelectField {
-  state: { value: AccessScope[]; meta: { isValid: boolean; errors?: string } };
-  handleChange: (value: AccessScope[]) => void;
-  handleBlur: () => void;
-}
+type PersonalApiKeyFormApi = ReturnType<
+  typeof useFormMutation<PersonalApiKeyFormValues>
+>["form"];
 
 export function PersonalApiKeyForm(props: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  FormField: React.FC<any>;
+  form: PersonalApiKeyFormApi;
   readonly?: boolean;
 }) {
-  const { FormField, readonly } = props;
+  const { form, readonly } = props;
 
   const userScopes = useGlobalStore(
     useShallow((state) => state.session?.user.role.scopes ?? []),
@@ -362,76 +345,38 @@ export function PersonalApiKeyForm(props: {
 
   return (
     <>
-      <FormField
+      <form.AppField
         name="expires_at"
         validators={{
-          onChange: ({ value }: { value: DateValue[] }) =>
+          onChange: ({ value }) =>
             value.length == 0 ? "Date is required" : undefined,
         }}
-        children={({
-          state: fieldState,
-          handleChange,
-          handleBlur,
-        }: ExpiryDateSelectField) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
+        children={(field) => (
+          <field.ExpiryDateField
+            label="Expiry Date"
             required
             disabled={readonly}
-          >
-            <Field.Label>
-              Expiry Date <Field.RequiredIndicator />
-            </Field.Label>
-            <Field.Context>
-              {(ctx) => (
-                <ExpiryDateSelect
-                  onValueChange={(details) => handleChange(details.value)}
-                  onBlur={handleBlur}
-                  required
-                  value={fieldState.value}
-                  invalid={ctx.invalid}
-                  presets={expiryDatePresets}
-                  disabled={ctx.disabled}
-                  ids={{
-                    label: () => ctx.ids.label,
-                    input: () => ctx.ids.control,
-                  }}
-                />
-              )}
-            </Field.Context>
-
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
 
-      <FormField
+      <form.AppField
         name="scopes"
         validators={{
-          onChange: ({ value }: { value: string[] }) =>
-            !value ? "At least one permission is required" : undefined,
+          onChange: ({ value }) =>
+            value.length == 0
+              ? "At least one permission is required"
+              : undefined,
         }}
-        children={({
-          state: fieldState,
-          handleChange,
-          handleBlur,
-        }: ScopesSelectField) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
+        children={(field) => (
+          <field.SelectField
+            label="Permissions"
+            placeholder="Select scopes"
+            items={userScopes.map((scope) => ({ value: scope, label: scope }))}
+            multiple
             required
             disabled={readonly}
-          >
-            <Field.Label>
-              Permissions <Field.RequiredIndicator />
-            </Field.Label>
-            <ScopeSelect
-              scopes={userScopes}
-              onValueChange={handleChange}
-              onBlur={handleBlur}
-              required
-              value={fieldState.value}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
     </>

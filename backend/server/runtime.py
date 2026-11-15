@@ -5,6 +5,7 @@ from server.const import EnvironmentsEnum
 from server.exceptions import ConfigurationError
 from server.infrastructure.database.interface import DBInterface, get_database_interface
 from server.infrastructure.database.runner import MigrationRunner
+from server.infrastructure.logging import setup_logging
 from server.settings import AppEnvSettings
 
 
@@ -16,6 +17,7 @@ class RuntimeContainer:
 
 
 def bootstrap_runtime(enviroment: EnvironmentsEnum = EnvironmentsEnum.DEVELOPMENT) -> RuntimeContainer:
+    setup_logging()
     env = AppEnvSettings(ENVIRONMENT=enviroment)
 
     db_interface = get_database_interface(env.DATABASE_URL)

@@ -6,29 +6,11 @@ formatters:
 handlers:
   console:
     class: logging.StreamHandler
-    level: INFO
     formatter: default
     stream: ext://sys.stdout
 loggers:
   alembic:
-    level: DEBUG
-    handlers: [console, file]
-    propagate: no
-    qualname: alembic
-  watchfiles.main:
-    level: WARN
-    handlers: [console, file]
-    propagate: no
-  aiosqlite:
     level: INFO
-    handlers: [console, file]
-    propagate: no
-  sqlalchemy:
-    level: WARN
-    handlers: [console, file]
-    propagate: no
-    qualname: sqlalchemy.engine
 root:
-  level: DEBUG
-  handlers: [console, file]
-  propogate: yes
+  level: WARNING
+  handlers: [console]

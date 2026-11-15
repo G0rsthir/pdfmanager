@@ -96,8 +96,8 @@ function FileReader({ file }: { file: FileResponse }) {
   const previewPage = searchParams.page ? Number(searchParams.page) : undefined;
 
   const handlePageChange = useCallback(
-    async (value: number) => {
-      saveReadingProgress({
+    (value: number) => {
+      void saveReadingProgress({
         fileId: file.id,
         currentPage: value,
       });
@@ -106,8 +106,8 @@ function FileReader({ file }: { file: FileResponse }) {
   );
 
   const handleScaleChange = useCallback(
-    async (value: string) => {
-      saveReadingProgress({
+    (value: string) => {
+      void saveReadingProgress({
         fileId: file.id,
         scale: value,
       });
@@ -115,11 +115,16 @@ function FileReader({ file }: { file: FileResponse }) {
     [file.id],
   );
 
+  // Set as a string on sign in and token refresh
+  const token = client.getConfig().auth;
+
   return (
     <ReactPDFViewer
       file={{
         url: `/api/v1/library/files/${file.id}/download`,
-        httpHeaders: { authorization: `Bearer ${client.getConfig().auth}` },
+        httpHeaders: {
+          authorization: `Bearer ${typeof token == "string" ? token : ""}`,
+        },
       }}
       fileName={file.name}
       initialScaleValue={file.state.scale}

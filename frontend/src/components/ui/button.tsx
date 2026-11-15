@@ -1,9 +1,12 @@
 import {
+  Button,
   CloseButton,
   IconButton,
+  type ButtonProps,
   type CloseButtonProps,
   type IconButtonProps,
 } from "@chakra-ui/react";
+import { Link, type To } from "react-router";
 import { Tooltip, type TooltipProps } from "./tooltip";
 
 export function GenericIconButton(
@@ -46,5 +49,24 @@ export function GenericCloseButton(
       {...other}
       _hover={{ color: "red.600" }}
     />
+  );
+}
+
+export function LinkButton(props: ButtonProps & { to: To; state?: unknown }) {
+  const { to, state, disabled, children, ...rest } = props;
+
+  if (disabled)
+    return (
+      <Button {...rest} disabled>
+        {children}
+      </Button>
+    );
+
+  return (
+    <Button {...rest} asChild>
+      <Link to={to} state={state}>
+        {children}
+      </Link>
+    </Button>
   );
 }

@@ -11,7 +11,6 @@ import {
   AccessScope,
   type AuthProviderOidcResponse,
   type AuthProviderResponse,
-  type OidcGroupRuleInput,
   type RoleResponse,
 } from "@/api/types.gen";
 import { useHasScopes } from "@/common/auth/hooks";
@@ -20,7 +19,6 @@ import { GenericIconButton } from "@/components/ui/button";
 import { SettingsOption } from "@/components/ui/display";
 import { MultiQueryView, QueryView } from "@/components/ui/feedback";
 import { Form } from "@/components/ui/form/container";
-import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import { useFormMutation } from "@/hooks/form";
@@ -31,7 +29,6 @@ import {
   Box,
   Button,
   Card,
-  Field,
   Group,
   HStack,
   Heading,
@@ -39,15 +36,13 @@ import {
   Input,
   Menu,
   Portal,
-  Select,
   Separator,
   Stack,
   Switch,
   Text,
-  createListCollection,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { LuMinus, LuPlus } from "react-icons/lu";
 
@@ -303,12 +298,12 @@ function OidcProviderView(props: {
 
   const testConnection = useCallback(() => {
     shouldRedirect.current = true;
-    form.handleSubmit();
+    void form.handleSubmit();
   }, [form]);
 
   return (
     <>
-      <Form onSubmit={form.handleSubmit}>
+      <Form onSubmit={() => void form.handleSubmit}>
         <Stack gap={6} pt={2}>
           <Box bg="bg.muted" borderRadius="l3" p={4}>
             <Stack gap={1}>
@@ -327,22 +322,10 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <form.Field
+            <form.AppField
               name="name"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  required
-                  disabled={readonly}
-                >
-                  <Input
-                    size="sm"
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+              children={(field) => (
+                <field.TextField size="sm" required disabled={readonly} />
               )}
             />
           </SettingsOption>
@@ -354,23 +337,15 @@ function OidcProviderView(props: {
             description="Well-known OIDC discovery endpoint used to fetch provider configuration automatically"
             required
           >
-            <form.Field
+            <form.AppField
               name="auto_discovery_url"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
+              children={(field) => (
+                <field.TextField
+                  size="sm"
+                  placeholder="https://auth.example.com/application/.well-known/openid-configuration"
                   required
                   disabled={readonly}
-                >
-                  <Input
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                    size="sm"
-                    placeholder="https://auth.example.com/application/.well-known/openid-configuration"
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+                />
               )}
             />
           </SettingsOption>
@@ -382,22 +357,10 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <form.Field
+            <form.AppField
               name="client_id"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  required
-                  disabled={readonly}
-                >
-                  <Input
-                    size="sm"
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+              children={(field) => (
+                <field.TextField size="sm" required disabled={readonly} />
               )}
             />
           </SettingsOption>
@@ -410,23 +373,15 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <form.Field
+            <form.AppField
               name="client_secret"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
+              children={(field) => (
+                <field.TextField
+                  size="sm"
+                  type="password"
                   required
                   disabled={readonly}
-                >
-                  <Input
-                    size="sm"
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                    type="password"
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+                />
               )}
             />
           </SettingsOption>
@@ -437,21 +392,9 @@ function OidcProviderView(props: {
             fieldSpan={8}
             fontWeight="normal"
           >
-            <form.Field
+            <form.AppField
               name="additional_scopes"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={readonly}
-                >
-                  <Input
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
+              children={(field) => <field.TextField disabled={readonly} />}
             />
           </SettingsOption>
 
@@ -463,21 +406,10 @@ function OidcProviderView(props: {
             fontWeight="normal"
             required
           >
-            <form.Field
+            <form.AppField
               name="group_claim_name"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  required
-                  disabled={readonly}
-                >
-                  <Input
-                    value={fieldState.value}
-                    onChange={(e) => handleChange(e.target.value)}
-                    onBlur={handleBlur}
-                  />
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
+              children={(field) => (
+                <field.TextField required disabled={readonly} />
               )}
             />
           </SettingsOption>
@@ -490,11 +422,7 @@ function OidcProviderView(props: {
                 Map OIDC group values to application roles
               </Text>
             </Stack>
-            <GroupRulesEditor
-              FormField={form.Field}
-              roles={roles}
-              readonly={readonly}
-            />
+            <GroupRulesEditor form={form} roles={roles} readonly={readonly} />
           </Stack>
           <Separator />
 
@@ -504,23 +432,9 @@ function OidcProviderView(props: {
             fieldSpan={8}
             fontWeight="normal"
           >
-            <form.Field
+            <form.AppField
               name="is_enabled"
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={readonly}
-                >
-                  <Switch.Root
-                    checked={fieldState.value}
-                    onCheckedChange={({ checked }) => handleChange(checked)}
-                  >
-                    <Switch.HiddenInput onBlur={handleBlur} />
-                    <Switch.Control />
-                  </Switch.Root>
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
+              children={(field) => <field.SwitchField disabled={readonly} />}
             />
           </SettingsOption>
 
@@ -531,7 +445,7 @@ function OidcProviderView(props: {
             fieldSpan={8}
             fontWeight="normal"
           >
-            <form.Field
+            <form.AppField
               name="auto_login"
               validators={{
                 onChangeAsync: async ({ value }) => {
@@ -548,24 +462,12 @@ function OidcProviderView(props: {
                     return `Only one provider can have auto login enabled. Currently active on "${autoLoginProvider.name}"`;
                 },
               }}
-              children={({ state: fieldState, handleChange, handleBlur }) => (
-                <Field.Root
-                  invalid={!fieldState.meta.isValid}
-                  disabled={readonly}
-                >
-                  <Switch.Root
-                    checked={fieldState.value}
-                    onCheckedChange={({ checked }) => handleChange(checked)}
-                  >
-                    <Switch.HiddenInput onBlur={handleBlur} />
-                    <Switch.Control />
-                  </Switch.Root>
-                  <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-                </Field.Root>
-              )}
+              children={(field) => <field.SwitchField disabled={readonly} />}
             />
           </SettingsOption>
-          <SubscribeFormError form={form} />
+          <form.AppForm>
+            <form.SubscribeFormError />
+          </form.AppForm>
           <Group justifyContent="flex-end">
             <Button
               size="sm"
@@ -584,9 +486,11 @@ function OidcProviderView(props: {
             >
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={readonly}>
-              Save
-            </Button>
+            <form.AppForm>
+              <form.SubmitButton size="sm" disabled={readonly}>
+                Save
+              </form.SubmitButton>
+            </form.AppForm>
           </Group>
         </Stack>
       </Form>
@@ -597,104 +501,69 @@ function OidcProviderView(props: {
 /**
  * More info https://tanstack.com/form/latest/docs/framework/react/guides/arrays
  */
+type OidcProviderFormValues = Pick<
+  AuthProviderOidcResponse,
+  | "name"
+  | "auto_discovery_url"
+  | "client_id"
+  | "client_secret"
+  | "group_claim_name"
+  | "auto_login"
+  | "is_enabled"
+  | "additional_scopes"
+  | "group_claim_rules"
+>;
+
+type OidcProviderFormApi = ReturnType<
+  typeof useFormMutation<OidcProviderFormValues>
+>["form"];
+
 function GroupRulesEditor(props: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  FormField: React.FC<any>;
+  form: OidcProviderFormApi;
   roles: RoleResponse[];
   readonly?: boolean;
 }) {
-  const { FormField, roles, readonly } = props;
+  const { form, roles, readonly } = props;
 
-  const roleList = useMemo(() => {
-    return createListCollection({
-      items: roles ?? [],
-      itemToString: (role) => role.name,
-      itemToValue: (role) => role.id,
-    });
-  }, [roles]);
+  const roleOptions = roles.map((role) => ({
+    value: role.id,
+    label: role.name,
+  }));
 
   return (
-    <FormField
+    <form.AppField
       name="group_claim_rules"
       mode="array"
-      children={(field: {
-        state: { value: OidcGroupRuleInput[] };
-        pushValue: (value: OidcGroupRuleInput) => void;
-        insertValue: (index: number, value: OidcGroupRuleInput) => void;
-        removeValue: (index: number) => void;
-      }) => (
+      children={(field) => (
         <Stack gap={3}>
-          {field.state.value.map((_rule: OidcGroupRuleInput, i: number) => (
+          {field.state.value.map((_rule, i) => (
             <HStack key={i} gap={3}>
-              <FormField
+              <form.AppField
                 name={`group_claim_rules[${i}].group`}
                 validators={{
-                  onChange: ({ value }: { value: string }) =>
+                  onChange: ({ value }) =>
                     !value ? "Group name is required" : undefined,
                 }}
-                children={(subField: {
-                  state: { value: string; meta: { isValid: boolean } };
-                  handleChange: (value: string) => void;
-                  handleBlur: () => void;
-                }) => (
-                  <Field.Root
-                    invalid={!subField.state.meta.isValid}
+                children={(subField) => (
+                  <subField.TextField
+                    placeholder="Group name"
                     disabled={readonly}
-                  >
-                    <Input
-                      placeholder="Group name"
-                      value={subField.state.value}
-                      onChange={(e) => subField.handleChange(e.target.value)}
-                      onBlur={subField.handleBlur}
-                    />
-                  </Field.Root>
+                  />
                 )}
               />
-              <FormField
+              <form.AppField
                 name={`group_claim_rules[${i}].role_id`}
                 validators={{
-                  onChange: ({ value }: { value: string }) =>
+                  onChange: ({ value }) =>
                     !value ? "Role is required" : undefined,
                 }}
-                children={(subField: {
-                  state: { value: string; meta: { isValid: boolean } };
-                  handleChange: (value: string) => void;
-                  handleBlur: () => void;
-                }) => (
-                  <Field.Root
-                    invalid={!subField.state.meta.isValid}
+                children={(subField) => (
+                  <subField.SelectField
+                    placeholder="Select role"
+                    items={roleOptions}
+                    required
                     disabled={readonly}
-                  >
-                    <Select.Root
-                      collection={roleList}
-                      onValueChange={(e) => subField.handleChange(e.value?.[0])}
-                      required
-                      onInteractOutside={subField.handleBlur}
-                      value={subField.state.value ? [subField.state.value] : []}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select role" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Portal>
-                        <Select.Positioner>
-                          <Select.Content maxH="300px" overflowY="auto">
-                            {roleList.items.map((role) => (
-                              <Select.Item item={role} key={role.id}>
-                                {role.name}
-                                <Select.ItemIndicator />
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Portal>
-                    </Select.Root>
-                  </Field.Root>
+                  />
                 )}
               />
               <Icon
@@ -784,32 +653,20 @@ function CreateOidcProviderDialog(props: {
       open={open}
       close={handleClose}
       title="Create OIDC provider"
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Create"
       submitOnEnter
       disabled={readonly}
     >
-      <form.Field
+      <form.AppField
         name="name"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={readonly}
-          >
-            <Field.Label>
-              Name <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TextField label="Name" required disabled={readonly} />
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }

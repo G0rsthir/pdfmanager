@@ -5,13 +5,11 @@ import {
   updateCollectionMutation,
 } from "@/api/@tanstack/react-query.gen";
 import { type CollectionWithDetailsResponse } from "@/api/types.gen";
-import { SubscribeFormError } from "@/components/ui/form/fields";
 import { FormModal } from "@/components/ui/form/modal";
 import { ConfirmModal } from "@/components/ui/modal";
 import { useFormMutation } from "@/hooks/form";
 import { useAPIMutation, useAPIQuery } from "@/hooks/query";
-import { Field, Input } from "@chakra-ui/react";
-import { CollectionSelect } from "./select";
+import { CollectionSelectField } from "./select";
 
 type PartialCollectionResponse = Omit<CollectionWithDetailsResponse, "owner">;
 
@@ -64,56 +62,34 @@ export function EditCollectionDialog(props: {
       open={open}
       close={handleClose}
       title={`Edit ${label}`}
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Update"
       disabled={readonly}
     >
-      <form.Field
+      <form.AppField
         name="name"
         validators={{
           onChange: ({ value }) => (!value ? "Name is required" : undefined),
         }}
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={readonly}
-          >
-            <Field.Label>
-              Name <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TextField label="Name" required disabled={readonly} />
         )}
       />
-      <form.Field
+      <form.AppField
         name="parent_id"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
+        children={() => (
+          <CollectionSelectField
+            label="Parent"
+            helperText="Only groups you can write to in the same library are selectable"
+            allowedCollectionIds={moveTargetsQ.data?.map((c) => c.id)}
+            type="group"
             disabled={readonly || !canMove}
-          >
-            <Field.Label>Parent</Field.Label>
-            <CollectionSelect
-              defaultValue={fieldState.value ?? ""}
-              onValueChange={(value) => handleChange(value || null)}
-              onBlur={handleBlur}
-              allowedCollectionIds={moveTargetsQ.data?.map((c) => c.id)}
-              type="group"
-            />
-            <Field.HelperText>
-              Only groups you can write to in the same library are selectable
-            </Field.HelperText>
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+          />
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }
@@ -189,32 +165,20 @@ export function CreateCollectionDialog(props: {
       open={open}
       close={handleClose}
       title={`New ${label}`}
-      onSubmit={() => form.handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
       confirmBtnText="Create"
       disabled={readonly}
       submitOnEnter
     >
-      <form.Field
+      <form.AppField
         name="name"
-        children={({ state: fieldState, handleChange, handleBlur }) => (
-          <Field.Root
-            invalid={!fieldState.meta.isValid}
-            required
-            disabled={readonly}
-          >
-            <Field.Label>
-              Name <Field.RequiredIndicator />
-            </Field.Label>
-            <Input
-              value={fieldState.value}
-              onChange={(e) => handleChange(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Field.ErrorText>{fieldState.meta.errors}</Field.ErrorText>
-          </Field.Root>
+        children={(field) => (
+          <field.TextField label="Name" required disabled={readonly} />
         )}
       />
-      <SubscribeFormError form={form} />
+      <form.AppForm>
+        <form.SubscribeFormError />
+      </form.AppForm>
     </FormModal>
   );
 }

@@ -173,7 +173,7 @@ function CopyAction(props: { text: string }) {
   const { copied, copy } = useCopy(props.text);
 
   return (
-    <ToolbarIcon label={copied ? "Copied" : "Copy"} onClick={copy}>
+    <ToolbarIcon label={copied ? "Copied" : "Copy"} onClick={() => void copy()}>
       {copied ? <LuCheck /> : <LuCopy />}
     </ToolbarIcon>
   );

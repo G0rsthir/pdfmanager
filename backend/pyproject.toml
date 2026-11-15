@@ -24,6 +24,7 @@ dependencies = [
     "pypdfium2 (>=5.14.0,<6.0.0)",
     "pillow (>=13.0.0,<14.0.0)",
     "httpx2>=2.13.1",
+    "pyyaml>=6.0.3",
 ]
 
 
@@ -78,5 +79,11 @@ pythonpath = ["."]
 [dependency-groups]
 dev = [
     "ruff (>=0.17.1,<0.18.0)",
-    "pytest (>=9.1.1,<10.0.0)"
+    "pytest (>=9.1.1,<10.0.0)",
+    "mypy>=2.4.1",
 ]
+
+[tool.mypy]
+files = ["server"]
+plugins = ["pydantic.mypy"]
+check_untyped_defs = true

@@ -49,7 +49,7 @@ export function UserProfileHeader() {
                   value="logout"
                   color="fg.error"
                   _hover={{ bg: "bg.error", color: "fg.error" }}
-                  onClick={() => logout()}
+                  onClick={() => void logout()}
                 >
                   Log out
                 </Menu.Item>
