@@ -2,7 +2,7 @@
 
 ## Code Style Guidelines
 
-Use [typescript-eslint](https://typescript-eslint.io/) for linting.
+Use [oxlint](https://oxc.rs/docs/guide/usage/linter) for linting.
 
 Use [prettier](https://prettier.io/) for code formatting.
 

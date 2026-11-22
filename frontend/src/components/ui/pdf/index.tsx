@@ -60,7 +60,7 @@ const ZOOM_PRESETS = [
 interface ReactPDFViewerProps {
   file: string | DocumentInitParameters;
   intialPage: number;
-  initialScaleValue: string;
+  initialScaleValue?: string;
   fileName?: string;
   startInPreviewPage?: number;
   onPageChange?: (value: number) => void;

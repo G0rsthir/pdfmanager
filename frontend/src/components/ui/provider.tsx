@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { ColorModeProvider, type ColorModeProviderProps } from "./color-mode";
 
 export function Provider(
-  props: ColorModeProviderProps & { primaryColor: string },
+  props: ColorModeProviderProps & { primaryColor?: string },
 ) {
   const { primaryColor = DEFAULT_PRIMARY_COLOR, ...rest } = props;
 

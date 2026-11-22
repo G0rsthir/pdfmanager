@@ -8,7 +8,7 @@ import { useHasScopes } from "./hooks";
  */
 export function AuthGuard({
   children,
-  scopes = [],
+  scopes,
 }: {
   children: React.ReactNode;
   scopes: string[];
